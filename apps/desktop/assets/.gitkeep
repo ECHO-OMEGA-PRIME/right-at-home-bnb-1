@@ -1,0 +1,7 @@
+# Icon assets directory
+# Add the following files:
+# - icon.png (512x512 app icon)
+# - icon.ico (Windows icon)
+# - icon.icns (macOS icon)
+# - tray-icon.png (16x16 or 22x22 tray icon)
+# - icon-small.png (16x16 for menus)

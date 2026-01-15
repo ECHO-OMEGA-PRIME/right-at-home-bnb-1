@@ -1,0 +1,65 @@
+{
+  "name": "Right at Home BnB",
+  "tagline": "Your Home Away From Home in Midland, TX",
+  "owner": "Steven Palma",
+  "location": "Midland, Texas",
+  "propertyCount": 22,
+  "colors": {
+    "primary": "#500000",
+    "primaryLight": "#722F37",
+    "primaryDark": "#3D0000",
+    "secondary": "#F5F5F0",
+    "accent": "#C4A777",
+    "gold": "#C4A777",
+    "burgundy": "#722F37",
+    "charcoal": "#2D2D2D",
+    "cream": "#F5F5F0",
+    "white": "#FFFFFF",
+    "success": "#2E7D32",
+    "warning": "#ED6C02",
+    "error": "#D32F2F",
+    "info": "#0288D1"
+  },
+  "typography": {
+    "headings": {
+      "family": "Playfair Display",
+      "weights": [400, 500, 600, 700]
+    },
+    "body": {
+      "family": "Inter",
+      "weights": [300, 400, 500, 600]
+    },
+    "accent": {
+      "family": "Cormorant Garamond",
+      "weights": [400, 500, 600]
+    }
+  },
+  "design": {
+    "borderRadius": {
+      "small": "4px",
+      "medium": "8px",
+      "large": "16px",
+      "pill": "9999px"
+    },
+    "shadows": {
+      "small": "0 1px 2px rgba(0,0,0,0.05)",
+      "medium": "0 4px 6px rgba(0,0,0,0.1)",
+      "large": "0 10px 15px rgba(0,0,0,0.1)"
+    }
+  },
+  "aesthetics": {
+    "style": "elegant",
+    "theme": "boutique-hotel",
+    "influences": ["wine", "hospitality", "Texas warmth"],
+    "avoid": ["sports themes", "baseball", "casual/playful"]
+  },
+  "domains": {
+    "production": "rightathomebnb.com",
+    "api": "api.rightathomebnb.com",
+    "admin": "admin.rightathomebnb.com"
+  },
+  "social": {
+    "instagram": "@rightathomebnb",
+    "facebook": "rightathomemidland"
+  }
+}

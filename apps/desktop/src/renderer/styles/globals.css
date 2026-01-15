@@ -1,0 +1,277 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Brand Colors */
+  --maroon: #500000;
+  --maroon-dark: #3D0000;
+  --maroon-light: #722F37;
+  --cream: #F5F5F0;
+  --gold: #C4A777;
+  --charcoal: #2D2D2D;
+
+  /* Light Theme */
+  --bg-primary: #FFFFFF;
+  --bg-secondary: #F9FAFB;
+  --bg-tertiary: #F3F4F6;
+  --text-primary: #111827;
+  --text-secondary: #4B5563;
+  --text-muted: #9CA3AF;
+  --border-color: #E5E7EB;
+  --card-bg: #FFFFFF;
+  --sidebar-bg: #500000;
+  --sidebar-text: #FFFFFF;
+  --toast-bg: #FFFFFF;
+  --toast-color: #111827;
+}
+
+.dark {
+  --bg-primary: #111827;
+  --bg-secondary: #1F2937;
+  --bg-tertiary: #374151;
+  --text-primary: #F9FAFB;
+  --text-secondary: #D1D5DB;
+  --text-muted: #6B7280;
+  --border-color: #374151;
+  --card-bg: #1F2937;
+  --sidebar-bg: #3D0000;
+  --sidebar-text: #FFFFFF;
+  --toast-bg: #1F2937;
+  --toast-color: #F9FAFB;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.5;
+  overflow: hidden;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--maroon);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--maroon-light);
+}
+
+/* Selection */
+::selection {
+  background-color: var(--maroon);
+  color: white;
+}
+
+/* Focus styles */
+:focus-visible {
+  outline: 2px solid var(--maroon);
+  outline-offset: 2px;
+}
+
+/* Typography */
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+/* Custom utilities */
+@layer utilities {
+  .gradient-maroon {
+    background: linear-gradient(135deg, var(--maroon) 0%, var(--maroon-dark) 100%);
+  }
+
+  .shadow-maroon {
+    box-shadow: 0 4px 14px rgba(80, 0, 0, 0.25);
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .drag-none {
+    -webkit-user-drag: none;
+    user-drag: none;
+  }
+}
+
+/* Card styles */
+@layer components {
+  .card {
+    @apply bg-white dark:bg-gray-800 rounded-2xl shadow-card border border-gray-100 dark:border-gray-700;
+  }
+
+  .card-hover {
+    @apply transition-all duration-200 hover:shadow-card-hover hover:-translate-y-0.5;
+  }
+
+  .stat-card {
+    @apply gradient-maroon text-white rounded-2xl shadow-maroon p-6;
+  }
+
+  .btn-primary {
+    @apply bg-maroon-900 text-white px-6 py-3 rounded-xl font-medium transition-all duration-200;
+    @apply hover:bg-maroon-800 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply bg-white text-maroon-900 px-6 py-3 rounded-xl font-medium border-2 border-maroon-900;
+    @apply transition-all duration-200 hover:bg-maroon-900 hover:text-white;
+    @apply dark:bg-gray-800 dark:border-maroon-800;
+  }
+
+  .btn-ghost {
+    @apply px-4 py-2 rounded-lg font-medium transition-all duration-200;
+    @apply hover:bg-gray-100 dark:hover:bg-gray-700;
+  }
+
+  .input {
+    @apply w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600;
+    @apply bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100;
+    @apply placeholder:text-gray-400 dark:placeholder:text-gray-500;
+    @apply focus:ring-2 focus:ring-maroon-900 focus:border-transparent;
+    @apply transition-all duration-200;
+  }
+
+  .label {
+    @apply block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5;
+  }
+
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .badge-success {
+    @apply bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400;
+  }
+
+  .badge-warning {
+    @apply bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400;
+  }
+
+  .badge-error {
+    @apply bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400;
+  }
+
+  .badge-info {
+    @apply bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400;
+  }
+
+  .badge-maroon {
+    @apply bg-maroon-100 text-maroon-900 dark:bg-maroon-900/30 dark:text-maroon-400;
+  }
+
+  .table {
+    @apply w-full text-sm text-left;
+  }
+
+  .table thead {
+    @apply bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 uppercase text-xs;
+  }
+
+  .table th {
+    @apply px-6 py-3 font-semibold;
+  }
+
+  .table td {
+    @apply px-6 py-4 border-b border-gray-100 dark:border-gray-700;
+  }
+
+  .table tbody tr {
+    @apply hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors;
+  }
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.2s ease-out;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s ease-out;
+}
+
+.animate-slide-down {
+  animation: slideDown 0.3s ease-out;
+}
+
+/* Print styles */
+@media print {
+  body {
+    background: white;
+    color: black;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .card {
+    box-shadow: none;
+    border: 1px solid #E5E7EB;
+  }
+}
+
+/* High DPI support */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  body {
+    -webkit-font-smoothing: antialiased;
+  }
+}

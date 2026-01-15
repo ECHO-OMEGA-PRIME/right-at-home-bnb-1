@@ -1,0 +1,47 @@
+RightAtHome BnB Desktop Application
+Copyright (c) 2024-2026 Right At Home Midland LLC
+
+PROPRIETARY SOFTWARE LICENSE AGREEMENT
+
+This software and associated documentation files (the "Software") are the
+proprietary property of Right At Home Midland LLC ("Company").
+
+LICENSE GRANT
+The Company grants you a limited, non-exclusive, non-transferable license to
+use the Software solely for managing vacation rental properties operated by
+or affiliated with the Company.
+
+RESTRICTIONS
+You may not:
+- Copy, modify, or distribute the Software
+- Reverse engineer, decompile, or disassemble the Software
+- Remove any proprietary notices or labels on the Software
+- Use the Software for any purpose other than property management
+- Transfer, sublicense, or assign your rights to use the Software
+
+INTELLECTUAL PROPERTY
+The Software contains proprietary and confidential information belonging to
+the Company. All title and intellectual property rights in and to the Software
+are owned by the Company.
+
+WARRANTY DISCLAIMER
+THE SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT.
+
+LIMITATION OF LIABILITY
+IN NO EVENT SHALL THE COMPANY BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL,
+EXEMPLARY, OR CONSEQUENTIAL DAMAGES ARISING OUT OF OR IN CONNECTION WITH THE
+USE OF THE SOFTWARE.
+
+TERMINATION
+This license is effective until terminated. Your rights under this license will
+terminate automatically without notice if you fail to comply with any term of
+this agreement.
+
+CONTACT
+Right At Home Midland LLC
+Midland, Texas
+support@rightathomebnb.com
+
+Last updated: January 2026

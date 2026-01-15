@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <!-- Background Circle -->
+  <circle cx="256" cy="256" r="240" fill="#500000"/>
+
+  <!-- House Roof -->
+  <path d="M256 80 L416 200 L416 220 L256 100 L96 220 L96 200 Z" fill="#FFFFFF"/>
+
+  <!-- House Body -->
+  <rect x="120" y="200" width="272" height="200" fill="#FFFFFF"/>
+
+  <!-- Door -->
+  <rect x="216" y="280" width="80" height="120" rx="4" fill="#500000"/>
+
+  <!-- Door Handle -->
+  <circle cx="280" cy="340" r="8" fill="#D4AF37"/>
+
+  <!-- Left Window -->
+  <rect x="140" y="240" width="60" height="60" rx="4" fill="#500000"/>
+  <line x1="170" y1="240" x2="170" y2="300" stroke="#FFFFFF" stroke-width="3"/>
+  <line x1="140" y1="270" x2="200" y2="270" stroke="#FFFFFF" stroke-width="3"/>
+
+  <!-- Right Window -->
+  <rect x="312" y="240" width="60" height="60" rx="4" fill="#500000"/>
+  <line x1="342" y1="240" x2="342" y2="300" stroke="#FFFFFF" stroke-width="3"/>
+  <line x1="312" y1="270" x2="372" y2="270" stroke="#FFFFFF" stroke-width="3"/>
+
+  <!-- Chimney -->
+  <rect x="340" y="120" width="40" height="80" fill="#FFFFFF"/>
+
+  <!-- Stars (representing hospitality/rating) -->
+  <polygon points="140,430 145,445 160,445 148,455 153,470 140,460 127,470 132,455 120,445 135,445" fill="#D4AF37"/>
+  <polygon points="256,430 261,445 276,445 264,455 269,470 256,460 243,470 248,455 236,445 251,445" fill="#D4AF37"/>
+  <polygon points="372,430 377,445 392,445 380,455 385,470 372,460 359,470 364,455 352,445 367,445" fill="#D4AF37"/>
+
+  <!-- Outer ring highlight -->
+  <circle cx="256" cy="256" r="240" fill="none" stroke="#D4AF37" stroke-width="8"/>
+</svg>

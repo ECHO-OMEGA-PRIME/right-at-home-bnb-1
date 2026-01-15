@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://api.rightathome.bnb https://*.googleapis.com;">
+  <title>Right at Home BnB</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --maroon-50: #fdf2f2;
+      --maroon-100: #fce4e4;
+      --maroon-500: #dc3c3c;
+      --maroon-700: #722F37;
+      --maroon-800: #500000;
+      --maroon-900: #3D0000;
+      --cream-50: #FEFDFB;
+      --cream-100: #F5F5F0;
+      --cream-200: #E8E6DC;
+      --gold-400: #C4A777;
+      --gold-500: #A68B4F;
+      --charcoal-600: #333333;
+      --charcoal-700: #2D2D2D;
+    }
+
+    html, body, #root {
+      height: 100%;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--cream-100);
+      color: var(--charcoal-700);
+      overflow: hidden;
+    }
+
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: var(--cream-200);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: var(--maroon-800);
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--maroon-700);
+    }
+
+    /* Loading state */
+    .loading-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      gap: 20px;
+    }
+
+    .loading-logo {
+      width: 80px;
+      height: 80px;
+      background: var(--maroon-800);
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: pulse 2s infinite;
+    }
+
+    .loading-logo svg {
+      width: 40px;
+      height: 40px;
+      fill: var(--gold-400);
+    }
+
+    .loading-text {
+      font-family: 'Playfair Display', serif;
+      font-size: 24px;
+      font-weight: 600;
+      color: var(--maroon-800);
+    }
+
+    .loading-spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid var(--cream-200);
+      border-top-color: var(--maroon-800);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div id="root">
+    <!-- Loading state before React hydrates -->
+    <div class="loading-container">
+      <div class="loading-logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+          <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+      </div>
+      <div class="loading-text">Right at Home BnB</div>
+      <div class="loading-spinner"></div>
+    </div>
+  </div>
+  <script src="./app.js"></script>
+</body>
+</html>
