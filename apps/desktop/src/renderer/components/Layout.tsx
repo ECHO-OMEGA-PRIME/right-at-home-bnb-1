@@ -14,6 +14,7 @@ import {
   Sun,
   RefreshCw,
   ChevronRight,
+  UserCheck,
 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useApp } from '../contexts/AppContext';
@@ -28,8 +29,9 @@ const navItems = [
   { path: '/properties', icon: Home, label: 'Properties' },
   { path: '/guests', icon: Users, label: 'Guests' },
   { path: '/cleaning', icon: Calendar, label: 'Cleaning Schedule' },
+  { path: '/cleaners', icon: UserCheck, label: 'Cleaners' },
   { path: '/finance', icon: DollarSign, label: 'Finance' },
-  { path: '/locks', icon: Lock, label: 'Smart Locks' },
+  { path: '/locks', icon: Lock, label: 'Smart Home' },
   { path: '/settings', icon: Settings, label: 'Settings' },
 ];
 

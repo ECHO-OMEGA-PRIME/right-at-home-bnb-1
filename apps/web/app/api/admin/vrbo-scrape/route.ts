@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Final dedup
-    const uniqueImages = [...new Set(images)];
+    const uniqueImages = Array.from(new Set(images));
 
     return NextResponse.json({
       vrboId,

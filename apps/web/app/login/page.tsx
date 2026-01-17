@@ -12,9 +12,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Eye, EyeOff, Lock, Mail, ArrowRight, Home } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { signInWithGoogle, signInWithApple } from '@/lib/auth';
-import { auth } from '@/lib/auth';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithGoogle, signInWithApple, signInWithEmail } from '@/lib/auth';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -30,11 +28,13 @@ export default function LoginPage() {
 
     try {
       // Firebase email/password auth
-      await signInWithEmailAndPassword(auth, email, password);
+      const user = await signInWithEmail(email, password);
 
-      localStorage.setItem('user_role', loginType);
-      toast.success('Welcome back!');
-      router.push('/dashboard');
+      if (user) {
+        localStorage.setItem('user_role', user.role || loginType);
+        toast.success('Welcome back!');
+        router.push('/dashboard');
+      }
     } catch (error: any) {
       console.error('Login error:', error);
 

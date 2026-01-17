@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, storage } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
+import type { Storage } from 'firebase-admin/storage';
 
 /**
  * Save Property Images API
@@ -17,6 +18,7 @@ interface ImageInput {
 }
 
 async function downloadAndUpload(
+  storageInstance: Storage,
   imageUrl: string,
   propertyId: string,
   index: number
@@ -41,7 +43,7 @@ async function downloadAndUpload(
     const ext = contentType.includes('png') ? 'png' : 'jpg';
 
     // Upload to Firebase Storage
-    const bucket = storage.bucket();
+    const bucket = storageInstance.bucket();
     const filePath = `properties/${propertyId}/images/${propertyId}_${String(index).padStart(2, '0')}.${ext}`;
     const file = bucket.file(filePath);
 
@@ -114,7 +116,7 @@ export async function POST(request: NextRequest) {
 
     for (let i = 0; i < images.length; i++) {
       const img = images[i];
-      const firebaseUrl = await downloadAndUpload(img.url, propertyId, i);
+      const firebaseUrl = await downloadAndUpload(storage, img.url, propertyId, i);
 
       if (firebaseUrl) {
         uploadedImages.push({

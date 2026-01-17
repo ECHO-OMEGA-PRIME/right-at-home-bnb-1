@@ -2,20 +2,26 @@
 
 /**
  * Right at Home BnB - App Providers
- * React Query, Toaster, and other global providers
+ * React Query, Toaster, Cross-Platform Sync, and other global providers
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import { createQueryClient } from '@/lib/api';
+import { SyncProvider } from '@/context/SyncContext';
+
+// Placeholder user ID - replace with actual auth
+const DEMO_USER_ID = 'steven_palma_rightathome';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => createQueryClient());
 
   return (
     <QueryClientProvider client={queryClient}>
-      {children}
+      <SyncProvider userId={DEMO_USER_ID}>
+        {children}
+      </SyncProvider>
       <Toaster
         position="top-right"
         toastOptions={{

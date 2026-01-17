@@ -37,6 +37,9 @@ import SettingsScreen from './src/screens/SettingsScreen';
 import { ThemeProvider } from './src/theme/ThemeContext';
 import { COLORS } from './src/theme/colors';
 
+// Cross-Platform Sync
+import { SyncProvider } from './src/context/SyncContext';
+
 // Types
 export type RootStackParamList = {
   Login: undefined;
@@ -274,14 +277,16 @@ function RootNavigator() {
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <SafeAreaProvider>
-          <NavigationContainer>
-            <StatusBar style="light" />
-            <RootNavigator />
-          </NavigationContainer>
-        </SafeAreaProvider>
-      </ThemeProvider>
+      <SyncProvider>
+        <ThemeProvider>
+          <SafeAreaProvider>
+            <NavigationContainer>
+              <StatusBar style="light" />
+              <RootNavigator />
+            </NavigationContainer>
+          </SafeAreaProvider>
+        </ThemeProvider>
+      </SyncProvider>
     </QueryClientProvider>
   );
 }

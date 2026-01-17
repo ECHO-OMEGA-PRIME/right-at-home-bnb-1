@@ -6,7 +6,11 @@ import { Toaster } from 'react-hot-toast';
 import App from './App';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { AppProvider } from './contexts/AppContext';
+import { SyncProvider } from './contexts/SyncContext';
 import './styles/globals.css';
+
+// Desktop admin user ID
+const ADMIN_USER_ID = 'steven_palma_rightathome_admin';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -23,9 +27,10 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <ThemeProvider>
-          <AppProvider>
-            <App />
-            <Toaster
+          <SyncProvider userId={ADMIN_USER_ID}>
+            <AppProvider>
+              <App />
+              <Toaster
               position="bottom-right"
               toastOptions={{
                 duration: 4000,
@@ -49,7 +54,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
                 },
               }}
             />
-          </AppProvider>
+            </AppProvider>
+          </SyncProvider>
         </ThemeProvider>
       </BrowserRouter>
     </QueryClientProvider>

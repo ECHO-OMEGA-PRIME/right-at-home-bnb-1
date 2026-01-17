@@ -117,7 +117,7 @@ export async function remember(
   } = {}
 ): Promise<string> {
   const id = `${options.category || 'context'}_${key}_${Date.now()}`;
-  const memoryRef = doc(db, COLLECTIONS.MEMORY, id);
+  const memoryRef = doc(db(), COLLECTIONS.MEMORY, id);
 
   const entry: Omit<MemoryEntry, 'id' | 'createdAt' | 'updatedAt'> & {
     createdAt: any;
@@ -156,7 +156,7 @@ export async function recall(
     guestId?: string;
   } = {}
 ): Promise<any | null> {
-  const memoryRef = collection(db, COLLECTIONS.MEMORY);
+  const memoryRef = collection(db(), COLLECTIONS.MEMORY);
   let q = query(memoryRef, where('key', '==', key), orderBy('createdAt', 'desc'), limit(1));
 
   if (options.category) {
@@ -190,7 +190,7 @@ export async function searchMemories(
     limit?: number;
   } = {}
 ): Promise<MemoryEntry[]> {
-  const memoryRef = collection(db, COLLECTIONS.MEMORY);
+  const memoryRef = collection(db(), COLLECTIONS.MEMORY);
   let constraints: any[] = [orderBy('createdAt', 'desc')];
 
   if (options.category) {
@@ -225,7 +225,7 @@ export async function searchMemories(
  * Forget (delete) a memory
  */
 export async function forget(id: string): Promise<void> {
-  const memoryRef = doc(db, COLLECTIONS.MEMORY, id);
+  const memoryRef = doc(db(), COLLECTIONS.MEMORY, id);
   await deleteDoc(memoryRef);
 }
 
@@ -241,7 +241,7 @@ export async function getOrCreateSession(
   platform: SessionContext['platform'],
   userId?: string
 ): Promise<SessionContext> {
-  const sessionRef = doc(db, COLLECTIONS.SESSIONS, sessionId);
+  const sessionRef = doc(db(), COLLECTIONS.SESSIONS, sessionId);
   const sessionSnap = await getDoc(sessionRef);
 
   if (sessionSnap.exists()) {
@@ -287,7 +287,7 @@ export async function addSessionMessage(
   role: 'user' | 'assistant',
   content: string
 ): Promise<void> {
-  const sessionRef = doc(db, COLLECTIONS.SESSIONS, sessionId);
+  const sessionRef = doc(db(), COLLECTIONS.SESSIONS, sessionId);
   const sessionSnap = await getDoc(sessionRef);
 
   if (!sessionSnap.exists()) return;
@@ -315,7 +315,7 @@ export async function updateSessionContext(
   sessionId: string,
   context: Record<string, any>
 ): Promise<void> {
-  const sessionRef = doc(db, COLLECTIONS.SESSIONS, sessionId);
+  const sessionRef = doc(db(), COLLECTIONS.SESSIONS, sessionId);
   const sessionSnap = await getDoc(sessionRef);
 
   if (!sessionSnap.exists()) return;
@@ -338,7 +338,7 @@ export async function savePropertyMemory(
   propertyId: string,
   data: Partial<PropertyMemory>
 ): Promise<void> {
-  const propRef = doc(db, COLLECTIONS.PROPERTIES, propertyId);
+  const propRef = doc(db(), COLLECTIONS.PROPERTIES, propertyId);
   const propSnap = await getDoc(propRef);
 
   if (propSnap.exists()) {
@@ -360,7 +360,7 @@ export async function savePropertyMemory(
  * Get property memory
  */
 export async function getPropertyMemory(propertyId: string): Promise<PropertyMemory | null> {
-  const propRef = doc(db, COLLECTIONS.PROPERTIES, propertyId);
+  const propRef = doc(db(), COLLECTIONS.PROPERTIES, propertyId);
   const propSnap = await getDoc(propRef);
 
   if (!propSnap.exists()) return null;
@@ -397,7 +397,7 @@ export async function logAIInteraction(
     helpful?: boolean;
   } = {}
 ): Promise<void> {
-  const logRef = doc(db, COLLECTIONS.AI_LOGS, `${sessionId}_${Date.now()}`);
+  const logRef = doc(db(), COLLECTIONS.AI_LOGS, `${sessionId}_${Date.now()}`);
 
   await setDoc(logRef, {
     sessionId,
@@ -420,7 +420,7 @@ export async function syncCrossPlatform(
   platform: 'web' | 'mobile' | 'desktop',
   context: Record<string, any>
 ): Promise<void> {
-  const syncRef = doc(db, COLLECTIONS.CONTEXT, userId);
+  const syncRef = doc(db(), COLLECTIONS.CONTEXT, userId);
   const syncSnap = await getDoc(syncRef);
 
   const platformKey = `${platform}Context`;
@@ -449,7 +449,7 @@ export async function getSyncedContext(userId: string): Promise<{
   mobileContext?: Record<string, any>;
   desktopContext?: Record<string, any>;
 } | null> {
-  const syncRef = doc(db, COLLECTIONS.CONTEXT, userId);
+  const syncRef = doc(db(), COLLECTIONS.CONTEXT, userId);
   const syncSnap = await getDoc(syncRef);
 
   if (!syncSnap.exists()) return null;

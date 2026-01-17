@@ -6,6 +6,7 @@ import Dashboard from './screens/Dashboard';
 import Properties from './screens/Properties';
 import Guests from './screens/Guests';
 import CleaningSchedule from './screens/CleaningSchedule';
+import Cleaners from './screens/Cleaners';
 import Finance from './screens/Finance';
 import SmartLocks from './screens/SmartLocks';
 import Settings from './screens/Settings';
@@ -25,6 +26,7 @@ export default function App() {
         <Route path="/properties" element={<Properties />} />
         <Route path="/guests" element={<Guests />} />
         <Route path="/cleaning" element={<CleaningSchedule />} />
+        <Route path="/cleaners" element={<Cleaners />} />
         <Route path="/schedule" element={<CleaningSchedule />} />
         <Route path="/finance" element={<Finance />} />
         <Route path="/locks" element={<SmartLocks />} />

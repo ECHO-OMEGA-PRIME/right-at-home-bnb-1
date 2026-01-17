@@ -1,0 +1,26 @@
+{
+  "name": "Right at Home BnB",
+  "short_name": "RAH BnB",
+  "description": "Premium vacation rentals in Midland, Texas. Experience Texas hospitality at its finest.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0505",
+  "theme_color": "#500000",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["travel", "lifestyle"],
+  "lang": "en-US"
+}

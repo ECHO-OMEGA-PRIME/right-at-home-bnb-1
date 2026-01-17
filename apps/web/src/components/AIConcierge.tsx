@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { 
+import {
   Mic, MicOff, Send, MapPin, Utensils, Wine, Calendar,
   Clock, Key, Wifi, Home, MessageCircle, Volume2, VolumeX,
-  ChevronRight, Star, Navigation, Coffee, Music, Sun
+  ChevronRight, Star, Navigation, Coffee, Music, Sun, Loader2
 } from 'lucide-react';
 
 interface Message {
@@ -13,6 +13,7 @@ interface Message {
   content: string;
   timestamp: Date;
   category?: string;
+  isLoading?: boolean;
 }
 
 interface LocalPlace {
@@ -92,8 +93,10 @@ export default function AIConcierge() {
   const [inputValue, setInputValue] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [showPlaces, setShowPlaces] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -178,37 +181,107 @@ export default function AIConcierge() {
     };
   };
 
-  const sendMessage = () => {
-    if (!inputValue.trim()) return;
+  const sendMessage = async () => {
+    if (!inputValue.trim() || isLoading) return;
 
+    const userQuery = inputValue.trim();
     const userMessage: Message = {
       id: messages.length + 1,
       role: 'user',
-      content: inputValue,
+      content: userQuery,
       timestamp: new Date()
     };
 
     setMessages(prev => [...prev, userMessage]);
     setInputValue('');
+    setIsLoading(true);
 
-    // Process and respond
-    setTimeout(() => {
-      const { response, category, places } = processQuery(inputValue);
-      
-      const assistantMessage: Message = {
-        id: messages.length + 2,
-        role: 'assistant',
-        content: response,
-        timestamp: new Date(),
-        category
-      };
+    // Add loading message
+    const loadingMessage: Message = {
+      id: messages.length + 2,
+      role: 'assistant',
+      content: '',
+      timestamp: new Date(),
+      isLoading: true
+    };
+    setMessages(prev => [...prev, loadingMessage]);
 
-      setMessages(prev => [...prev, assistantMessage]);
-      
+    // Abort any previous request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+
+    try {
+      const response = await fetch('/api/concierge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: userQuery,
+          stream: false
+        }),
+        signal: abortControllerRef.current.signal
+      });
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      // Remove loading message and add real response
+      setMessages(prev => {
+        const filtered = prev.filter(m => !m.isLoading);
+        return [...filtered, {
+          id: filtered.length + 1,
+          role: 'assistant',
+          content: data.response || data.message || "I'm here to help! What would you like to know?",
+          timestamp: new Date(),
+          category: data.category || detectCategory(userQuery)
+        }];
+      });
+
+      // Show places panel if relevant category
+      const category = data.category || detectCategory(userQuery);
+      if (['dining', 'nightlife', 'attractions'].includes(category)) {
+        setShowPlaces(category === 'dining' ? 'restaurants' : category === 'nightlife' ? 'bars' : 'attractions');
+      }
+
+    } catch (error: any) {
+      if (error.name === 'AbortError') return;
+
+      console.error('Concierge API error:', error);
+
+      // Fallback to local processing if API fails
+      const { response, category, places } = processQuery(userQuery);
+
+      setMessages(prev => {
+        const filtered = prev.filter(m => !m.isLoading);
+        return [...filtered, {
+          id: filtered.length + 1,
+          role: 'assistant',
+          content: response,
+          timestamp: new Date(),
+          category
+        }];
+      });
+
       if (places) {
         setShowPlaces(category);
       }
-    }, 500);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Detect category from query for local fallback
+  const detectCategory = (query: string): string => {
+    const q = query.toLowerCase();
+    if (q.includes('restaurant') || q.includes('eat') || q.includes('food') || q.includes('dinner')) return 'dining';
+    if (q.includes('bar') || q.includes('wine') || q.includes('drink')) return 'nightlife';
+    if (q.includes('attraction') || q.includes('museum') || q.includes('visit')) return 'attractions';
+    if (q.includes('wifi') || q.includes('checkout') || q.includes('thermostat')) return 'property';
+    return 'general';
   };
 
   const handleQuickAction = (action: string) => {
@@ -247,12 +320,21 @@ export default function AIConcierge() {
                     ? 'bg-maroon-800 text-white rounded-br-md'
                     : 'bg-cream-100 text-charcoal-800 rounded-bl-md'
                 }`}>
-                  <p className="whitespace-pre-line">{msg.content}</p>
-                  <p className={`text-xs mt-2 ${
-                    msg.role === 'user' ? 'text-maroon-200' : 'text-charcoal-400'
-                  }`}>
-                    {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </p>
+                  {msg.isLoading ? (
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin text-maroon-600" />
+                      <span className="text-charcoal-500">Thinking...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="whitespace-pre-line">{msg.content}</p>
+                      <p className={`text-xs mt-2 ${
+                        msg.role === 'user' ? 'text-maroon-200' : 'text-charcoal-400'
+                      }`}>
+                        {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </>
+                  )}
                 </div>
               </div>
             ))}
@@ -282,9 +364,14 @@ export default function AIConcierge() {
               />
               <button
                 onClick={sendMessage}
-                className="btn-primary p-3"
+                disabled={isLoading || !inputValue.trim()}
+                className="btn-primary p-3 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Send className="w-5 h-5" />
+                {isLoading ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <Send className="w-5 h-5" />
+                )}
               </button>
             </div>
           </div>

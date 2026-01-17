@@ -28,6 +28,7 @@
     "lint:fix": "eslint src --ext .ts,.tsx --fix"
   },
   "dependencies": {
+    "@rightathome/shared": "workspace:*",
     "@tanstack/react-query": "^5.17.0",
     "axios": "^1.6.5",
     "clsx": "^2.1.0",

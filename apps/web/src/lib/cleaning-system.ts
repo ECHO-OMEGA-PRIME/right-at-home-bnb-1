@@ -283,7 +283,7 @@ export async function createCleaningReport(
   bookingId?: string
 ): Promise<string> {
   const id = `clean_${propertyId}_${Date.now()}`;
-  const reportRef = doc(db, COLLECTIONS.CLEANING_REPORTS, id);
+  const reportRef = doc(db(), COLLECTIONS.CLEANING_REPORTS, id);
 
   // Initialize checklist with all items uncompleted
   const checklist: CompletedChecklistItem[] = masterChecklist.map(item => ({
@@ -311,7 +311,7 @@ export async function createCleaningReport(
 }
 
 export async function startCleaningJob(reportId: string): Promise<void> {
-  const reportRef = doc(db, COLLECTIONS.CLEANING_REPORTS, reportId);
+  const reportRef = doc(db(), COLLECTIONS.CLEANING_REPORTS, reportId);
   await updateDoc(reportRef, {
     status: 'in_progress',
     startedAt: serverTimestamp(),
@@ -325,7 +325,7 @@ export async function updateChecklistItem(
   photoUrl?: string,
   notes?: string
 ): Promise<void> {
-  const reportRef = doc(db, COLLECTIONS.CLEANING_REPORTS, reportId);
+  const reportRef = doc(db(), COLLECTIONS.CLEANING_REPORTS, reportId);
   const reportSnap = await getDoc(reportRef);
 
   if (!reportSnap.exists()) return;
@@ -350,7 +350,7 @@ export async function addCleaningIssue(
   reportId: string,
   issue: Omit<CleaningIssue, 'id' | 'reportedAt' | 'status'>
 ): Promise<string> {
-  const reportRef = doc(db, COLLECTIONS.CLEANING_REPORTS, reportId);
+  const reportRef = doc(db(), COLLECTIONS.CLEANING_REPORTS, reportId);
   const reportSnap = await getDoc(reportRef);
 
   if (!reportSnap.exists()) throw new Error('Report not found');
@@ -376,7 +376,7 @@ export async function addVerificationPhoto(
   area: string,
   photoUrl: string
 ): Promise<void> {
-  const reportRef = doc(db, COLLECTIONS.CLEANING_REPORTS, reportId);
+  const reportRef = doc(db(), COLLECTIONS.CLEANING_REPORTS, reportId);
   const reportSnap = await getDoc(reportRef);
 
   if (!reportSnap.exists()) return;
@@ -397,7 +397,7 @@ export async function completeCleaningJob(
   suppliesUsed?: string[],
   suppliesNeeded?: string[]
 ): Promise<void> {
-  const reportRef = doc(db, COLLECTIONS.CLEANING_REPORTS, reportId);
+  const reportRef = doc(db(), COLLECTIONS.CLEANING_REPORTS, reportId);
   const reportSnap = await getDoc(reportRef);
 
   if (!reportSnap.exists()) return;
@@ -422,7 +422,7 @@ export async function completeCleaningJob(
 }
 
 export async function getCleaningReport(reportId: string): Promise<CleaningReport | null> {
-  const reportRef = doc(db, COLLECTIONS.CLEANING_REPORTS, reportId);
+  const reportRef = doc(db(), COLLECTIONS.CLEANING_REPORTS, reportId);
   const reportSnap = await getDoc(reportRef);
 
   if (!reportSnap.exists()) return null;
@@ -438,7 +438,7 @@ export async function getCleaningReport(reportId: string): Promise<CleaningRepor
 }
 
 export async function getCleanerReports(cleanerId: string): Promise<CleaningReport[]> {
-  const reportsRef = collection(db, COLLECTIONS.CLEANING_REPORTS);
+  const reportsRef = collection(db(), COLLECTIONS.CLEANING_REPORTS);
   const q = query(
     reportsRef,
     where('cleanerId', '==', cleanerId),
@@ -456,7 +456,7 @@ export async function getCleanerReports(cleanerId: string): Promise<CleaningRepo
 }
 
 export async function getPropertyReports(propertyId: string): Promise<CleaningReport[]> {
-  const reportsRef = collection(db, COLLECTIONS.CLEANING_REPORTS);
+  const reportsRef = collection(db(), COLLECTIONS.CLEANING_REPORTS);
   const q = query(
     reportsRef,
     where('propertyId', '==', propertyId),
@@ -554,7 +554,7 @@ export async function createServiceRequest(
   createdBy: string
 ): Promise<string> {
   const id = `svc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  const requestRef = doc(db, SERVICE_REQUESTS_COLLECTION, id);
+  const requestRef = doc(db(), SERVICE_REQUESTS_COLLECTION, id);
 
   const request: Omit<ServiceRequest, 'id' | 'createdAt'> & { createdAt: any } = {
     reportId,
@@ -603,7 +603,7 @@ function getServiceNotificationTitle(type: ServiceRequest['type'], urgency: Serv
 
 export async function createOwnerNotification(data: Omit<OwnerNotification, 'id' | 'createdAt'>): Promise<string> {
   const id = `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  const notifRef = doc(db, NOTIFICATIONS_COLLECTION, id);
+  const notifRef = doc(db(), NOTIFICATIONS_COLLECTION, id);
 
   await setDoc(notifRef, {
     ...data,
@@ -619,7 +619,7 @@ export async function createOwnerNotification(data: Omit<OwnerNotification, 'id'
 }
 
 export async function getOwnerNotifications(unreadOnly: boolean = false): Promise<OwnerNotification[]> {
-  const notifsRef = collection(db, NOTIFICATIONS_COLLECTION);
+  const notifsRef = collection(db(), NOTIFICATIONS_COLLECTION);
   let q = query(notifsRef, orderBy('createdAt', 'desc'));
 
   if (unreadOnly) {
@@ -637,7 +637,7 @@ export async function getOwnerNotifications(unreadOnly: boolean = false): Promis
 }
 
 export async function markNotificationRead(notificationId: string): Promise<void> {
-  const notifRef = doc(db, NOTIFICATIONS_COLLECTION, notificationId);
+  const notifRef = doc(db(), NOTIFICATIONS_COLLECTION, notificationId);
   await updateDoc(notifRef, {
     readAt: serverTimestamp(),
   });
@@ -648,7 +648,7 @@ export async function takeNotificationAction(
   action: OwnerNotification['actionTaken'],
   serviceProviderId?: string
 ): Promise<void> {
-  const notifRef = doc(db, NOTIFICATIONS_COLLECTION, notificationId);
+  const notifRef = doc(db(), NOTIFICATIONS_COLLECTION, notificationId);
   const notifSnap = await getDoc(notifRef);
 
   if (!notifSnap.exists()) return;
@@ -662,7 +662,7 @@ export async function takeNotificationAction(
   // Update the service request status
   const serviceRequestId = notifSnap.data().serviceRequestId;
   if (serviceRequestId && action !== 'dismissed') {
-    const requestRef = doc(db, SERVICE_REQUESTS_COLLECTION, serviceRequestId);
+    const requestRef = doc(db(), SERVICE_REQUESTS_COLLECTION, serviceRequestId);
     await updateDoc(requestRef, {
       status: 'notified',
       assignedTo: serviceProviderId,
@@ -675,7 +675,7 @@ export async function submitCompletionQuestions(
   questions: CompletionQuestions,
   propertyAddress: string
 ): Promise<string[]> {
-  const reportRef = doc(db, COLLECTIONS.CLEANING_REPORTS, reportId);
+  const reportRef = doc(db(), COLLECTIONS.CLEANING_REPORTS, reportId);
   const reportSnap = await getDoc(reportRef);
 
   if (!reportSnap.exists()) throw new Error('Report not found');

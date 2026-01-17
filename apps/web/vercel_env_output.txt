@@ -1,0 +1,13 @@
+Vercel CLI 50.0.1
+Retrieving project…
+> Environment Variables found for bobcwiliams-projects/web [139ms]
+
+ name                               value               environments        created    
+ NEXT_PUBLIC_FIREBASE_APP_ID        Encrypted           Production          2d ago     
+ NEXT_PUBLIC_FIREBASE_API_KEY       Encrypted           Production          2d ago     
+ NEXT_PUBLIC_API_URL                Encrypted           Production          2d ago     
+
+Common next commands:
+- `vercel env add`
+- `vercel env rm`
+- `vercel env pull`

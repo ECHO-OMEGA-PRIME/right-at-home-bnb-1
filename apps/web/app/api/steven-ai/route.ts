@@ -29,7 +29,7 @@ const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
 
 // ElevenLabs v3 Alpha Configuration - Steven's Voice
 const STEVEN_VOICE_CONFIG = {
-  voice_id: process.env.ELEVENLABS_STEVEN_VOICE_ID || '21m00Tcm4TlvDq8ikWAM', // Professional male voice
+  voice_id: process.env.ELEVENLABS_STEVEN_VOICE_ID || 'keDMh3sQlEXKM4EQxvvi', // ECHO Prime voice (until Steven clone ready)
   model_id: 'eleven_v3_alpha', // Latest v3 Alpha model with emotions
   name: 'Steven',
 };

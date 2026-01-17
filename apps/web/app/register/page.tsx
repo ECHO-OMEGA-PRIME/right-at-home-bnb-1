@@ -12,9 +12,8 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Eye, EyeOff, Lock, Mail, ArrowRight, Home, User, Phone } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { auth, signInWithGoogle, signInWithApple } from '@/lib/auth';
+import { getAuthInstance, signInWithGoogle, signInWithApple, db } from '@/lib/auth';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { db } from '@/lib/auth';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 type AccountType = 'guest' | 'cleaner' | 'yard_crew' | 'handyman';
@@ -66,7 +65,7 @@ export default function RegisterPage() {
     try {
       // Create Firebase Auth user
       const userCredential = await createUserWithEmailAndPassword(
-        auth,
+        getAuthInstance(),
         formData.email,
         formData.password
       );
@@ -80,7 +79,7 @@ export default function RegisterPage() {
       });
 
       // Create user document in Firestore
-      await setDoc(doc(db, 'users', user.uid), {
+      await setDoc(doc(db(), 'users', user.uid), {
         uid: user.uid,
         email: formData.email,
         firstName: formData.firstName,
@@ -96,7 +95,7 @@ export default function RegisterPage() {
 
       // If guest, also create entry in steven_guests for AI memory
       if (accountType === 'guest') {
-        await setDoc(doc(db, 'steven_guests', user.uid), {
+        await setDoc(doc(db(), 'steven_guests', user.uid), {
           guestId: user.uid,
           guestName: `${formData.firstName} ${formData.lastName}`,
           email: formData.email,

@@ -1,0 +1,66 @@
+# Right at Home BnB - Robots.txt
+# Premium Vacation Rentals in Midland, Texas
+# Owner: Steven Palma
+
+# Allow all crawlers
+User-agent: *
+Allow: /
+
+# Sitemap location
+Sitemap: https://rightathomebnb.com/sitemap.xml
+
+# Allow important pages
+Allow: /properties
+Allow: /properties/*
+Allow: /about
+Allow: /contact
+Allow: /privacy-policy
+Allow: /terms-of-service
+
+# Disallow internal/admin pages
+Disallow: /dashboard
+Disallow: /dashboard/*
+Disallow: /api/
+Disallow: /admin
+Disallow: /admin/*
+Disallow: /settings
+Disallow: /settings/*
+Disallow: /login
+Disallow: /register
+Disallow: /cleaners
+Disallow: /cleaners/*
+Disallow: /finance
+Disallow: /finance/*
+Disallow: /messages
+Disallow: /messages/*
+Disallow: /bookings
+Disallow: /bookings/*
+Disallow: /guests
+Disallow: /guests/*
+Disallow: /locks
+Disallow: /locks/*
+Disallow: /smart-home
+Disallow: /smart-home/*
+Disallow: /cleaning
+Disallow: /cleaning/*
+Disallow: /vrbo
+Disallow: /vrbo/*
+Disallow: /notifications
+Disallow: /notifications/*
+
+# Disallow private content
+Disallow: /*.json$
+Disallow: /*?*
+
+# Crawl-delay for politeness
+Crawl-delay: 1
+
+# Google specific
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 0
+
+# Bing specific
+User-agent: Bingbot
+Allow: /
+Crawl-delay: 1

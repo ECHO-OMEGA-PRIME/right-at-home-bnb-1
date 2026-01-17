@@ -95,7 +95,7 @@ export async function getOrCreateGuestMemory(
   guestName?: string
 ): Promise<GuestMemory> {
   try {
-    const guestRef = doc(db, COLLECTIONS.GUESTS, guestId);
+    const guestRef = doc(db(), COLLECTIONS.GUESTS, guestId);
     const guestSnap = await getDoc(guestRef);
 
     if (guestSnap.exists()) {
@@ -173,7 +173,7 @@ export async function addConversationEntry(
   entry: ConversationEntry
 ): Promise<void> {
   try {
-    const guestRef = doc(db, COLLECTIONS.GUESTS, guestId);
+    const guestRef = doc(db(), COLLECTIONS.GUESTS, guestId);
     const guestSnap = await getDoc(guestRef);
 
     if (!guestSnap.exists()) {
@@ -194,7 +194,7 @@ export async function addConversationEntry(
 
     // Also store in conversations collection for analytics
     const convRef = doc(
-      db,
+      db(),
       COLLECTIONS.CONVERSATIONS,
       `${guestId}_${Date.now()}`
     );
@@ -216,7 +216,7 @@ export async function updateGuestPreferences(
   preferences: Partial<GuestPreferences>
 ): Promise<void> {
   try {
-    const guestRef = doc(db, COLLECTIONS.GUESTS, guestId);
+    const guestRef = doc(db(), COLLECTIONS.GUESTS, guestId);
     const guestSnap = await getDoc(guestRef);
 
     if (!guestSnap.exists()) return;
@@ -239,7 +239,7 @@ export async function addStayHistory(
   stay: StayHistory
 ): Promise<void> {
   try {
-    const guestRef = doc(db, COLLECTIONS.GUESTS, guestId);
+    const guestRef = doc(db(), COLLECTIONS.GUESTS, guestId);
     const guestSnap = await getDoc(guestRef);
 
     if (!guestSnap.exists()) return;
@@ -272,7 +272,7 @@ export async function addGuestTags(
   newTags: string[]
 ): Promise<void> {
   try {
-    const guestRef = doc(db, COLLECTIONS.GUESTS, guestId);
+    const guestRef = doc(db(), COLLECTIONS.GUESTS, guestId);
     const guestSnap = await getDoc(guestRef);
 
     if (!guestSnap.exists()) return;
@@ -297,7 +297,7 @@ export async function searchGuests(
   maxResults: number = 10
 ): Promise<GuestMemory[]> {
   try {
-    const guestsRef = collection(db, COLLECTIONS.GUESTS);
+    const guestsRef = collection(db(), COLLECTIONS.GUESTS);
     const q = query(
       guestsRef,
       orderBy('lastInteraction', 'desc'),
@@ -333,7 +333,7 @@ export async function getRecentConversations(
   count: number = 20
 ): Promise<ConversationEntry[]> {
   try {
-    const guestRef = doc(db, COLLECTIONS.GUESTS, guestId);
+    const guestRef = doc(db(), COLLECTIONS.GUESTS, guestId);
     const guestSnap = await getDoc(guestRef);
 
     if (!guestSnap.exists()) return [];
@@ -453,7 +453,7 @@ export async function getOrCreateSession(
   startedAt: Date;
 }> {
   try {
-    const sessionRef = doc(db, COLLECTIONS.SESSIONS, sessionId);
+    const sessionRef = doc(db(), COLLECTIONS.SESSIONS, sessionId);
     const sessionSnap = await getDoc(sessionRef);
 
     if (sessionSnap.exists()) {
@@ -503,7 +503,7 @@ export async function addSessionMessage(
   entry: ConversationEntry
 ): Promise<void> {
   try {
-    const sessionRef = doc(db, COLLECTIONS.SESSIONS, sessionId);
+    const sessionRef = doc(db(), COLLECTIONS.SESSIONS, sessionId);
     const sessionSnap = await getDoc(sessionRef);
 
     if (!sessionSnap.exists()) return;
