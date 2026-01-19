@@ -244,6 +244,129 @@ interface ConversationMessage {
 // Session storage (in production, use Redis or database)
 const sessions = new Map<string, ConversationMessage[]>();
 
+// ===========================================
+// RESPONSE CACHE - Reduces API costs
+// ===========================================
+interface CachedResponse {
+  response: string;
+  timestamp: number;
+  hits: number;
+}
+
+// Cache storage (in production, use Redis for persistence)
+const responseCache = new Map<string, CachedResponse>();
+
+// Cache configuration
+const CACHE_CONFIG = {
+  // TTL in milliseconds
+  ttl: {
+    general: 30 * 60 * 1000,    // 30 minutes for general queries
+    property: 60 * 60 * 1000,   // 1 hour for property info (rarely changes)
+    dining: 24 * 60 * 60 * 1000, // 24 hours for restaurant info
+    wifi: 24 * 60 * 60 * 1000,  // 24 hours for wifi/codes
+    rules: 24 * 60 * 60 * 1000, // 24 hours for rules
+  },
+  // Intents that should NEVER be cached (time-sensitive)
+  noCacheIntents: ['events', 'emergency', 'checkout', 'checkin', 'contact'],
+  // Max cache entries before cleanup
+  maxEntries: 500,
+  // Clean up entries older than this (7 days)
+  maxAge: 7 * 24 * 60 * 60 * 1000,
+};
+
+/**
+ * Generate cache key from query parameters
+ */
+function generateCacheKey(query: string, propertyId?: string, guestType?: string): string {
+  // Normalize query: lowercase, trim, remove extra spaces
+  const normalizedQuery = query.toLowerCase().trim().replace(/\s+/g, ' ');
+  const key = `${normalizedQuery}|${propertyId || 'none'}|${guestType || 'general'}`;
+  return key;
+}
+
+/**
+ * Get cached response if valid
+ */
+function getCachedResponse(key: string, intent: string): CachedResponse | null {
+  // Never cache time-sensitive intents
+  if (CACHE_CONFIG.noCacheIntents.includes(intent)) {
+    return null;
+  }
+
+  const cached = responseCache.get(key);
+  if (!cached) return null;
+
+  // Determine TTL based on intent
+  const ttl = CACHE_CONFIG.ttl[intent as keyof typeof CACHE_CONFIG.ttl] || CACHE_CONFIG.ttl.general;
+  const age = Date.now() - cached.timestamp;
+
+  // Check if expired
+  if (age > ttl) {
+    responseCache.delete(key);
+    return null;
+  }
+
+  // Increment hit counter
+  cached.hits++;
+  return cached;
+}
+
+/**
+ * Store response in cache
+ */
+function setCachedResponse(key: string, response: string, intent: string): void {
+  // Never cache time-sensitive intents
+  if (CACHE_CONFIG.noCacheIntents.includes(intent)) {
+    return;
+  }
+
+  // Cleanup if cache is too large
+  if (responseCache.size >= CACHE_CONFIG.maxEntries) {
+    cleanupCache();
+  }
+
+  responseCache.set(key, {
+    response,
+    timestamp: Date.now(),
+    hits: 1,
+  });
+}
+
+/**
+ * Clean up old cache entries
+ */
+function cleanupCache(): void {
+  const now = Date.now();
+  const entriesToDelete: string[] = [];
+
+  // Find expired or old entries using Array.from for TypeScript compatibility
+  const allEntries = Array.from(responseCache.entries());
+  for (let i = 0; i < allEntries.length; i++) {
+    const [key, value] = allEntries[i];
+    if (now - value.timestamp > CACHE_CONFIG.maxAge) {
+      entriesToDelete.push(key);
+    }
+  }
+
+  // If not enough to delete, remove least-hit entries
+  if (entriesToDelete.length < 50) {
+    const sortedEntries = allEntries
+      .sort((a, b) => a[1].hits - b[1].hits)
+      .slice(0, 100);
+
+    for (let i = 0; i < sortedEntries.length; i++) {
+      entriesToDelete.push(sortedEntries[i][0]);
+    }
+  }
+
+  // Delete entries
+  for (let i = 0; i < entriesToDelete.length; i++) {
+    responseCache.delete(entriesToDelete[i]);
+  }
+
+  console.log(`[Cache] Cleaned up ${entriesToDelete.length} entries. Remaining: ${responseCache.size}`);
+}
+
 /**
  * POST /api/concierge
  * Main chat endpoint with optional streaming and voice
@@ -285,13 +408,31 @@ export async function POST(request: NextRequest) {
     // Detect intent for response routing
     const intent = detectIntent(query);
 
-    // Handle streaming response
+    // Handle streaming response (no caching for streams)
     if (stream && !isVoiceRequest) {
       return handleStreamingResponse(history, sessionId, intent, guestType);
     }
 
-    // Get AI response
-    const aiResponse = await callLLM(history);
+    // ===========================================
+    // CHECK CACHE FIRST - Reduces API costs
+    // ===========================================
+    const cacheKey = generateCacheKey(query, propertyId, guestType);
+    const cachedResponse = getCachedResponse(cacheKey, intent);
+
+    let aiResponse: string;
+
+    if (cachedResponse) {
+      // Cache hit - use cached response
+      aiResponse = cachedResponse.response;
+      console.log(`[Cache HIT] Key: ${cacheKey.substring(0, 50)}... Hits: ${cachedResponse.hits}`);
+    } else {
+      // Cache miss - call LLM
+      aiResponse = await callLLM(history);
+
+      // Store in cache for future requests
+      setCachedResponse(cacheKey, aiResponse, intent);
+      console.log(`[Cache MISS] Key: ${cacheKey.substring(0, 50)}... Stored.`);
+    }
 
     // Add assistant response to history
     history.push({ role: 'assistant', content: aiResponse });
@@ -644,6 +785,7 @@ function detectIntent(query: string): string {
   if (q.includes('rule') || q.includes('policy') || q.includes('allow')) return 'rules';
   if (q.includes('property') || q.includes('house') || q.includes('listing')) return 'property_info';
   if (q.includes('contact') || q.includes('steven') || q.includes('host')) return 'contact';
+  if (q.includes('concert') || q.includes('music') || q.includes('live') || q.includes('event') || q.includes('show') || q.includes('band') || q.includes('entertainment') || q.includes('weekend') || q.includes('tonight')) return 'events';
 
   return 'general';
 }
@@ -784,31 +926,129 @@ Hours: 8am-8pm daily
 **Your Host Steven:** ${EMERGENCY_INFO.host.phone}`;
   }
 
-  return `I'd be happy to help with that! For immediate assistance, please contact Steven at ${EMERGENCY_INFO.host.phone}.
+  // Local events, concerts, live music
+  if (q.includes('concert') || q.includes('music') || q.includes('live') || q.includes('event') || q.includes('show') || q.includes('band') || q.includes('entertainment') || q.includes('weekend') || q.includes('tonight')) {
+    return `Here's what's happening in Midland/Odessa this weekend:
 
-I can help with:
-- Property amenities (pools, hot tubs, WiFi)
-- Local restaurants and bars
-- Directions and attractions
-- Checkout procedures
-- Hardware stores and work supplies
-- Emergency contacts
+**LIVE MUSIC & ENTERTAINMENT:**
 
-What would you like to know?`;
+🎵 **The Blue Door** - 123 E Wall St, Midland
+Live bands Friday & Saturday nights starting 8pm
+Craft cocktails with live music - great vibe!
+
+🍺 **Tall City Brewing** - 203 E Texas Ave, Midland
+Live music most weekends on the patio
+Local craft beer + food trucks
+
+🎸 **La Hacienda Event Center** - 4 E Industrial Loop, Midland
+Check Facebook for upcoming concerts & events
+Large venue for bigger acts
+
+🎤 **Wagner Noël Performing Arts Center** - 1310 N FM 1788, Midland
+Broadway shows, concerts, comedy acts
+Visit wagnernoel.com for current schedule
+
+**ODESSA VENUES:**
+
+🎭 **Ector Theatre** - 500 N Texas Ave, Odessa
+Historic venue with concerts & events
+Check ectortheatre.com for schedule
+
+🎵 **The Barn Door** - 2140 N Grant Ave, Odessa
+Country & western live music
+
+**CHECK THESE FOR CURRENT EVENTS:**
+- Facebook: "Midland TX Events"
+- Midland Reporter-Telegram events section
+- VisitMidlandTexas.com/events
+
+Would you like restaurant recommendations near any of these venues?`;
+  }
+
+  return `Here's what I can help you with:
+
+**DINING & NIGHTLIFE:**
+- Restaurant recommendations
+- Bars and live music venues
+- Late-night food options
+
+**YOUR STAY:**
+- WiFi password and property info
+- Check-in/check-out times
+- Pool and hot tub properties
+
+**LOCAL INFO:**
+- Attractions and events
+- Hardware stores (early hours)
+- Medical and emergency contacts
+
+**WORK CREWS:**
+- Early breakfast spots
+- Laundromats
+- 24-hour food options
+
+What would you like to know about?`;
 }
 
 /**
  * GET /api/concierge
  * API status and capabilities
+ * GET /api/concierge?stats=true - Cache statistics
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
+  // Check if cache stats are requested
+  const showStats = request.nextUrl.searchParams.get('stats') === 'true';
+
+  if (showStats) {
+    // Calculate cache statistics
+    let totalHits = 0;
+    let oldestEntry = Date.now();
+    let newestEntry = 0;
+
+    const cacheEntries = Array.from(responseCache.values());
+    for (let i = 0; i < cacheEntries.length; i++) {
+      const cached = cacheEntries[i];
+      totalHits += cached.hits;
+      if (cached.timestamp < oldestEntry) oldestEntry = cached.timestamp;
+      if (cached.timestamp > newestEntry) newestEntry = cached.timestamp;
+    }
+
+    const cacheSize = responseCache.size;
+    const avgHitsPerEntry = cacheSize > 0 ? (totalHits / cacheSize).toFixed(2) : 0;
+
+    return NextResponse.json({
+      cache: {
+        status: 'active',
+        entries: cacheSize,
+        maxEntries: CACHE_CONFIG.maxEntries,
+        totalHits,
+        avgHitsPerEntry,
+        oldestEntryAge: cacheSize > 0 ? `${Math.round((Date.now() - oldestEntry) / 60000)} minutes` : 'N/A',
+        newestEntryAge: cacheSize > 0 ? `${Math.round((Date.now() - newestEntry) / 60000)} minutes` : 'N/A',
+        ttlConfig: {
+          general: '30 minutes',
+          property: '1 hour',
+          dining: '24 hours',
+          wifi: '24 hours',
+          rules: '24 hours',
+        },
+        noCacheIntents: CACHE_CONFIG.noCacheIntents,
+      },
+      estimatedSavings: {
+        apiCallsAvoided: totalHits,
+        note: 'Each cache hit saves one LLM API call',
+      },
+    });
+  }
+
   return NextResponse.json({
     status: 'AI Concierge API is running',
-    version: '3.0.0',
+    version: '3.1.0',
     endpoints: {
       'POST /api/concierge': 'Chat with AI concierge',
       'POST /api/concierge?voice=true': 'Get voice response with audio',
       'POST /api/concierge (stream: true)': 'Streaming chat response (SSE)',
+      'GET /api/concierge?stats=true': 'View cache statistics',
     },
     capabilities: [
       'Property information and amenities',
@@ -822,10 +1062,12 @@ export async function GET() {
       'Work crew resources',
       'Voice responses (ElevenLabs)',
       'Streaming responses (SSE)',
+      'Response caching for cost reduction',
     ],
     guestTypes: ['work_crew', 'family', 'couple', 'business', 'general'],
     properties: Object.keys(PROPERTIES),
     voiceOptions: Object.keys(VOICE_CONFIG),
     contact: EMERGENCY_INFO.host,
+    cacheEnabled: true,
   });
 }

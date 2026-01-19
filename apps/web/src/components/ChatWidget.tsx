@@ -80,90 +80,99 @@ export default function ChatWidget() {
     }
   }, [messages, isOpen, isMinimized]);
 
-  const processQuery = (query: string): { response: string; places?: LocalPlace[] } => {
+  /**
+   * Call the AI Concierge API for intelligent responses
+   */
+  const callConciergeAPI = async (query: string): Promise<string> => {
+    try {
+      const response = await fetch('/api/concierge', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query,
+          guestType: 'general',
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.response || "I'm here to help! What would you like to know?";
+    } catch (error) {
+      console.error('Concierge API error:', error);
+      // Fallback to local processing if API fails
+      return processQueryLocal(query);
+    }
+  };
+
+  /**
+   * Local fallback processing (used when API is unavailable)
+   */
+  const processQueryLocal = (query: string): string => {
     const q = query.toLowerCase();
 
     if (q.includes('restaurant') || q.includes('eat') || q.includes('food') || q.includes('dinner') || q.includes('lunch')) {
-      return {
-        response: "Here are my top restaurant picks! I especially recommend Cork & Pig Tavern for their amazing atmosphere. 🍽️",
-        places: MIDLAND_PLACES.restaurants
-      };
+      const places = MIDLAND_PLACES.restaurants;
+      return "Here are my top restaurant picks! I especially recommend Cork & Pig Tavern for their amazing atmosphere. 🍽️\n\n" +
+        places.map(p => `**${p.name}** - ${p.type}\n⭐ ${p.rating} | ${p.price} | 📍 ${p.address}`).join('\n\n');
     }
 
     if (q.includes('bar') || q.includes('wine') || q.includes('drink') || q.includes('cocktail') || q.includes('beer')) {
-      return {
-        response: "Great spots for drinks! The Blue Door has an excellent wine selection. 🍷",
-        places: MIDLAND_PLACES.bars
-      };
+      const places = MIDLAND_PLACES.bars;
+      return "Great spots for drinks! The Blue Door has an excellent wine selection. 🍷\n\n" +
+        places.map(p => `**${p.name}** - ${p.type}\n⭐ ${p.rating} | ${p.price} | 📍 ${p.address}`).join('\n\n');
     }
 
     if (q.includes('attraction') || q.includes('things to do') || q.includes('visit') || q.includes('museum') || q.includes('fun')) {
-      return {
-        response: "There's plenty to explore! The Petroleum Museum tells a fascinating story about the region. 🎭",
-        places: MIDLAND_PLACES.attractions
-      };
+      const places = MIDLAND_PLACES.attractions;
+      return "There's plenty to explore! The Petroleum Museum tells a fascinating story about the region. 🎭\n\n" +
+        places.map(p => `**${p.name}** - ${p.type}\n⭐ ${p.rating} | ${p.price} | 📍 ${p.address}`).join('\n\n');
     }
 
     if (q.includes('wifi') || q.includes('internet') || q.includes('password')) {
-      return {
-        response: "📶 **WiFi Details**\n\nNetwork: RightAtHome_Guest\nPassword: Welcome2024\n\nThe router is near the living room TV. Enjoy streaming!"
-      };
+      return "📶 **WiFi Details**\n\nNetwork: RightAtHome_Guest\nPassword: Welcome2024\n\nThe router is near the living room TV. Enjoy streaming!";
     }
 
     if (q.includes('checkout') || q.includes('check out') || q.includes('leaving')) {
-      return {
-        response: "⏰ **Checkout Info**\n\nCheckout time: 11:00 AM\n\nBefore you go:\n✓ Leave keys on kitchen counter\n✓ Close all windows\n✓ Take out trash\n\nNeed a late checkout? Just ask!"
-      };
+      return "⏰ **Checkout Info**\n\nCheckout time: 11:00 AM\n\nBefore you go:\n✓ Leave keys on kitchen counter\n✓ Close all windows\n✓ Take out trash\n\nNeed a late checkout? Just ask!";
     }
 
     if (q.includes('late checkout')) {
-      return {
-        response: "I'd be happy to request a late checkout! What time would you prefer? I'll check with Steven and get back to you. 😊"
-      };
+      return "I'd be happy to request a late checkout! What time would you prefer? I'll check with Steven and get back to you. 😊";
     }
 
     if (q.includes('checkin') || q.includes('check in') || q.includes('check-in') || q.includes('arriving')) {
-      return {
-        response: "🔑 **Check-in Info**\n\nCheck-in time: 3:00 PM\n\nYour door code will be sent via text. The lockbox is on the front door. Welcome home!"
-      };
+      return "🔑 **Check-in Info**\n\nCheck-in time: 3:00 PM\n\nYour door code will be sent via text. The lockbox is on the front door. Welcome home!";
     }
 
     if (q.includes('emergency') || q.includes('help') || q.includes('problem') || q.includes('issue')) {
-      return {
-        response: "🚨 **Emergency Contacts**\n\n• Emergency: 911\n• Medical Center: (432) 685-1111\n• Steven (Host): (432) 559-1904\n\nWhat's the issue? I'll make sure it gets resolved!"
-      };
+      return "🚨 **Emergency Contacts**\n\n• Emergency: 911\n• Medical Center: (432) 685-1111\n• Steven (Host): (432) 559-1904\n\nWhat's the issue? I'll make sure it gets resolved!";
     }
 
     if (q.includes('pool') || q.includes('hot tub') || q.includes('jacuzzi')) {
-      return {
-        response: "🏊 **Pool/Hot Tub Info**\n\nPool hours: 8 AM - 10 PM\nTowels are in the hall closet\n\nPlease shower before entering and no glass near the pool area!"
-      };
+      return "🏊 **Pool/Hot Tub Info**\n\nPool hours: 8 AM - 10 PM\nTowels are in the hall closet\n\nPlease shower before entering and no glass near the pool area!";
     }
 
     if (q.includes('parking') || q.includes('car') || q.includes('garage')) {
-      return {
-        response: "🚗 **Parking**\n\nFree parking in the driveway. Street parking is also available. The garage is not accessible to guests."
-      };
+      return "🚗 **Parking**\n\nFree parking in the driveway. Street parking is also available. The garage is not accessible to guests.";
     }
 
     if (q.includes('hello') || q.includes('hi') || q.includes('hey')) {
-      return {
-        response: "Hello! 👋 Welcome to Right at Home! I'm here to help with anything you need - restaurants, WiFi, checkout info, or local tips. What can I help you with?"
-      };
+      return "Hello! 👋 Welcome to Right at Home! I'm here to help with anything you need - restaurants, WiFi, checkout info, or local tips. What can I help you with?";
     }
 
     if (q.includes('thank')) {
-      return {
-        response: "You're welcome! 😊 Enjoy your stay! Let me know if you need anything else."
-      };
+      return "You're welcome! 😊 Enjoy your stay! Let me know if you need anything else.";
     }
 
-    return {
-      response: "I can help with:\n\n🍽️ Restaurant recommendations\n🍷 Bars & nightlife\n🎭 Local attractions\n📶 WiFi & property info\n⏰ Check-in/out details\n📞 Emergency contacts\n\nWhat would you like to know?"
-    };
+    return "I can help with:\n\n🍽️ Restaurant recommendations\n🍷 Bars & nightlife\n🎭 Local attractions\n📶 WiFi & property info\n⏰ Check-in/out details\n📞 Emergency contacts\n\nWhat would you like to know?";
   };
 
-  const sendMessage = (text?: string) => {
+  const sendMessage = async (text?: string) => {
     const messageText = text || inputValue;
     if (!messageText.trim()) return;
 
@@ -178,27 +187,32 @@ export default function ChatWidget() {
     setInputValue('');
     setIsTyping(true);
 
-    // Simulate AI thinking
-    setTimeout(() => {
-      const { response, places } = processQuery(messageText);
-
-      let fullResponse = response;
-      if (places) {
-        fullResponse += '\n\n' + places.map(p =>
-          `**${p.name}** - ${p.type}\n⭐ ${p.rating} | ${p.price} | 📍 ${p.address}`
-        ).join('\n\n');
-      }
+    try {
+      // Call the AI Concierge API
+      const response = await callConciergeAPI(messageText);
 
       const assistantMessage: Message = {
         id: messages.length + 2,
         role: 'assistant',
-        content: fullResponse,
+        content: response,
         timestamp: new Date()
       };
 
       setMessages(prev => [...prev, assistantMessage]);
+    } catch (error) {
+      console.error('Error sending message:', error);
+      // Fallback to local response
+      const fallbackResponse = processQueryLocal(messageText);
+      const assistantMessage: Message = {
+        id: messages.length + 2,
+        role: 'assistant',
+        content: fallbackResponse,
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, assistantMessage]);
+    } finally {
       setIsTyping(false);
-    }, 800 + Math.random() * 500);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
