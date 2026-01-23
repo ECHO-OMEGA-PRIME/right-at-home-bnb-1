@@ -452,8 +452,10 @@ RESPONSE GUIDELINES:
 
 /**
  * Call AI for Steven's responses
+ * Tries GROQ first, then falls back to SENTINEL-OMNI
  */
 async function callStevenAI(messages: ConversationMessage[]): Promise<string> {
+  // Try GROQ first
   if (GROQ_API_KEY) {
     try {
       const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -477,6 +479,34 @@ async function callStevenAI(messages: ConversationMessage[]): Promise<string> {
     } catch (error) {
       console.error('Groq API error:', error);
     }
+  }
+
+  // Fallback to SENTINEL-OMNI (our production AI backend)
+  try {
+    console.log('[Steven-AI] Falling back to SENTINEL-OMNI...');
+    const lastUserMessage = messages.filter(m => m.role === 'user').pop();
+    const query = lastUserMessage?.content || 'Hello';
+    
+    const sentinelResponse = await fetch('https://sentinel-omni-249995513427.us-central1.run.app/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: query,
+        user_id: 'website_guest_' + Date.now(),
+        platform: 'rah-midland.com',
+        include_voice: false,
+      }),
+    });
+
+    if (sentinelResponse.ok) {
+      const data = await sentinelResponse.json();
+      console.log('[Steven-AI] SENTINEL-OMNI success');
+      return data.response || getDefaultResponse();
+    } else {
+      console.error('[Steven-AI] SENTINEL-OMNI error:', sentinelResponse.status);
+    }
+  } catch (error) {
+    console.error('[Steven-AI] SENTINEL-OMNI fallback error:', error);
   }
 
   return getDefaultResponse();
