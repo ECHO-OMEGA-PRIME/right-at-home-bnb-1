@@ -1,0 +1,80 @@
+{
+  "name": "@rightathome/security",
+  "version": "1.0.0",
+  "description": "Security package for Right at Home BnB - validation, auth, sanitization",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./validation": {
+      "import": "./dist/validation.mjs",
+      "require": "./dist/validation.js",
+      "types": "./dist/validation.d.ts"
+    },
+    "./auth": {
+      "import": "./dist/auth.mjs",
+      "require": "./dist/auth.js",
+      "types": "./dist/auth.d.ts"
+    },
+    "./sanitize": {
+      "import": "./dist/sanitize.mjs",
+      "require": "./dist/sanitize.js",
+      "types": "./dist/sanitize.d.ts"
+    },
+    "./credentials": {
+      "import": "./dist/credentials.mjs",
+      "require": "./dist/credentials.js",
+      "types": "./dist/credentials.d.ts"
+    },
+    "./middleware": {
+      "import": "./dist/middleware.mjs",
+      "require": "./dist/middleware.js",
+      "types": "./dist/middleware.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsup src/index.ts src/validation.ts src/auth.ts src/sanitize.ts src/credentials.ts src/middleware.ts --format cjs,esm --dts",
+    "dev": "tsup --watch",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "zod": "^3.22.0",
+    "jsonwebtoken": "^9.0.2",
+    "bcryptjs": "^2.4.3",
+    "xss": "^1.0.14",
+    "validator": "^13.11.0",
+    "sanitize-html": "^2.12.1"
+  },
+  "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.5",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/validator": "^13.11.8",
+    "@types/sanitize-html": "^2.11.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.2.0"
+  },
+  "peerDependencies": {
+    "firebase-admin": ">=11.0.0"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "keywords": [
+    "security",
+    "validation",
+    "auth",
+    "sanitization",
+    "owasp"
+  ],
+  "license": "PROPRIETARY"
+}

@@ -1,0 +1,606 @@
+{
+  "id": "Mogford-1408",
+  "vrboId": "3724481",
+  "title": "Right At Home-Midland Clermont House w/ Pool and Billiards",
+  "tagline": "Vacation home in Midland with a fitness center and an outdoor pool",
+  "propertyType": "Entire home",
+  "location": {
+    "city": "Midland",
+    "state": "TX",
+    "address": "1408 Mogford",
+    "coordinates": null
+  },
+  "specs": {
+    "bedrooms": 5,
+    "bathrooms": 3,
+    "fullBathrooms": 2,
+    "halfBathrooms": 1,
+    "sleeps": 14
+  },
+  "rooms": [
+    {
+      "name": "Bedroom 1",
+      "beds": "2 Double Beds"
+    },
+    {
+      "name": "Bedroom 2",
+      "beds": "1 Queen Bed"
+    },
+    {
+      "name": "Bedroom 3",
+      "beds": "1 Queen Bed"
+    },
+    {
+      "name": "Bedroom 4",
+      "beds": "1 Queen Bed"
+    },
+    {
+      "name": "Bedroom 5",
+      "beds": "2 Queen Beds"
+    }
+  ],
+  "bathrooms": [
+    {
+      "name": "Bathroom 1",
+      "type": "Full",
+      "features": [
+        "Soap",
+        "Towels provided",
+        "Bathtub or shower",
+        "Toilet",
+        "Shampoo",
+        "Hair dryer"
+      ]
+    },
+    {
+      "name": "Bathroom 2",
+      "type": "Full",
+      "features": [
+        "Soap",
+        "Towels provided",
+        "Bathtub or shower",
+        "Toilet",
+        "Jetted bathtub",
+        "Shampoo",
+        "Hair dryer"
+      ]
+    },
+    {
+      "name": "Bathroom 3",
+      "type": "Half",
+      "features": [
+        "Soap",
+        "Towels provided",
+        "Toilet"
+      ]
+    }
+  ],
+  "spaces": [
+    "Deck or patio",
+    "Kitchen",
+    "Separate dining area",
+    "Outdoor play area",
+    "Dining area"
+  ],
+  "amenities": {
+    "topFamilyFriendly": [
+      "Kitchen",
+      "Microwave",
+      "Living/Dining area"
+    ],
+    "popular": [
+      "Pool",
+      "Hot tub",
+      "Washer",
+      "Dryer",
+      "Pet friendly",
+      "Free WiFi",
+      "Air conditioning",
+      "Gym",
+      "Outdoor Space",
+      "Parking available",
+      "Barbecue grill",
+      "Fireplace"
+    ],
+    "essentials": [
+      "Wireless internet",
+      "Free wifi",
+      "Internet",
+      "Towels provided",
+      "Linens provided",
+      "Air conditioning",
+      "Hair dryer",
+      "Shampoo",
+      "Toilet paper",
+      "Paper towels",
+      "Basic soaps",
+      "Iron & board",
+      "Heating",
+      "Fireplace",
+      "Fitness room / equipment",
+      "Desk",
+      "Desk chair"
+    ],
+    "kitchen": [
+      "Kitchen",
+      "Refrigerator",
+      "Dishwasher",
+      "Microwave",
+      "Stove",
+      "Oven",
+      "Grill",
+      "Dishes & utensils",
+      "Coffee maker",
+      "Blender",
+      "Toaster"
+    ],
+    "poolSpa": [
+      "Private pool",
+      "Spa whirlpool",
+      "Heated pool",
+      "Outdoor pool",
+      "Pool"
+    ],
+    "pets": [
+      "Pet friendly",
+      "Welcoming dogs only",
+      "2 pets total (up to 50 lbs per pet)"
+    ],
+    "entertainment": [
+      "Books",
+      "Television",
+      "Smart TV",
+      "Satellite / cable",
+      "Pool table"
+    ],
+    "laundry": [
+      "Washing machine",
+      "Dryer"
+    ],
+    "parking": [
+      "Parking"
+    ],
+    "safety": [
+      "Carbon monoxide detector not reported",
+      "Smoke detector not reported"
+    ]
+  },
+  "houseRules": {
+    "checkIn": "After 4:00 PM",
+    "checkOut": "Before 11:00 AM",
+    "minimumAge": 25,
+    "children": "Children allowed: ages 0-17",
+    "events": "Events allowed: family gatherings and birthday parties (max 22 attendees)",
+    "pets": "Dogs allowed: less than 23 kg per pet (limit 2 pets total)",
+    "smoking": "Smoking is not permitted",
+    "checkOutInstructions": [
+      "Strip any used beds",
+      "Take out the rubbish",
+      "Turn off the lights, lock the doors and return the keys"
+    ],
+    "additionalRules": [
+      "For Extend Stays over 10 days The customer will be assessed an additional cleaning fee every 10 days for cleaning.",
+      "If pool is heated you agree to an additional 100 per day for the duration of stay and 18 hour notice to heat."
+    ]
+  },
+  "importantInfo": [
+    "Extra-person charges may apply and vary depending on property policy",
+    "Government-issued photo identification and a credit card, debit card or cash deposit may be required at check-in for incidental charges",
+    "Special requests are subject to availability upon check-in and may incur additional charges; special requests cannot be guaranteed",
+    "Parties and events (including family gatherings and birthday parties) are allowed on site. Maximum attendees: 22",
+    "Host has not indicated whether there is a carbon monoxide detector on the property; consider bringing a portable detector with you on the trip",
+    "Host has not indicated whether there is a smoke detector on the property"
+  ],
+  "reviews": {
+    "rating": 8.2,
+    "count": 23,
+    "breakdown": {
+      "cleanliness": 8,
+      "checkIn": 9.6,
+      "communication": 9.2,
+      "location": 9.6,
+      "listingAccuracy": 8.4
+    },
+    "distribution": {
+      "excellent": 12,
+      "good": 4,
+      "okay": 5,
+      "poor": 1,
+      "terrible": 1
+    },
+    "list": [
+      {
+        "rating": 6,
+        "title": null,
+        "author": "Kasee P.",
+        "date": "Sep 2025",
+        "stayDuration": "3 nights",
+        "stayDate": "Aug 2025",
+        "content": "The house is big and the common areas are accommodating for a big family! I've stayed at",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": null,
+        "author": "William S.",
+        "date": "Jul 2025",
+        "stayDuration": "5 nights",
+        "stayDate": "Jul 2025",
+        "content": "Great stay! Pool was very refreshing.",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 8,
+        "title": "Large home - lots of room for family",
+        "author": "John H.",
+        "date": "Jul 2025",
+        "stayDuration": "3 nights",
+        "stayDate": "Jun 2025",
+        "content": "Great house for a larger family(5 of us) to stay and enjoy each other's company. The swimming pool and large backyard is a big bonus. Manager was quick to answer questions and flexible with our needs. Highly recommend staying here.",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 6,
+        "title": null,
+        "author": "Michelle K.",
+        "date": "Dec 2025",
+        "stayDuration": "3 nights",
+        "stayDate": "Dec 2025",
+        "content": "the kitchen had plenty of cooking utensils, but there was dirty dishes in the oven and microwave, floors were really dirty, master bathtub was dirty and hair in it, the back yard was junky with dead bushes, trashn not upkept at all, the garage had an extra fridge which was nice but the garage is full of junk and just a total disaster.",
+        "liked": [
+          "check-in"
+        ],
+        "disliked": [
+          "cleanliness",
+          "communication",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 8,
+        "title": "Fourth of July weekend",
+        "author": "Margarita Gutierrez G.",
+        "date": "Jul 2025",
+        "stayDuration": "2 nights",
+        "stayDate": "Jul 2025",
+        "content": "Good weekend having fun cooking out and enjoying the sun near the pool just getting to enjoy family",
+        "liked": [
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ],
+        "disliked": [
+          "cleanliness"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": "Family Time",
+        "author": "Sue Beth J.",
+        "date": "May 2025",
+        "stayDuration": "2 nights",
+        "stayDate": "May 2025",
+        "content": "This is a yearly golf tournament for our families and friends to catch up and have fun, It was great to have a place for our group to stay together, cool off in the pool, and make more memories, Thanks again",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 8,
+        "title": null,
+        "author": "Jack L C.",
+        "date": "Aug 2025",
+        "stayDuration": "3 nights",
+        "stayDate": "Aug 2025",
+        "content": "Everything was functional. Rooms and climate conditions were comfortable. Spacious. Bathrooms and kitchen were clean. Pool was refreshing and served its purpose. Made for a comfortable place for family members from Iowa and Virginia to converge for visit with family in Midland.",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": "Great stay",
+        "author": "Damon T.",
+        "date": "Jan 2024",
+        "stayDuration": "1 night",
+        "stayDate": "Jan 2024",
+        "content": "Cozie and comfortable, nice space and area to let the dogs outside",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": "3 day visit",
+        "author": "Brentley T.",
+        "date": "Apr 2025",
+        "stayDuration": "3 nights",
+        "stayDate": "Mar 2025",
+        "content": "The property was everything the pictures showed to be and more. Our host responded back to us very quickly. Couldn't have asked for a better place to stay. Really nice place!",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": "Perfect.",
+        "author": "Collin K.",
+        "date": "Mar 2025",
+        "stayDuration": "3 nights",
+        "stayDate": "Mar 2025",
+        "content": "This property is amazing!! We just wanted a little \"stay-cation\", and this place was great for that! Thank you! Everyone has a great time.",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 8,
+        "title": "Home away from home",
+        "author": "Susan D.",
+        "date": "May 2024",
+        "stayDuration": "4 nights",
+        "stayDate": "May 2024",
+        "content": "Great house…great space…great time!",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "location"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": "Wonderful home",
+        "author": "Christy A.",
+        "date": "Jun 2024",
+        "stayDuration": "2 nights",
+        "stayDate": "Jun 2024",
+        "content": "Celebrated my daughters Birthday with a swim party and grilled burgers and hot dogs. We loved the home and had a wonderful time.",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 6,
+        "title": null,
+        "author": "Gerald W.",
+        "date": "Jul 2025",
+        "stayDuration": "4 nights",
+        "stayDate": "Jul 2025",
+        "content": "The home could be really really nice. Tons of maintenance needed from little things like light bulbs and toilet paper fixtures to range hood and paint (indoor and out) landscaping was all over grown and the pool needed to be vacuumed. Overall it was ok it seems as though it's not being properly taken care of.",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": null,
+        "author": "Katherine B.",
+        "date": "Jun 2025",
+        "stayDuration": "3 nights",
+        "stayDate": "May 2025",
+        "content": "The house was wonderful. We had a little trouble with the AC that we did realize until late Saturday evening due to being at a Wedding all day. But the owner responded quickly and let us know what we needed to do. The home was very roomy and there was enough for everyone to do with the pool, darts and pool table.",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": "Beautiful house",
+        "author": "Noe' C.",
+        "date": "Feb 2024",
+        "stayDuration": "9 nights",
+        "stayDate": "Dec 2023",
+        "content": "Everything was great the house the town the neighborhood,all facilities near. 100% recommended.",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": "Post Thanksgiving R&R",
+        "author": "Libby R.",
+        "date": "Nov 2023",
+        "stayDuration": "1 night",
+        "stayDate": "Nov 2023",
+        "content": "The home and outdoor area was spotless and beautifully furnished. And the Christmas tree was a pleasant surprise! The ease of reaching out to the host was seamless.",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": "Great home",
+        "author": "Jennifer B.",
+        "date": "May 2024",
+        "stayDuration": "1 night",
+        "stayDate": "May 2024",
+        "content": "We rented so we had a place to stay as we were in town for funeral and the normal family we stay with were out of room! This home is an older home with a lot of charm and was great for entertaining some family that stoped by to see us that wouldn't be at the funeral. We were grateful for the family friendly environment with plenty of places for a large group to hang out! There was 8 of us that stay and total counting babies for dinner was 18.",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 6,
+        "title": "Nice space poorly maintained",
+        "author": "Ann C.",
+        "date": "Jul 2024",
+        "stayDuration": "3 nights",
+        "stayDate": "Jul 2024",
+        "content": "Let's start with the positive. Plenty of space to spread out. Well stocked kitchen. Lots of plates, silverware, wine glasses, etc. We had 20 for dinner and no one felt crowded. The backyard was huge and the pool was great. The bedrooms that were additions to the home offered separation from the other three bedrooms. Unfortunately, these bedrooms were the only access points to the backyard. This made it a little difficult because the family members using these rooms were working during our stay. The house was not well maintained. The garbage disposal was not working and the host failed to fix it during our stay. The house was not ready when we arrived. We were not able to get in until 4:40...delaying our dinner plans with the family.",
+        "liked": [
+          "cleanliness",
+          "location",
+          "listing accuracy"
+        ],
+        "disliked": [
+          "communication"
+        ]
+      },
+      {
+        "rating": 4,
+        "title": "Lots of potential",
+        "author": "Crystal S.",
+        "date": "Nov 2024",
+        "stayDuration": "2 nights",
+        "stayDate": "Nov 2024",
+        "content": "This house has so much potential, but needs lots of loving. We booked mainly for the pool table, hot tub, and darts but we're unable to use any. The pool table had steak bones and limes all over and under from previous tenants, we cleaned that up.. there were not any darts to be able to use the dart board… jacuzzi was dirty. There were also wasp nests outside… spider webs in multiple rooms as well as spiders and beetles. One of the beds had bugs in the bed so a 5 bedroom home turned into a 3 bedroom, we ended up having to use the couches to sleep on. 12 people also had to share one shower due to plumbing issues leaving 1 restroom completely unusable. Layers of dust and webs on light fixtures in the kitchen as well. We also washed the sheets prior to using due to the smell they had. The house is beautiful, but you can see it is rarely really cleaned.",
+        "liked": [
+          "check-in",
+          "communication",
+          "location"
+        ],
+        "disliked": [
+          "cleanliness",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 6,
+        "title": null,
+        "author": "Crystal M.",
+        "date": "Sep 2025",
+        "stayDuration": "3 nights",
+        "stayDate": "Aug 2025",
+        "content": "The pool was beautiful and relaxing. The living room, dining are and kitchen were large enough for our entire family to hang out without feeling crowded.",
+        "liked": [
+          "check-in",
+          "communication",
+          "location"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": null,
+        "author": "M V.",
+        "date": "Aug 2025",
+        "stayDuration": "3 nights",
+        "stayDate": "Aug 2025",
+        "content": null,
+        "liked": null
+      },
+      {
+        "rating": 10,
+        "title": "Graduation celebration",
+        "author": "Kathy R.",
+        "date": "May 2025",
+        "stayDuration": "5 nights",
+        "stayDate": "May 2025",
+        "content": null,
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 2,
+        "title": null,
+        "author": "Clarissa S.",
+        "date": "Aug 2024",
+        "stayDuration": "2 nights",
+        "stayDate": "Apr 2024",
+        "content": null,
+        "liked": [
+          "check-in",
+          "communication",
+          "location"
+        ],
+        "disliked": [
+          "cleanliness",
+          "listing accuracy"
+        ]
+      }
+    ]
+  },
+  "host": {
+    "name": "STEVEN M PALMA",
+    "isPremier": true,
+    "languages": [
+      "English"
+    ]
+  },
+  "description": "Welcome to this spacious home with room for everybody, including privacy and common spaces both inside and out. The backyard features a pool that can be heated for an additional expense that is shallow size for volleyball and basketball. There's also a large grassy area for pets and of course a covered patio with pool table darts, and seating. In addition to the outside the home is just as spacious with two living rooms, an open concept for dining within the kitchen as well as five bedrooms there's smart TVs in all the rooms and main areas to enjoy.\n\nOur prices include all fees. No hidden fees.",
+  "images": {
+    "main": "main.webp",
+    "count": 34
+  },
+  "serviceFees": {
+    "cleaningFee": 200,
+    "deepCleanFee": 400,
+    "poolServiceFee": 50,
+    "lawnServiceFee": 75
+  },
+  "waiverRequirements": {
+    "pool": true,
+    "hotTub": true,
+    "firePit": false,
+    "general": true
+  },
+  "hasPool": true,
+  "hasHotTub": true,
+  "hasFirePit": false
+}

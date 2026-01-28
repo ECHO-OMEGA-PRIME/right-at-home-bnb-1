@@ -1,0 +1,40 @@
+{
+  "name": "@rightathome/testing",
+  "version": "1.0.0",
+  "description": "Comprehensive testing suite for RightAtHomeBnB property management system",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest run --coverage",
+    "test:unit": "vitest run unit/",
+    "test:integration": "vitest run integration/",
+    "test:e2e": "vitest run e2e/",
+    "validate:db": "tsx validation/validate-db.ts",
+    "validate:sync": "tsx validation/validate-sync.ts",
+    "validate:build": "tsx validation/validate-build.ts",
+    "validate:all": "npm run validate:db && npm run validate:sync && npm run validate:build"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.9.0",
+    "firebase": "^10.7.0"
+  },
+  "devDependencies": {
+    "@testing-library/react": "^14.1.0",
+    "@types/node": "^20.11.0",
+    "@vitest/coverage-v8": "^1.2.0",
+    "@vitest/ui": "^1.2.0",
+    "happy-dom": "^13.3.0",
+    "msw": "^2.1.0",
+    "prisma": "^5.9.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3",
+    "vitest": "^1.2.0"
+  },
+  "peerDependencies": {
+    "@rightathome/shared": "workspace:*"
+  }
+}

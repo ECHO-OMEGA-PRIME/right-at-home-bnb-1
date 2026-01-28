@@ -37,6 +37,7 @@ import {
 } from '@/lib/api';
 import { properties as propertyKnowledge } from '@/lib/property-knowledge';
 import toast from 'react-hot-toast';
+import PhoneCallPanel from '@/components/calls/PhoneCallPanel';
 
 // Brand Colors
 const BRAND = {
@@ -665,6 +666,21 @@ export default function DashboardPage() {
               </div>
             </motion.div>
 
+            {/* AI Phone Calls */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.47 }}
+            >
+              <PhoneCallPanel
+                onCallComplete={(result) => {
+                  if (result.success) {
+                    toast.success('Call initiated successfully!');
+                  }
+                }}
+              />
+            </motion.div>
+
             {/* Property Health */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -722,6 +738,7 @@ export default function DashboardPage() {
 
               <div className="space-y-2">
                 {[
+                  { label: 'AI Phone Calls', icon: Phone, href: '#phone-calls', badge: undefined },
                   { label: 'Smart Home Control', icon: Thermometer, href: '/smart-home', badge: lockStats.lowBattery > 0 ? `${lockStats.lowBattery} alert` : undefined },
                   { label: 'Generate Lock Code', icon: Key, href: '/locks' },
                   { label: 'Schedule Cleaning', icon: Sparkles, href: '/cleaning' },

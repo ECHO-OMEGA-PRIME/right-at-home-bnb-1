@@ -1,6 +1,6 @@
 /**
  * Right at Home BnB - Main App Entry
- * Complete navigation with all screens
+ * Complete navigation with cleaner and owner modes
  * @author ECHO OMEGA PRIME
  */
 
@@ -14,15 +14,13 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { View, Text, ActivityIndicator } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Core Screens
+// Cleaner Screens
 import HomeScreen from './src/screens/HomeScreen';
 import JobsScreen from './src/screens/JobsScreen';
 import JobDetailScreen from './src/screens/JobDetailScreen';
 import ConciergeScreen from './src/screens/ConciergeScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import PropertyScreen from './src/screens/PropertyScreen';
-
-// New Screens
 import LoginScreen from './src/screens/LoginScreen';
 import GPSCheckInScreen from './src/screens/GPSCheckInScreen';
 import PhotoCaptureScreen from './src/screens/PhotoCaptureScreen';
@@ -33,6 +31,9 @@ import MessagesScreen from './src/screens/MessagesScreen';
 import NotificationsScreen from './src/screens/NotificationsScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 
+// Owner Navigator
+import { OwnerNavigator } from './src/navigation';
+
 // Theme
 import { ThemeProvider } from './src/theme/ThemeContext';
 import { COLORS } from './src/theme/colors';
@@ -41,9 +42,13 @@ import { COLORS } from './src/theme/colors';
 import { SyncProvider } from './src/context/SyncContext';
 
 // Types
+export type UserRole = 'cleaner' | 'owner' | 'admin';
+
 export type RootStackParamList = {
   Login: undefined;
-  Main: undefined;
+  RoleSelect: undefined;
+  CleanerMain: undefined;
+  OwnerMain: undefined;
   JobDetail: { jobId: string };
   Property: { propertyId: string };
   GPSCheckIn: { jobId: string; propertyId: string; propertyName: string; lat: number; lng: number };
@@ -71,7 +76,7 @@ const TabIcon = ({ name, focused }: { name: string; focused: boolean }) => (
   </Text>
 );
 
-// Jobs Stack Navigator
+// Jobs Stack Navigator (Cleaner)
 function JobsStackNavigator() {
   return (
     <JobStack.Navigator
@@ -87,8 +92,8 @@ function JobsStackNavigator() {
   );
 }
 
-// Main Tab Navigator
-function MainTabs() {
+// Cleaner Tab Navigator
+function CleanerTabs() {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -132,7 +137,82 @@ function MainTabs() {
   );
 }
 
-// Auth State Check
+// Role Selection Screen
+function RoleSelectScreen({ navigation }: any) {
+  const handleSelectRole = async (role: UserRole) => {
+    await AsyncStorage.setItem('@rightathome_user_role', role);
+    navigation.reset({
+      index: 0,
+      routes: [{ name: role === 'owner' || role === 'admin' ? 'OwnerMain' : 'CleanerMain' }],
+    });
+  };
+
+  return (
+    <View style={{ flex: 1, backgroundColor: COLORS.background, padding: 20, justifyContent: 'center' }}>
+      <Text style={{ fontSize: 28, fontWeight: '700', color: COLORS.charcoal, textAlign: 'center', marginBottom: 8 }}>
+        Welcome!
+      </Text>
+      <Text style={{ fontSize: 16, color: COLORS.gray, textAlign: 'center', marginBottom: 40 }}>
+        Select your account type
+      </Text>
+
+      {/* Owner Card */}
+      <View
+        style={{
+          backgroundColor: COLORS.white,
+          borderRadius: 16,
+          padding: 20,
+          marginBottom: 16,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 8,
+          elevation: 3,
+        }}
+        onTouchEnd={() => handleSelectRole('owner')}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+          <Text style={{ fontSize: 36, marginRight: 12 }}>🏠</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 20, fontWeight: '700', color: COLORS.charcoal }}>Property Owner</Text>
+            <Text style={{ fontSize: 14, color: COLORS.gray }}>Manage your rentals</Text>
+          </View>
+        </View>
+        <Text style={{ fontSize: 13, color: COLORS.gray, lineHeight: 20 }}>
+          View bookings, manage properties, coordinate cleaning, and track revenue.
+        </Text>
+      </View>
+
+      {/* Cleaner Card */}
+      <View
+        style={{
+          backgroundColor: COLORS.white,
+          borderRadius: 16,
+          padding: 20,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 8,
+          elevation: 3,
+        }}
+        onTouchEnd={() => handleSelectRole('cleaner')}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+          <Text style={{ fontSize: 36, marginRight: 12 }}>🧹</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 20, fontWeight: '700', color: COLORS.charcoal }}>Cleaning Professional</Text>
+            <Text style={{ fontSize: 14, color: COLORS.gray }}>Complete jobs & earn</Text>
+          </View>
+        </View>
+        <Text style={{ fontSize: 13, color: COLORS.gray, lineHeight: 20 }}>
+          View assigned jobs, check in with GPS, submit photos, and complete checklists.
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+// Auth Loading Screen
 function AuthLoadingScreen() {
   return (
     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.maroon }}>
@@ -149,6 +229,7 @@ function AuthLoadingScreen() {
 function RootNavigator() {
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userRole, setUserRole] = useState<UserRole | null>(null);
 
   useEffect(() => {
     checkAuth();
@@ -156,9 +237,10 @@ function RootNavigator() {
 
   const checkAuth = async () => {
     try {
-      // Check for stored auth token
       const token = await AsyncStorage.getItem('@rightathome_auth_token');
+      const role = await AsyncStorage.getItem('@rightathome_user_role') as UserRole | null;
       setIsAuthenticated(!!token);
+      setUserRole(role);
     } catch (error) {
       console.error('Auth check failed:', error);
       setIsAuthenticated(false);
@@ -182,9 +264,16 @@ function RootNavigator() {
         <Stack.Screen name="Login" component={LoginScreen} />
       ) : null}
 
-      <Stack.Screen name="Main" component={MainTabs} />
+      {/* Role Selection (shown after login if no role selected) */}
+      <Stack.Screen name="RoleSelect" component={RoleSelectScreen} />
 
-      {/* Job Flow Screens */}
+      {/* Cleaner Flow */}
+      <Stack.Screen name="CleanerMain" component={CleanerTabs} />
+
+      {/* Owner Flow */}
+      <Stack.Screen name="OwnerMain" component={OwnerNavigator} />
+
+      {/* Shared Screens - Job Flow */}
       <Stack.Screen
         name="JobDetail"
         component={JobDetailScreen}
@@ -214,9 +303,7 @@ function RootNavigator() {
       <Stack.Screen
         name="Checklist"
         component={ChecklistScreen}
-        options={{
-          headerShown: false,
-        }}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="IssueReport"
@@ -240,36 +327,10 @@ function RootNavigator() {
       />
 
       {/* Social & Communication Screens */}
-      <Stack.Screen
-        name="Leaderboard"
-        component={LeaderboardScreen}
-        options={{
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen
-        name="Messages"
-        component={MessagesScreen}
-        options={{
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen
-        name="Notifications"
-        component={NotificationsScreen}
-        options={{
-          headerShown: false,
-        }}
-      />
-
-      {/* Settings */}
-      <Stack.Screen
-        name="Settings"
-        component={SettingsScreen}
-        options={{
-          headerShown: false,
-        }}
-      />
+      <Stack.Screen name="Leaderboard" component={LeaderboardScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="Messages" component={MessagesScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="Settings" component={SettingsScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 }

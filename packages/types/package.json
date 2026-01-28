@@ -1,0 +1,45 @@
+{
+  "name": "@rightathome/types",
+  "version": "1.0.0",
+  "description": "Comprehensive TypeScript type definitions for Right at Home BnB",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./database": {
+      "import": "./dist/database.mjs",
+      "require": "./dist/database.js",
+      "types": "./dist/database.d.ts"
+    },
+    "./api": {
+      "import": "./dist/api.mjs",
+      "require": "./dist/api.js",
+      "types": "./dist/api.d.ts"
+    },
+    "./business": {
+      "import": "./dist/business.mjs",
+      "require": "./dist/business.js",
+      "types": "./dist/business.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsup src/index.ts src/database.ts src/api.ts src/business.ts --format cjs,esm --dts --clean",
+    "dev": "tsup --watch",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "tsup": "^8.0.0",
+    "typescript": "^5.3.0"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "license": "PROPRIETARY"
+}

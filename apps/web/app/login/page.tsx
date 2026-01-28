@@ -10,7 +10,8 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Eye, EyeOff, Lock, Mail, ArrowRight, Home } from 'lucide-react';
+import Image from 'next/image';
+import { Eye, EyeOff, Lock, Mail, ArrowRight, Code } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { signInWithGoogle, signInWithApple, signInWithEmail } from '@/lib/auth';
 
@@ -114,16 +115,15 @@ export default function LoginPage() {
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.3, duration: 0.6 }}
           >
-            <div className="flex items-center gap-3 mb-8">
-              <div className="w-14 h-14 rounded-xl bg-[#C4A777] flex items-center justify-center">
-                <Home className="w-8 h-8 text-[#500000]" />
-              </div>
-              <div>
-                <h1 className="text-3xl font-['Playfair_Display'] font-semibold">
-                  Right at Home
-                </h1>
-                <p className="text-[#C4A777] text-sm tracking-wider">MIDLAND, TEXAS</p>
-              </div>
+            <div className="mb-8">
+              <Image
+                src="/images/logo-light.png"
+                alt="Right at Home Midland"
+                width={280}
+                height={120}
+                className="h-auto max-w-[280px]"
+                priority
+              />
             </div>
 
             <h2 className="text-5xl font-['Playfair_Display'] font-bold leading-tight mb-6">
@@ -166,15 +166,15 @@ export default function LoginPage() {
       >
         <div className="w-full max-w-md">
           {/* Mobile Logo */}
-          <div className="lg:hidden flex items-center justify-center gap-3 mb-8">
-            <div className="w-12 h-12 rounded-xl bg-[#500000] flex items-center justify-center">
-              <Home className="w-6 h-6 text-[#C4A777]" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-['Playfair_Display'] font-semibold text-[#500000]">
-                Right at Home
-              </h1>
-            </div>
+          <div className="lg:hidden flex items-center justify-center mb-8">
+            <Image
+              src="/images/logo-dark.png"
+              alt="Right at Home Midland"
+              width={200}
+              height={85}
+              className="h-auto max-w-[200px]"
+              priority
+            />
           </div>
 
           <motion.div
@@ -338,6 +338,17 @@ export default function LoginPage() {
               {' '}and{' '}
               <a href="#" className="text-[#500000] hover:underline">Privacy Policy</a>
             </p>
+
+            {/* Developer Login */}
+            <div className="mt-6 pt-4 border-t border-[#2D2D2D]/10">
+              <Link
+                href="/dev-login"
+                className="flex items-center justify-center gap-2 py-2 text-sm text-[#500000]/70 hover:text-[#500000] hover:bg-[#500000]/5 rounded-lg transition-all"
+              >
+                <Code className="w-4 h-4" />
+                <span>Developer Login</span>
+              </Link>
+            </div>
           </motion.div>
         </div>
       </motion.div>

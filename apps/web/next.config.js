@@ -5,7 +5,9 @@ const nextConfig = {
     domains: ['localhost', 'rightathomebnb.com', 'rah-midland.com'],
   },
   // Mark twilio as server-only external - it's only used in API routes
-  serverExternalPackages: ['twilio'],
+  experimental: {
+    serverComponentsExternalPackages: ['twilio'],
+  },
   async rewrites() {
     return [
       {

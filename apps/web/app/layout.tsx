@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Playfair_Display, Inter, Outfit } from 'next/font/google';
 import '../src/styles/globals.css';
 import { Providers } from './providers';
-import StevenAI from '@/components/StevenAI';
+import SentinelWidget from '@/components/SentinelWidget';
 
 // Premium Display Font - Elegant headers
 const playfair = Playfair_Display({
@@ -138,8 +138,8 @@ export default function RootLayout({
             {children}
           </main>
 
-          {/* Floating Steven AI Voice Assistant */}
-          <StevenAI mode="widget" />
+          {/* Floating SENTINEL V2 Chat Widget */}
+          <SentinelWidget mode="widget" />
         </Providers>
       </body>
     </html>

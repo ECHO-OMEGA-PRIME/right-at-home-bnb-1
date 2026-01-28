@@ -1,0 +1,19 @@
+{
+  "name": "@rightathome/smart-locks",
+  "version": "1.0.0",
+  "description": "Smart lock integration for vacation rental properties - Schlage and August support",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "lint": "eslint src/**/*.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.9.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "typescript": "^5.3.3"
+  }
+}

@@ -7,7 +7,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -21,7 +21,7 @@ model User {
   name          String
   phone         String?
   avatarUrl     String?
-  role          UserRole  @default(GUEST)
+  role          String    @default("GUEST")
   isActive      Boolean   @default(true)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -31,14 +31,12 @@ model User {
   expenses      Expense[]
   approvedMsgs  Message[]     @relation("ApprovedBy")
 
+  // Performance indexes
   @@index([email])
   @@index([role])
-}
-
-enum UserRole {
-  ADMIN
-  CLEANER
-  GUEST
+  @@index([isActive])                     // Filter active users
+  @@index([role, isActive])               // Composite: active users by role
+  @@index([createdAt])                    // Sort by creation date
 }
 
 // ============================================
@@ -60,31 +58,31 @@ model Property {
   bathrooms       Float
   maxGuests       Int
   squareFeet      Int?
-  propertyType    PropertyType @default(HOUSE)
+  propertyType    String    @default("HOUSE")
 
-  // Amenities & Info
-  amenities       Json?     // Array of amenity strings
+  // Amenities & Info (stored as JSON string)
+  amenities       String?
   wifiNetwork     String?
   wifiPassword    String?
   parkingInfo     String?
-  checkInInstr    String?   @db.Text
-  checkOutInstr   String?   @db.Text
-  houseRules      String?   @db.Text
+  checkInInstr    String?
+  checkOutInstr   String?
+  houseRules      String?
 
   // Cleaning
-  cleaningChecklist Json?   // Array of checklist items
+  cleaningChecklist String?
 
   // Pricing
-  nightlyRate     Decimal   @db.Decimal(10, 2)
-  cleaningFee     Decimal?  @db.Decimal(10, 2)
-  securityDeposit Decimal?  @db.Decimal(10, 2)
+  nightlyRate     Float
+  cleaningFee     Float?
+  securityDeposit Float?
 
   // External IDs
   airbnbId        String?
   vrboId          String?
 
   // Status
-  status          PropertyStatus @default(ACTIVE)
+  status          String    @default("ACTIVE")
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
@@ -95,8 +93,16 @@ model Property {
   expenses        Expense[]
   photos          PropertyPhoto[]
 
+  // Performance indexes
   @@index([status])
   @@index([city])
+  @@index([status, city])             // Composite: filter by status and city
+  @@index([propertyType])             // Filter by property type
+  @@index([bedrooms])                 // Filter by bedroom count
+  @@index([nightlyRate])              // Sort/filter by price
+  @@index([airbnbId])                 // Lookup by external ID
+  @@index([vrboId])                   // Lookup by external ID
+  @@index([createdAt])                // Sort by creation date
 }
 
 model PropertyPhoto {
@@ -113,20 +119,6 @@ model PropertyPhoto {
   @@index([propertyId])
 }
 
-enum PropertyType {
-  HOUSE
-  APARTMENT
-  CONDO
-  TOWNHOUSE
-  CABIN
-}
-
-enum PropertyStatus {
-  ACTIVE
-  INACTIVE
-  MAINTENANCE
-}
-
 // ============================================
 // GUESTS & CRM
 // ============================================
@@ -138,24 +130,24 @@ model Guest {
   phone         String?
 
   // Source
-  platform      Platform  @default(DIRECT)
-  platformId    String?   // External booking platform ID
+  platform      String    @default("DIRECT")
+  platformId    String?
 
   // CRM Data
   firstStay     DateTime?
   lastStay      DateTime?
   totalStays    Int       @default(0)
-  totalSpent    Decimal   @default(0) @db.Decimal(10, 2)
+  totalSpent    Float     @default(0)
   avgRating     Float?
 
-  // Tags & Preferences
-  tags          Json?     // Array of tags: ["VIP", "Pet Owner", "Business"]
-  notes         String?   @db.Text
-  preferences   Json?     // Guest preferences object
+  // Tags & Preferences (stored as JSON string)
+  tags          String?
+  notes         String?
+  preferences   String?
 
   // VIP Status
   isVip         Boolean   @default(false)
-  vipTier       VipTier?
+  vipTier       String?
 
   // Special Dates
   birthday      DateTime?
@@ -169,23 +161,17 @@ model Guest {
   messages      Message[]
   conciergeQueries ConciergeQuery[]
 
+  // Performance indexes
   @@index([email])
   @@index([isVip])
-}
-
-enum Platform {
-  AIRBNB
-  VRBO
-  BOOKING
-  DIRECT
-  OTHER
-}
-
-enum VipTier {
-  SILVER
-  GOLD
-  PLATINUM
-  DIAMOND
+  @@index([platform])                     // Filter by booking platform
+  @@index([platform, platformId])         // Lookup by platform ID
+  @@index([totalStays])                   // Sort by stay count (loyalty)
+  @@index([totalSpent])                   // Sort by revenue (VIP identification)
+  @@index([lastStay])                     // Filter by recency
+  @@index([isVip, totalSpent])            // Composite: VIP ranking
+  @@index([createdAt])                    // Sort by registration date
+  @@index([birthday])                     // Birthday campaign targeting
 }
 
 // ============================================
@@ -203,26 +189,26 @@ model Booking {
 
   // Details
   guestCount    Int       @default(1)
-  platform      Platform  @default(DIRECT)
-  confirmCode   String?   // Platform confirmation code
+  platform      String    @default("DIRECT")
+  confirmCode   String?
 
   // Pricing
-  nightlyRate   Decimal   @db.Decimal(10, 2)
+  nightlyRate   Float
   totalNights   Int
-  subtotal      Decimal   @db.Decimal(10, 2)
-  cleaningFee   Decimal?  @db.Decimal(10, 2)
-  serviceFee    Decimal?  @db.Decimal(10, 2)
-  taxes         Decimal?  @db.Decimal(10, 2)
-  totalPrice    Decimal   @db.Decimal(10, 2)
+  subtotal      Float
+  cleaningFee   Float?
+  serviceFee    Float?
+  taxes         Float?
+  totalPrice    Float
 
   // Access
-  accessCode    String?   // Smart lock code
+  accessCode    String?
   codeExpiresAt DateTime?
 
   // Status
-  status        BookingStatus @default(CONFIRMED)
-  specialReqs   String?   @db.Text
-  internalNotes String?   @db.Text
+  status        String    @default("CONFIRMED")
+  specialReqs   String?
+  internalNotes String?
 
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -233,20 +219,19 @@ model Booking {
   cleaningJob   CleaningJob?
   messages      Message[]
 
+  // Performance indexes
   @@index([propertyId])
   @@index([guestId])
   @@index([checkIn])
   @@index([checkOut])
   @@index([status])
-}
-
-enum BookingStatus {
-  PENDING
-  CONFIRMED
-  CHECKED_IN
-  CHECKED_OUT
-  CANCELLED
-  NO_SHOW
+  @@index([propertyId, checkIn])          // Composite: property availability queries
+  @@index([propertyId, status])           // Composite: property bookings by status
+  @@index([propertyId, checkIn, checkOut]) // Composite: date range availability
+  @@index([platform, status])             // Filter by platform and status
+  @@index([platform])                     // Filter by booking source
+  @@index([createdAt])                    // Sort by creation date
+  @@index([confirmCode])                  // Lookup by confirmation code
 }
 
 // ============================================
@@ -265,10 +250,10 @@ model CleaningJob {
   completedAt   DateTime?
 
   // Type
-  jobType       CleaningType @default(TURNOVER)
+  jobType       String    @default("TURNOVER")
 
   // Status
-  status        CleaningStatus @default(SCHEDULED)
+  status        String    @default("SCHEDULED")
 
   // GPS Verification
   checkInLat    Float?
@@ -276,17 +261,17 @@ model CleaningJob {
   checkOutLat   Float?
   checkOutLng   Float?
 
-  // Checklist & Photos
-  checklistProgress Json? // { itemId: boolean }
-  photos        Json?     // Array of photo URLs
+  // Checklist & Photos (stored as JSON string)
+  checklistProgress String?
+  photos        String?
 
   // Quality
-  score         Int?      // AI-generated quality score 1-100
-  scoreFeedback String?   @db.Text
+  score         Int?
+  scoreFeedback String?
 
   // Notes
-  notes         String?   @db.Text
-  issues        String?   @db.Text
+  notes         String?
+  issues        String?
 
   // Duration
   durationMins  Int?
@@ -299,26 +284,18 @@ model CleaningJob {
   cleaner       User?     @relation(fields: [cleanerId], references: [id])
   booking       Booking?  @relation(fields: [bookingId], references: [id])
 
+  // Performance indexes
   @@index([propertyId])
   @@index([cleanerId])
   @@index([status])
   @@index([scheduledAt])
-}
-
-enum CleaningType {
-  TURNOVER
-  DEEP_CLEAN
-  INSPECTION
-  MAINTENANCE
-}
-
-enum CleaningStatus {
-  SCHEDULED
-  ASSIGNED
-  IN_PROGRESS
-  COMPLETED
-  CANCELLED
-  ISSUE_REPORTED
+  @@index([propertyId, scheduledAt])      // Composite: property cleaning schedule
+  @@index([cleanerId, status])            // Composite: cleaner's active jobs
+  @@index([cleanerId, scheduledAt])       // Composite: cleaner's schedule
+  @@index([scheduledAt, status])          // Composite: upcoming jobs by status
+  @@index([jobType, status])              // Filter by job type and status
+  @@index([createdAt])                    // Sort by creation date
+  @@index([completedAt])                  // Query completed jobs
 }
 
 // ============================================
@@ -330,20 +307,20 @@ model SmartLock {
   propertyId    String    @unique
 
   // Device Info
-  brand         LockBrand
+  brand         String
   model         String?
-  deviceId      String    // External device identifier
+  deviceId      String
   serialNumber  String?
 
   // Current State
   currentCode   String?
   codeExpiresAt DateTime?
-  batteryLevel  Int?      // 0-100
+  batteryLevel  Int?
   lastActivity  DateTime?
   isOnline      Boolean   @default(true)
 
-  // Access Log
-  accessLog     Json?     // Array of access events
+  // Access Log (stored as JSON string)
+  accessLog     String?
 
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -352,14 +329,6 @@ model SmartLock {
   property      Property  @relation(fields: [propertyId], references: [id])
 
   @@index([brand])
-}
-
-enum LockBrand {
-  SCHLAGE
-  YALE
-  AUGUST
-  KWIKSET
-  OTHER
 }
 
 // ============================================
@@ -372,13 +341,13 @@ model Message {
   bookingId     String?
 
   // Message Details
-  type          MessageType
-  channel       MessageChannel @default(EMAIL)
+  type          String
+  channel       String    @default("EMAIL")
   subject       String?
-  body          String    @db.Text
+  body          String
 
   // Status
-  status        MessageStatus @default(DRAFT)
+  status        String    @default("DRAFT")
 
   // Scheduling
   scheduledFor  DateTime?
@@ -389,7 +358,7 @@ model Message {
   approvedAt    DateTime?
 
   // AI Analysis
-  sentiment     Sentiment?
+  sentiment     String?
   sentimentScore Float?
 
   createdAt     DateTime  @default(now())
@@ -400,44 +369,17 @@ model Message {
   booking       Booking?  @relation(fields: [bookingId], references: [id])
   approver      User?     @relation("ApprovedBy", fields: [approvedBy], references: [id])
 
+  // Performance indexes
   @@index([guestId])
   @@index([bookingId])
   @@index([status])
   @@index([type])
-}
-
-enum MessageType {
-  BOOKING_CONFIRM
-  PRE_ARRIVAL
-  CHECK_IN
-  DURING_STAY
-  CHECK_OUT
-  POST_STAY
-  REVIEW_REQUEST
-  CUSTOM
-}
-
-enum MessageChannel {
-  EMAIL
-  SMS
-  WHATSAPP
-  APP_NOTIFICATION
-}
-
-enum MessageStatus {
-  DRAFT
-  PENDING_APPROVAL
-  APPROVED
-  SCHEDULED
-  SENT
-  DELIVERED
-  FAILED
-}
-
-enum Sentiment {
-  POSITIVE
-  NEUTRAL
-  NEGATIVE
+  @@index([channel])                      // Filter by message channel
+  @@index([guestId, type])                // Composite: guest messages by type
+  @@index([status, scheduledFor])         // Composite: scheduled messages queue
+  @@index([sentAt])                       // Query sent messages
+  @@index([createdAt])                    // Sort by creation date
+  @@index([sentiment])                    // Filter by sentiment analysis
 }
 
 // ============================================
@@ -450,9 +392,9 @@ model Expense {
   createdById   String?
 
   // Expense Details
-  category      ExpenseCategory
+  category      String
   subcategory   String?
-  amount        Decimal   @db.Decimal(10, 2)
+  amount        Float
   description   String
   vendor        String?
 
@@ -467,10 +409,10 @@ model Expense {
   taxCategory   String?
 
   // Status
-  status        ExpenseStatus @default(PENDING)
+  status        String    @default("PENDING")
 
   // Notes
-  notes         String?   @db.Text
+  notes         String?
 
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -479,33 +421,18 @@ model Expense {
   property      Property  @relation(fields: [propertyId], references: [id])
   createdBy     User?     @relation(fields: [createdById], references: [id])
 
+  // Performance indexes
   @@index([propertyId])
   @@index([category])
   @@index([date])
-}
-
-enum ExpenseCategory {
-  CLEANING
-  MAINTENANCE
-  UTILITIES
-  SUPPLIES
-  FURNITURE
-  APPLIANCES
-  INSURANCE
-  TAXES
-  MARKETING
-  SOFTWARE
-  PROFESSIONAL_FEES
-  MORTGAGE
-  HOA
-  OTHER
-}
-
-enum ExpenseStatus {
-  PENDING
-  APPROVED
-  REJECTED
-  PAID
+  @@index([propertyId, date])             // Composite: property expenses by date
+  @@index([propertyId, category])         // Composite: property expenses by category
+  @@index([category, date])               // Composite: expenses report
+  @@index([status])                       // Filter by approval status
+  @@index([isTaxDeductible])              // Filter for tax reports
+  @@index([isTaxDeductible, taxCategory]) // Composite: tax category reports
+  @@index([vendor])                       // Group by vendor
+  @@index([createdAt])                    // Sort by creation date
 }
 
 // ============================================
@@ -518,16 +445,16 @@ model ConciergeQuery {
   propertyId    String?
 
   // Query & Response
-  query         String    @db.Text
-  response      String    @db.Text
+  query         String
+  response      String
 
   // Classification
-  category      ConciergeCategory?
+  category      String?
   intent        String?
 
   // Quality
   wasHelpful    Boolean?
-  rating        Int?      // 1-5
+  rating        Int?
 
   // Voice
   voiceUsed     Boolean   @default(false)
@@ -543,21 +470,6 @@ model ConciergeQuery {
   @@index([createdAt])
 }
 
-enum ConciergeCategory {
-  PROPERTY_INFO
-  DIRECTIONS
-  RESTAURANTS
-  ACTIVITIES
-  EMERGENCY
-  CHECKOUT
-  LATE_CHECKOUT
-  WIFI
-  AMENITIES
-  LOCAL_EVENTS
-  TRANSPORTATION
-  OTHER
-}
-
 // ============================================
 // SYSTEM & AUDIT
 // ============================================
@@ -566,23 +478,28 @@ model AuditLog {
   id            String    @id @default(cuid())
   userId        String?
   action        String
-  entity        String    // Table name
+  entity        String
   entityId      String?
-  oldValues     Json?
-  newValues     Json?
+  oldValues     String?
+  newValues     String?
   ipAddress     String?
   userAgent     String?
   createdAt     DateTime  @default(now())
 
+  // Performance indexes
   @@index([userId])
   @@index([entity])
   @@index([createdAt])
+  @@index([entity, entityId])             // Composite: lookup entity history
+  @@index([action])                       // Filter by action type
+  @@index([userId, createdAt])            // Composite: user activity history
+  @@index([entity, action])               // Composite: entity action reports
 }
 
 model Setting {
   id            String    @id @default(cuid())
   key           String    @unique
-  value         Json
+  value         String
   description   String?
   updatedAt     DateTime  @updatedAt
 }

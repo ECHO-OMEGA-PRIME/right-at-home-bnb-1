@@ -44,8 +44,25 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Database init warning: {e}")
 
+    # Initialize cron scheduler for background jobs
+    try:
+        from services.cron_scheduler import init_cron_scheduler, shutdown_cron_scheduler
+        await init_cron_scheduler()
+        logger.info("Cron scheduler initialized (Gap Detection, Calendar Sync)")
+    except Exception as e:
+        logger.warning(f"Cron scheduler init warning: {e}")
+
     logger.info("=" * 60)
     yield
+
+    # Shutdown cron scheduler
+    try:
+        from services.cron_scheduler import shutdown_cron_scheduler
+        await shutdown_cron_scheduler()
+        logger.info("Cron scheduler shutdown complete")
+    except Exception as e:
+        logger.warning(f"Cron shutdown warning: {e}")
+
     logger.info("Shutting down Right at Home BnB API...")
 
 # Initialize FastAPI app
@@ -94,6 +111,13 @@ from routes.auth import router as auth_router
 from routes.marketing import router as marketing_router
 from routes.cleaner_tracking import router as cleaner_tracking_router
 from routes.bookings import router as bookings_router
+from routes.utilities import router as utilities_router
+
+# Cleaner Performance Analytics
+from routers.cleaner_analytics import router as cleaner_analytics_router
+
+# Pool Tech Worker Portal
+from routes.pool_tech import router as pool_tech_router
 
 # ============================================================================
 # CORE API ROUTES
@@ -167,6 +191,12 @@ app.include_router(cleaner_tracking_router, prefix="/api/tracking", tags=["Clean
 
 # Bookings - Calendar sync from Airbnb/VRBO, conflict detection
 app.include_router(bookings_router, prefix="/api/bookings", tags=["Bookings & Calendar Sync"])
+
+# Utility Tracking - Bills, cost analysis, anomaly detection
+app.include_router(utilities_router, prefix="/api/admin/utilities", tags=["Utility Tracking"])
+
+# Cleaner Performance Analytics - Dashboard, rankings, bonus calculations
+app.include_router(cleaner_analytics_router, prefix="/api/admin/cleaners", tags=["Cleaner Performance Analytics"])
 
 # ============================================================================
 # ECHO OMEGA PRIME BRANDING

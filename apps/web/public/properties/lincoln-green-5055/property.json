@@ -1,0 +1,246 @@
+{
+  "id": "lincoln-green-5055",
+  "vrboId": "4581977",
+  "title": "Right at Home-Midland Sprawling Ranch House with Pool Cabana and Playground",
+  "tagline": "Vacation home in Midland with fireplace and jetted bathtub",
+  "propertyType": "Entire home",
+  "location": {
+    "city": "Midland",
+    "state": "TX",
+    "address": "5055 Lincoln Green",
+    "coordinates": null
+  },
+  "specs": {
+    "bedrooms": 6,
+    "bathrooms": 5,
+    "fullBathrooms": 3,
+    "halfBathrooms": 2,
+    "sleeps": 18
+  },
+  "rooms": [
+    {
+      "name": "Bedroom 1",
+      "beds": "1 King Bed"
+    },
+    {
+      "name": "Bedroom 2",
+      "beds": "2 Queen Beds and 2 Double Beds"
+    },
+    {
+      "name": "Bedroom 3",
+      "beds": "1 Queen Bed"
+    },
+    {
+      "name": "Bedroom 4",
+      "beds": "1 Queen Bed"
+    },
+    {
+      "name": "Bedroom 5",
+      "beds": "1 Queen Bed"
+    },
+    {
+      "name": "Bedroom 6",
+      "beds": "1 Queen Bed"
+    }
+  ],
+  "bathrooms": [
+    {
+      "name": "Bathroom 1",
+      "type": "Full",
+      "features": [
+        "Jetted bathtub",
+        "Bathtub or shower",
+        "Toilet",
+        "Soap",
+        "Towels",
+        "Shampoo",
+        "Hair dryer"
+      ]
+    },
+    {
+      "name": "Bathroom 2",
+      "type": "Full",
+      "features": [
+        "Bathtub or shower",
+        "Toilet",
+        "Soap",
+        "Towels",
+        "Shampoo",
+        "Hair dryer"
+      ]
+    },
+    {
+      "name": "Bathroom 3",
+      "type": "Full",
+      "features": [
+        "Bathtub or shower",
+        "Toilet",
+        "Soap",
+        "Towels",
+        "Shampoo",
+        "Hair dryer"
+      ]
+    },
+    {
+      "name": "Bathroom 4",
+      "type": "Half",
+      "features": [
+        "Toilet",
+        "Soap",
+        "Towels"
+      ]
+    },
+    {
+      "name": "Bathroom 5",
+      "type": "Half",
+      "features": [
+        "Toilet",
+        "Soap",
+        "Towels"
+      ]
+    }
+  ],
+  "spaces": [
+    "Pool",
+    "Spa/Hot tub",
+    "Playground",
+    "Pool Cabana",
+    "Kitchen",
+    "Living room",
+    "Dining area"
+  ],
+  "amenities": {
+    "popular": [
+      "Pool",
+      "Washer",
+      "Dryer",
+      "Pet friendly",
+      "Air conditioning",
+      "Parking available"
+    ],
+    "essentials": [
+      "Wireless internet",
+      "WiFi",
+      "Towels provided",
+      "Linens provided",
+      "Air conditioning",
+      "Hair dryer",
+      "Shampoo",
+      "Toilet paper",
+      "Basic soaps",
+      "Iron & board",
+      "Heating",
+      "Fireplace"
+    ],
+    "kitchen": [
+      "Kitchen",
+      "Refrigerator",
+      "Microwave",
+      "Stove",
+      "Oven",
+      "Dishwasher",
+      "Coffee maker",
+      "Dishes & utensils"
+    ],
+    "entertainment": [
+      "Television",
+      "Smart TV"
+    ],
+    "laundry": [
+      "Washing machine",
+      "Dryer"
+    ],
+    "outside": [
+      "Pool",
+      "Spa/Hot tub",
+      "Playground",
+      "Pool cabana",
+      "Outdoor furniture"
+    ],
+    "pets": [
+      "Pet friendly"
+    ],
+    "parking": [
+      "Parking available"
+    ]
+  },
+  "houseRules": {
+    "checkIn": "Check with host",
+    "checkOut": "Check with host",
+    "children": "Allowed",
+    "events": "No events allowed",
+    "pets": "Allowed",
+    "smoking": "No smoking"
+  },
+  "importantInfo": [
+    "Extra-person charges may apply and vary depending on property policy",
+    "On-site parties or group events are strictly prohibited",
+    "Host has indicated that there is a carbon monoxide detector on the property",
+    "Host has indicated that there is a smoke detector on the property"
+  ],
+  "reviews": {
+    "rating": 9,
+    "count": 2,
+    "breakdown": {
+      "cleanliness": 10,
+      "checkIn": 10,
+      "communication": 10,
+      "location": 10,
+      "listingAccuracy": 10
+    },
+    "list": [
+      {
+        "rating": 10,
+        "title": "Best stay in Midland",
+        "author": "Jacqueline R.",
+        "date": "Jun 2025",
+        "stayDuration": "2 nights",
+        "travellerType": "Family with young children",
+        "content": "We had an amazing stay in Midland! The house was fantastic spacious, beautifully maintained, and clean. The pool was great a hit with the whole family, and the location couldn't have been better. Everything we needed was provided, from kitchen essentials to comfy bedding, making it feel like a true home away from home. My family genuinely enjoyed every moment of our stay, and we're already looking forward to coming back. Highly recommend!",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 8,
+        "title": null,
+        "author": "Lingsue P.",
+        "date": "Aug 2025",
+        "stayDuration": "3 nights",
+        "travellerType": null,
+        "content": null,
+        "liked": null
+      }
+    ]
+  },
+  "host": {
+    "name": "STEVEN M PALMA",
+    "isPremier": true,
+    "languages": [
+      "English"
+    ]
+  },
+  "images": {
+    "main": "main.webp",
+    "count": 84
+  },
+  "serviceFees": {
+    "cleaningFee": 200,
+    "deepCleanFee": 400,
+    "poolServiceFee": 50,
+    "lawnServiceFee": 75
+  },
+  "waiverRequirements": {
+    "pool": true,
+    "hotTub": true,
+    "firePit": false,
+    "general": true
+  },
+  "hasPool": true,
+  "hasHotTub": true,
+  "hasFirePit": false
+}

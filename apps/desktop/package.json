@@ -25,7 +25,12 @@
     "package:all": "npm run build && electron-builder -mwl",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src --ext .ts,.tsx",
-    "lint:fix": "eslint src --ext .ts,.tsx --fix"
+    "lint:fix": "eslint src --ext .ts,.tsx --fix",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "generate-icons": "ts-node scripts/generate-icons.ts",
+    "build-icons": "node scripts/build-icons.js"
   },
   "dependencies": {
     "@rightathome/shared": "workspace:*",
@@ -47,6 +52,7 @@
     "zustand": "^4.4.7"
   },
   "devDependencies": {
+    "@electron/rebuild": "^3.6.0",
     "@types/node": "^20.11.0",
     "@types/react": "^18.2.45",
     "@types/react-big-calendar": "^1.8.5",
@@ -66,7 +72,15 @@
     "typescript": "^5.3.3",
     "vite": "^5.0.11",
     "vite-plugin-electron": "^0.28.0",
-    "vite-plugin-electron-renderer": "^0.14.5"
+    "vite-plugin-electron-renderer": "^0.14.5",
+    "vitest": "^1.2.0",
+    "@vitest/coverage-v8": "^1.2.0",
+    "@testing-library/react": "^14.1.2",
+    "@testing-library/jest-dom": "^6.2.0",
+    "jsdom": "^23.2.0",
+    "happy-dom": "^13.2.0",
+    "sharp": "^0.33.2",
+    "png-to-ico": "^2.1.8"
   },
   "build": {
     "appId": "com.rightathome.bnb.desktop",

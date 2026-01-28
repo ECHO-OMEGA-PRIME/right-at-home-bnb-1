@@ -702,3 +702,9 @@ h1, h2, h3, h4 {
     font-size: 0.875rem;
   }
 }
+
+/* === CHROMATIC SHIFT ANIMATION === */
+@keyframes chromatic {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}

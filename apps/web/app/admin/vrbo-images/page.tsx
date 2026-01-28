@@ -35,6 +35,15 @@ interface ScrapedImage {
   isPrimary: boolean;
 }
 
+interface ScrapeResponse {
+  vrboId: string;
+  images: string[];
+  count: number;
+  galleryUrl?: string;
+  warning?: string;
+  errors?: string[];
+}
+
 // All Right at Home properties with VRBO IDs
 const PROPERTIES: PropertyConfig[] = [
   { propertyId: "castleford-5001", propertyName: "Oasis with Pool-Billiards @ Castleford", vrboId: "2636389", vrboUrl: "https://www.vrbo.com/2636389" },
@@ -61,6 +70,8 @@ export default function VRBOImagesPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
+  const [galleryUrl, setGalleryUrl] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'carousel'>('grid');
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [savedImages, setSavedImages] = useState<Record<string, string[]>>({});
@@ -77,6 +88,8 @@ export default function VRBOImagesPage() {
   const scrapeImages = useCallback(async (property: PropertyConfig) => {
     setLoading(true);
     setError(null);
+    setWarning(null);
+    setGalleryUrl(null);
     setImages([]);
 
     try {
@@ -88,16 +101,27 @@ export default function VRBOImagesPage() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to scrape images');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to scrape images');
       }
 
-      const data = await response.json();
+      const data: ScrapeResponse = await response.json();
+
+      // Store gallery URL for manual access
+      if (data.galleryUrl) {
+        setGalleryUrl(data.galleryUrl);
+      }
+
+      // Show warning if present
+      if (data.warning) {
+        setWarning(data.warning);
+      }
 
       // Mark previously saved images
       const savedForProperty = savedImages[property.propertyId] || [];
       const scrapedImages: ScrapedImage[] = data.images.map((url: string, index: number) => ({
         url,
-        thumbnailUrl: url.replace(/\/[a-z]\./, '/t.'), // Get thumbnail version
+        thumbnailUrl: url.replace(/_[a-z]\./, '_t.'), // Get thumbnail version
         alt: `${property.propertyName} - Image ${index + 1}`,
         index,
         selected: false,
@@ -108,6 +132,8 @@ export default function VRBOImagesPage() {
       setImages(scrapedImages);
     } catch (err: any) {
       setError(err.message || 'Failed to load images');
+      // Still set gallery URL so user can try manually
+      setGalleryUrl(`${property.vrboUrl}?pwaThumbnailDialog=thumbnail-gallery`);
     } finally {
       setLoading(false);
     }
@@ -385,6 +411,32 @@ export default function VRBOImagesPage() {
                   </div>
                 )}
 
+                {/* Gallery URL Link */}
+                {galleryUrl && (
+                  <div className="mx-4 mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-2 text-blue-700">
+                    <ImageIcon className="w-5 h-5 flex-shrink-0" />
+                    <span className="flex-1">
+                      <strong>Gallery URL:</strong>{' '}
+                      <a
+                        href={galleryUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="underline hover:text-blue-900"
+                      >
+                        Open VRBO Gallery with all photos
+                      </a>
+                    </span>
+                    <a
+                      href={galleryUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                    </a>
+                  </div>
+                )}
+
                 {/* Alerts */}
                 <AnimatePresence>
                   {error && (
@@ -395,8 +447,29 @@ export default function VRBOImagesPage() {
                       className="mx-4 mt-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700"
                     >
                       <AlertCircle className="w-5 h-5 flex-shrink-0" />
-                      <span>{error}</span>
+                      <div className="flex-1">
+                        <span>{error}</span>
+                        {galleryUrl && (
+                          <p className="text-sm mt-1">
+                            Try opening the <a href={galleryUrl} target="_blank" rel="noopener noreferrer" className="underline">VRBO Gallery</a> directly and copy image URLs manually.
+                          </p>
+                        )}
+                      </div>
                       <button onClick={() => setError(null)} className="ml-auto">
+                        <X className="w-4 h-4" />
+                      </button>
+                    </motion.div>
+                  )}
+                  {warning && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="mx-4 mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-2 text-amber-700"
+                    >
+                      <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                      <span>{warning}</span>
+                      <button onClick={() => setWarning(null)} className="ml-auto">
                         <X className="w-4 h-4" />
                       </button>
                     </motion.div>
@@ -616,18 +689,32 @@ export default function VRBOImagesPage() {
                     <h3 className="text-xl font-['Playfair_Display'] text-[#2D2D2D]">
                       No Images Found
                     </h3>
-                    <p className="text-[#2D2D2D]/60 mt-2">
-                      Could not find any images for this property
+                    <p className="text-[#2D2D2D]/60 mt-2 max-w-md mx-auto">
+                      VRBO may be blocking automated requests. Try opening the gallery directly to view all photos.
                     </p>
-                    <a
-                      href={selectedProperty.vrboUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-[#500000] text-white rounded-lg hover:bg-[#722F37] transition-colors"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                      View on VRBO
-                    </a>
+                    <div className="flex items-center justify-center gap-3 mt-6">
+                      <a
+                        href={galleryUrl || `${selectedProperty.vrboUrl}?pwaThumbnailDialog=thumbnail-gallery`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-[#500000] text-white rounded-lg hover:bg-[#722F37] transition-colors"
+                      >
+                        <ImageIcon className="w-4 h-4" />
+                        Open Photo Gallery
+                      </a>
+                      <a
+                        href={selectedProperty.vrboUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-[#500000] text-[#500000] rounded-lg hover:bg-[#500000]/5 transition-colors"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                        View Listing
+                      </a>
+                    </div>
+                    <p className="text-sm text-[#2D2D2D]/40 mt-4">
+                      Tip: Right-click images in the gallery and select &quot;Copy image address&quot; to get URLs
+                    </p>
                   </div>
                 )}
               </div>

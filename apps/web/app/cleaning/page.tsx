@@ -8,6 +8,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
+import DashboardShell from '@/components/layout/DashboardShell';
 import {
   CheckCircle, Clock, Calendar, Home, AlertTriangle, Camera, ChevronRight,
   Plus, RefreshCw, MapPin, User, Sparkles, ClipboardList, Trophy, Star,
@@ -1585,7 +1586,8 @@ export default function CleaningJobsPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#F5F5F0]">
+    <DashboardShell>
+      <div className="min-h-screen bg-[#F5F5F0]">
       {/* Header */}
       <div className="bg-gradient-to-br from-[#500000] to-[#722F37] text-white px-6 py-8">
         <div className="max-w-6xl mx-auto">
@@ -1851,6 +1853,7 @@ export default function CleaningJobsPage() {
           </button>
         </div>
       </div>
-    </div>
+      </div>
+    </DashboardShell>
   );
 }

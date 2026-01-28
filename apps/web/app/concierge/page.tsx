@@ -22,6 +22,7 @@ import {
   ChevronDown, ChevronUp, MoreHorizontal, Bookmark,
   MessageCircle, RefreshCw, Settings, Bell
 } from 'lucide-react';
+import DashboardShell from '@/components/layout/DashboardShell';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -1044,7 +1045,7 @@ How can I assist you today?`,
     };
   }, []);
 
-  // Handle sending message
+  // Handle sending message - calls actual API with ElevenLabs TTS
   const handleSend = useCallback(async (query?: string) => {
     const messageText = query || input.trim();
     if (!messageText) return;
@@ -1060,30 +1061,118 @@ How can I assist you today?`,
     setInput('');
     setIsTyping(true);
 
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 700));
+    try {
+      // Call the actual API with voice enabled
+      const response = await fetch('/api/concierge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: messageText,
+          sessionId,
+          guestType,
+          voice: voiceEnabled ? 'concierge' : undefined,
+        }),
+      });
 
-    // Generate response
-    const response = generateResponse(messageText);
+      const data = await response.json();
 
-    const assistantMessage: Message = {
-      id: (Date.now() + 1).toString(),
-      role: 'assistant',
-      content: response.content,
-      timestamp: new Date(),
-      category: response.category,
-      recommendations: response.recommendations,
-      suggestedReplies: response.suggestedReplies,
-    };
+      // Get local recommendations based on intent
+      const localRecs = getLocalRecommendations(data.intent || messageText);
 
-    setMessages((prev) => [...prev, assistantMessage]);
-    setIsTyping(false);
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: data.response || data.error || 'Sorry, I had trouble processing that.',
+        timestamp: new Date(),
+        category: data.intent,
+        recommendations: localRecs,
+        suggestedReplies: getSuggestedReplies(data.intent),
+      };
 
-    // Speak response if voice enabled
-    if (voiceEnabled && response.content) {
-      speakResponse(response.content);
+      setMessages((prev) => [...prev, assistantMessage]);
+
+      // Play ElevenLabs audio if available
+      if (voiceEnabled && data.audio) {
+        playAudioBase64(data.audio);
+      }
+    } catch (error) {
+      console.error('Concierge API error:', error);
+      // Fallback to local response
+      const response = generateResponse(messageText);
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: response.content,
+        timestamp: new Date(),
+        category: response.category,
+        recommendations: response.recommendations,
+        suggestedReplies: response.suggestedReplies,
+      };
+      setMessages((prev) => [...prev, assistantMessage]);
+
+      // Fallback to browser TTS
+      if (voiceEnabled && response.content) {
+        speakResponse(response.content);
+      }
+    } finally {
+      setIsTyping(false);
     }
-  }, [input, generateResponse, voiceEnabled]);
+  }, [input, sessionId, guestType, voiceEnabled, generateResponse]);
+
+  // Get local recommendations based on intent
+  const getLocalRecommendations = useCallback((intent: string): LocalBusiness[] => {
+    const q = intent.toLowerCase();
+    if (q.includes('restaurant') || q.includes('food') || q.includes('dining')) {
+      return localBusinesses.filter(b => b.category === 'restaurant').slice(0, 3);
+    }
+    if (q.includes('bar') || q.includes('drink') || q.includes('nightlife')) {
+      return localBusinesses.filter(b => b.category === 'bar').slice(0, 3);
+    }
+    if (q.includes('coffee')) {
+      return localBusinesses.filter(b => b.category === 'coffee').slice(0, 3);
+    }
+    if (q.includes('hardware')) {
+      return localBusinesses.filter(b => b.category === 'hardware').slice(0, 3);
+    }
+    if (q.includes('medical') || q.includes('emergency')) {
+      return localBusinesses.filter(b => b.category === 'medical').slice(0, 2);
+    }
+    return [];
+  }, []);
+
+  // Get suggested replies based on intent
+  const getSuggestedReplies = useCallback((intent: string): string[] => {
+    const suggestions: Record<string, string[]> = {
+      wifi: ['What time is checkout?', 'How do I control the thermostat?', 'Contact Steven'],
+      checkout: ['Can I get a late checkout?', 'Where are the trash bins?', 'Thanks!'],
+      checkin: ['What is the WiFi password?', 'Where do I park?', 'Pool rules?'],
+      dining: ['Any other options?', 'Which has the best reviews?', 'What about bars?'],
+      pool: ['Pool hours?', 'Hot tub temperature?', 'Other amenities?'],
+      hot_tub: ['Pool rules?', 'Best restaurants?', 'Contact Steven'],
+      emergency: ['Where is the nearest pharmacy?', 'Contact Steven', 'Thanks'],
+    };
+    return suggestions[intent] || ['Best restaurants?', 'WiFi password?', 'Contact Steven'];
+  }, []);
+
+  // Play audio from base64 (ElevenLabs response)
+  const playAudioBase64 = useCallback((base64Audio: string) => {
+    try {
+      setIsSpeaking(true);
+      const audio = new Audio(`data:audio/mp3;base64,${base64Audio}`);
+      audio.onended = () => setIsSpeaking(false);
+      audio.onerror = () => {
+        setIsSpeaking(false);
+        console.error('Audio playback error');
+      };
+      audio.play().catch(err => {
+        setIsSpeaking(false);
+        console.error('Audio play failed:', err);
+      });
+    } catch (error) {
+      setIsSpeaking(false);
+      console.error('Audio playback error:', error);
+    }
+  }, []);
 
   // Text to speech
   const speakResponse = useCallback((text: string) => {
@@ -1237,6 +1326,7 @@ How can I assist you today?`,
   }
 
   return (
+    <DashboardShell>
     <div className="min-h-screen bg-[#F5F5F0]">
       <Toaster position="top-center" />
 
@@ -1509,5 +1599,6 @@ How can I assist you today?`,
         )}
       </AnimatePresence>
     </div>
+    </DashboardShell>
   );
 }

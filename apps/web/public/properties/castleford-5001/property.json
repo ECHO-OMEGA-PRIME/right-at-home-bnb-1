@@ -1,0 +1,645 @@
+{
+  "id": "castleford-5001",
+  "vrboId": "2636389",
+  "title": "Right At Home-Midland Oasis with pool-billiards",
+  "tagline": "Vacation home in Midland with private pool and kitchen",
+  "propertyType": "Entire home",
+  "location": {
+    "city": "Midland",
+    "state": "TX",
+    "address": "5001 Castleford",
+    "coordinates": null
+  },
+  "specs": {
+    "bedrooms": 4,
+    "bathrooms": 4,
+    "fullBathrooms": 3,
+    "halfBathrooms": 1,
+    "sleeps": 10
+  },
+  "rooms": [
+    {
+      "name": "Bedroom 1",
+      "beds": "1 Queen Bed"
+    },
+    {
+      "name": "Bedroom 2",
+      "beds": "2 Queen Beds"
+    },
+    {
+      "name": "Bedroom 3",
+      "beds": "1 Queen Bed"
+    },
+    {
+      "name": "Bedroom 4",
+      "beds": "1 Queen Bed"
+    }
+  ],
+  "bathrooms": [
+    {
+      "name": "Bathroom 1",
+      "type": "Full",
+      "features": [
+        "Jetted bathtub",
+        "Shower only",
+        "Toilet",
+        "Soap",
+        "Towels",
+        "Shampoo",
+        "Hair dryer"
+      ]
+    },
+    {
+      "name": "Bathroom 2",
+      "type": "Half",
+      "features": [
+        "Toilet",
+        "Soap"
+      ]
+    },
+    {
+      "name": "Bathroom 3",
+      "type": "Full",
+      "features": [
+        "Bathtub or shower",
+        "Toilet",
+        "Soap",
+        "Towels",
+        "Shampoo",
+        "Hair dryer"
+      ]
+    },
+    {
+      "name": "Bathroom 4",
+      "type": "Full",
+      "features": [
+        "Shower only",
+        "Toilet",
+        "Soap",
+        "Hair dryer"
+      ]
+    }
+  ],
+  "spaces": [
+    "Deck or patio",
+    "Porch or lanai",
+    "Kitchen",
+    "Separate dining area",
+    "Garden",
+    "Dining area"
+  ],
+  "amenities": {
+    "topFamilyFriendly": [
+      "Kitchen",
+      "Game room",
+      "Microwave",
+      "Living/Dining area"
+    ],
+    "popular": [
+      "Pool",
+      "Washer",
+      "Dryer",
+      "Pet friendly",
+      "Free WiFi",
+      "Air conditioning",
+      "Outdoor Space",
+      "Parking available",
+      "Barbecue grill",
+      "Fireplace"
+    ],
+    "essentials": [
+      "Wireless internet",
+      "Free wifi",
+      "Wifi speed: 500+ Mbps",
+      "Internet",
+      "Towels provided",
+      "Linens provided",
+      "Air conditioning",
+      "Hair dryer",
+      "Shampoo",
+      "Toilet paper",
+      "Paper towels",
+      "Basic soaps",
+      "Iron & board",
+      "Heating",
+      "Fireplace"
+    ],
+    "kitchen": [
+      "Kitchen",
+      "Refrigerator",
+      "Dishwasher",
+      "Microwave",
+      "Stove",
+      "Oven",
+      "Grill",
+      "Dishes & utensils",
+      "Dining table",
+      "Coffee maker",
+      "Blender",
+      "Toaster"
+    ],
+    "poolSpa": [
+      "Private pool",
+      "Heated pool",
+      "Outdoor pool",
+      "Pool"
+    ],
+    "outside": [
+      "Outdoor furniture",
+      "Beach towels"
+    ],
+    "pets": [
+      "Pet friendly",
+      "2 pets total (up to 50 lbs per pet)"
+    ],
+    "entertainment": [
+      "Television",
+      "Smart TV",
+      "Game room",
+      "Pool table"
+    ],
+    "babyToddler": [
+      "Books for kids"
+    ],
+    "laundry": [
+      "Washing machine",
+      "Dryer"
+    ],
+    "parking": [
+      "Parking"
+    ],
+    "safety": [
+      "Carbon monoxide detector",
+      "Smoke detector",
+      "Fenced yard"
+    ]
+  },
+  "houseRules": {
+    "checkIn": "After 4:00 PM",
+    "checkOut": "Before 11:00 AM",
+    "minimumAge": 25,
+    "children": "Children allowed: ages 0-17",
+    "events": "No events allowed",
+    "pets": "Pets allowed: less than 23 kg per pet (limit 2 pets total)",
+    "smoking": "Smoking is not permitted",
+    "additionalRules": [
+      "For Extend Stays over 10 days The customer will be assessed an additional cleaning fee every 10 days for cleaning.",
+      "Pool has the option to be heated for an additional 100 a day per the duration of your stay and takes 18 hour notice to heat."
+    ]
+  },
+  "importantInfo": [
+    "Extra-person charges may apply and vary depending on property policy",
+    "Government-issued photo identification and a credit card, debit card or cash deposit may be required at check-in for incidental charges",
+    "Special requests are subject to availability upon check-in and may incur additional charges; special requests cannot be guaranteed",
+    "On-site parties or group events are strictly prohibited",
+    "Host has indicated that there is a carbon monoxide detector on the property",
+    "Host has indicated that there is a smoke detector on the property",
+    "Property Registration Number STR22-0006"
+  ],
+  "reviews": {
+    "rating": 9,
+    "count": 69,
+    "breakdown": {
+      "cleanliness": 8.6,
+      "amenities": 9,
+      "propertyConditions": 9,
+      "checkIn": 9.8,
+      "communication": 9.8,
+      "location": 10,
+      "listingAccuracy": 9.2
+    },
+    "list": [
+      {
+        "rating": 10,
+        "title": null,
+        "author": "Stacy J.",
+        "date": "Oct 2025",
+        "stayDuration": "6 nights",
+        "travellerType": null,
+        "content": "This location was amazing and easy access to the loop, shopping and dining.",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 8,
+        "title": "Great family spot",
+        "author": "Eric L.",
+        "date": "May 2025",
+        "stayDuration": "3 nights",
+        "travellerType": null,
+        "content": "Great place for a family to relax. House had lots of room and pool is great!",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": "Graduation Family in town",
+        "author": "Gina S.",
+        "date": "May 2025",
+        "stayDuration": "4 nights",
+        "travellerType": null,
+        "content": "This house was a lot bigger than it looks from the pictures. Great place to have family stay. Everyone enjoyed the stay at the house.",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": "Weekend celebration",
+        "author": "Jodi P.",
+        "date": "Aug 2025",
+        "stayDuration": "2 nights",
+        "travellerType": null,
+        "content": "The house was plenty big for the group we had with us. We loved the pool table and pool outside! All the rooms and bathrooms were clean and big! We did find that the fridge/freezers did not stay very cold though. If we had a longer stay that could've been more of an issue. Owner was very accommodating in letting us check in early as well! Loved our stay there and family from out of town was very happy as well!",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 8,
+        "title": "Visiting in Midland",
+        "author": "Kittie A.",
+        "date": "Apr 2025",
+        "stayDuration": "4 nights",
+        "travellerType": null,
+        "content": "The size of the property was adequate for our family, it was well stocked with the essentials. There were some issues initially however the property manager handled all promptly. Overall my family thoroughly enjoyed the stay in Midland visiting with family in town.",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": "An amazing house",
+        "author": "Sarah Q.",
+        "date": "Mar 2025",
+        "stayDuration": "4 nights",
+        "travellerType": null,
+        "content": "The host was so great, reached out made sure we knew where things were, the house was so amazing, what a great BnB experience highly recommended, especially for a family. Thank you",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": "Great stay",
+        "author": "Bill H.",
+        "date": "May 2023",
+        "stayDuration": "2 nights",
+        "travellerType": null,
+        "content": "Great house",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": "Great home!",
+        "author": "Deanna L.",
+        "date": "Aug 2024",
+        "stayDuration": "2 nights",
+        "travellerType": null,
+        "content": "We had a great time at this home and really loved the pool! Beautiful home with plenty of beds and space! Was the perfect place for our group!",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": "Nice home",
+        "author": "Sheri B.",
+        "date": "Nov 2024",
+        "stayDuration": "3 nights",
+        "travellerType": null,
+        "content": "Nice home, nice neighborhood.",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": "Weekend in Midland",
+        "author": "juan C.",
+        "location": "San Antonio, USA",
+        "date": "Nov 2023",
+        "stayDuration": "2 nights",
+        "travellerType": null,
+        "content": "Property was very clean and Check-In and check out was easy. I will stay again!",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": "Great stay!",
+        "author": "Fernando S.",
+        "date": "Aug 2023",
+        "stayDuration": "2 nights",
+        "travellerType": null,
+        "content": "Everything was even better than expected. Loved this property. We will definitely be staying again in the future",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": "Very nice and enjoyable experience",
+        "author": "Maia V.",
+        "date": "Jun 2023",
+        "stayDuration": "1 night",
+        "travellerType": null,
+        "content": "I was very glad that i had such a nice stay at this residance.",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": "Great stay",
+        "author": "Annalisa G.",
+        "location": "Abilene Texas USA",
+        "date": "Jun 2023",
+        "stayDuration": "1 night",
+        "travellerType": null,
+        "content": "Very nice, Clean property. Good communication.",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": "Great home",
+        "author": "Dana H.",
+        "date": "May 2023",
+        "stayDuration": "1 night",
+        "travellerType": null,
+        "content": "Beautiful home. Well stocked. We enjoyed our stay.",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": "Texas Tech Alumni",
+        "author": "Joy F.",
+        "date": "Apr 2024",
+        "stayDuration": "2 nights",
+        "travellerType": null,
+        "content": "We had a great time, a perfect place to gather. The place was clean and the communication was great we would definitely stay again",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": "Amazing home",
+        "author": "Angela F.",
+        "date": "Jul 2024",
+        "stayDuration": "2 nights",
+        "travellerType": null,
+        "content": "We enjoyed our stay. House was so nice. Beds were comfortable. Kitchen was well stocked. The swimming pool was so clean and the outdoor patio and TV were great. The host was so nice and responded quickly.",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 8,
+        "title": "Graduation Stay",
+        "author": "Keslie L.",
+        "date": "Jun 2023",
+        "stayDuration": "1 night",
+        "travellerType": null,
+        "content": "Perfect for the family to enjoy while celebrating a family graduate",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": "7 year old bday party",
+        "author": "lindzy g.",
+        "date": "Jun 2024",
+        "stayDuration": "2 nights",
+        "travellerType": null,
+        "content": "We had a great time the pool was nice our family really enjoyed it there was plenty of room for everyone",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": "Beautiful home",
+        "author": "Kealy C.",
+        "date": "Aug 2023",
+        "stayDuration": "4 nights",
+        "travellerType": null,
+        "content": "Beautiful home the kids and I had a amazing time swimming wonderful place to getaway and spend quality time with your family",
+        "liked": [
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": "Great stay",
+        "author": "Verified traveller",
+        "date": "Mar 2023",
+        "stayDuration": "2 nights",
+        "travellerType": null,
+        "content": "We really enjoyed the big house. We had everything we needed. Host was great. Great communication.",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": "Lovely property",
+        "author": "Angelique m.",
+        "date": "Sep 2024",
+        "stayDuration": "2 nights",
+        "travellerType": null,
+        "content": "The pictures and posting do not do the home justice, super cute home, very clean. Check in process was easy and location of the home to every where we needed to go was perfect. Will definitely be saving this listing for future visits to Midland! Thank you so much.",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": null,
+        "author": "Esther",
+        "date": "Sep 2023",
+        "stayDuration": "3 nights",
+        "travellerType": null,
+        "content": "Great rental, would rent again. Very comfortable and plenty of room! Thank you!",
+        "liked": [
+          "cleanliness",
+          "amenities",
+          "property conditions & facilities",
+          "communication"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": "Accommodating and Hospitable",
+        "author": "Jack L C.",
+        "date": "Aug 2024",
+        "stayDuration": "3 nights",
+        "travellerType": null,
+        "content": "We were visiting our kids and grandkids in Midland. The property offered more than enough space for dining, leisure, and rest. The neighbor is friendly and located near shopping establishments and restaurants. Everything was clean and welcoming. We hope to return next year!",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": "Amazing!",
+        "author": "Socorro G.",
+        "location": "Roswell NM",
+        "date": "May 2022",
+        "stayDuration": "4 nights",
+        "travellerType": null,
+        "content": "Great place to stay! Steven was an amazing host and never skipped a beat. Very responsive to all our needs. The neighborhood was amazing and close to everything! We will definitely be renting from him again!",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": "Perfect for gatherings",
+        "author": "benjamin s.",
+        "date": "Nov 2023",
+        "stayDuration": "4 nights",
+        "travellerType": null,
+        "content": "My wife has a large family and there was plenty of room to entertain no matter how many wanted to come over.",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      }
+    ]
+  },
+  "host": {
+    "name": "STEVEN M PALMA",
+    "isPremier": true,
+    "languages": [
+      "English"
+    ],
+    "about": "Full time property manager here to ensure you have a wonderful trip. Graduate of Texas A&M and travel enthusiast.",
+    "whyChoseProperty": "Located in the Exclusive Saddle Cub South Addition just off of Loop 250",
+    "whatMakesUnique": "Private Pool and Billiards Room"
+  },
+  "description": "This home is located in saddle club north convenient access to both Loop 250 which includes all shopping surroundings restaurants and entertainment venues there is a pool for your enjoyment as well as a pool table to enjoy all the bedrooms have 50 inch TVs as well as one in the living room available seating for 22 inside as well as 15 outside this home is set up for both business and pleasure. should you need larger accommodations you can also book Santiago Dreams another four bedroom three bath home just two blocks away. Enjoy your stay. Our prices include all fees. No hidden fees.",
+  "images": {
+    "main": "main.webp",
+    "count": 66
+  },
+  "serviceFees": {
+    "cleaningFee": 175,
+    "deepCleanFee": 350,
+    "poolServiceFee": 50,
+    "lawnServiceFee": 75
+  },
+  "waiverRequirements": {
+    "pool": true,
+    "hotTub": true,
+    "firePit": false,
+    "general": true
+  },
+  "hasPool": true,
+  "hasHotTub": true,
+  "hasFirePit": false
+}

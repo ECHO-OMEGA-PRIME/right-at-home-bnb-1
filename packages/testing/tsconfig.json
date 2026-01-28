@@ -1,0 +1,36 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM"],
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "outDir": "./dist",
+    "rootDir": ".",
+    "types": ["vitest/globals", "node"],
+    "paths": {
+      "@/*": ["./src/*"],
+      "@shared/*": ["../shared/src/*"],
+      "@cloud-sync/*": ["../cloud-sync/src/*"],
+      "@fixtures": ["./utils/fixtures"],
+      "@helpers": ["./utils/helpers"],
+      "@mocks": ["./utils/mocks"]
+    }
+  },
+  "include": [
+    "src/**/*.ts",
+    "unit/**/*.ts",
+    "integration/**/*.ts",
+    "e2e/**/*.ts",
+    "utils/**/*.ts",
+    "validation/**/*.ts"
+  ],
+  "exclude": ["node_modules", "dist"]
+}

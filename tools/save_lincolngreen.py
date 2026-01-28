@@ -1,0 +1,112 @@
+#!/usr/bin/env python3
+"""Save Lincoln Green images to JSON"""
+import json
+from datetime import datetime
+from pathlib import Path
+
+OUTPUT_DIR = Path(__file__).parent / "vrbo_images"
+OUTPUT_DIR.mkdir(exist_ok=True)
+
+images = [
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/04f2aa7c.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/095c0ca3.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/0a11b3cd.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/0c5b11f5.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/0d2a778a.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/0e0f6cc7.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/14bfe08b.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/1a828ae9.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/1db61d3a.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/204d68a3.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/20bd4761.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/23434305.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/27776f82.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/2bc15eb8.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/2d370abd.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/2e834717.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/30585a17.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/317b91ba.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/3ca8048b.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/3f3a2ba1.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/426f1c3a.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/4328def4.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/433ae4e8.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/44000244.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/45b153ed.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/4942c944.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/4a23fa95.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/4b98d46e.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/4e83178c.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/52cb3e67.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/55e68d01.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/5772aaf1.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/5885273f.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/5e6cef14.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/660accaf.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/6804b109.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/6e1ebb11.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/72fda321.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/739f2ec9.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/76fca7f0.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/7844ad83.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/841f5313.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/867f8d1c.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/8698a3d2.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/8698d679.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/88f4886f.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/8e2a6fee.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/901ac5ed.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/932242eb.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/944d2e1e.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/98e7ecd9.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/99088f3a.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/9dfc5129.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/9f12c949.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/9f32989b.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/a0fcb4b5.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/a1cd59e1.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/a4bee6ed.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/a90825a3.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/aa3e9152.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/aa68b76a.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/ae5508d7.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/b03ecfd5.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/b171681a.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/b2572967.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/b6bf6011.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/b7c89ebb.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/ba351550.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/bce62797.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/c3a8cb16.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/c97579b9.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/ca4afe67.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/cac984a1.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/cb526586.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/d17b82c9.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/d502661b.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/d75ff611.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/d8f19063.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/d9e1a19a.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/dcb378f4.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/e59dc078.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/ef91242f.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/f5c9dde1.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/117000000/116090000/116086400/116086340/fcc008fd.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+]
+
+result = {
+    "propertyId": "lincoln-green-5055",
+    "propertyName": "Right at Home-Midland Sprawling Ranch House with Pool Cabana and Playground",
+    "vrboId": "4581977",
+    "vrboUrl": "https://www.vrbo.com/4581977",
+    "galleryUrl": "https://www.vrbo.com/4581977?pwaThumbnailDialog=thumbnail-gallery",
+    "images": images,
+    "count": len(images),
+    "scrapedAt": datetime.now().isoformat()
+}
+
+output_file = OUTPUT_DIR / "lincoln-green-5055.json"
+with open(output_file, 'w') as f:
+    json.dump(result, f, indent=2)
+
+print(f"Saved {len(images)} images to {output_file}")

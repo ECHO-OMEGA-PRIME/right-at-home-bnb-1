@@ -1,0 +1,277 @@
+{
+  "id": "Oriole-6100",
+  "vrboId": "4471713",
+  "title": "Right At Home-Midland's Most Marvelous with Pool",
+  "tagline": "Holiday home in Midland with kitchen and fireplace",
+  "propertyType": "Entire home",
+  "location": {
+    "city": "Midland",
+    "state": "TX",
+    "address": "6100 Oriole",
+    "coordinates": null
+  },
+  "specs": {
+    "bedrooms": 4,
+    "bathrooms": 2,
+    "sleeps": 8
+  },
+  "rooms": [
+    {
+      "name": "Bedroom 1",
+      "beds": "1 Queen Bed"
+    },
+    {
+      "name": "Bedroom 2",
+      "beds": "1 Queen Bed"
+    },
+    {
+      "name": "Bedroom 3",
+      "beds": "1 Queen Bed"
+    },
+    {
+      "name": "Bedroom 4",
+      "beds": "1 Queen Bed"
+    }
+  ],
+  "bathrooms": [
+    {
+      "name": "Bathroom 1",
+      "type": "Full",
+      "features": [
+        "Bathtub or shower",
+        "Toilet",
+        "Soap",
+        "Towels",
+        "Shampoo",
+        "Hair dryer"
+      ]
+    },
+    {
+      "name": "Bathroom 2",
+      "type": "Full",
+      "features": [
+        "Shower only",
+        "Toilet",
+        "Soap",
+        "Towels",
+        "Shampoo",
+        "Hair dryer"
+      ]
+    }
+  ],
+  "spaces": [
+    "Pool",
+    "Kitchen",
+    "Outdoor dining area",
+    "Indoor dining for 10"
+  ],
+  "amenities": {
+    "topFamilyFriendly": [
+      "Kitchen",
+      "Microwave"
+    ],
+    "popular": [
+      "Pool",
+      "Washing machine",
+      "Dryer",
+      "Pet-friendly",
+      "Air-conditioning",
+      "Parking available",
+      "Barbecue grill",
+      "Fireplace"
+    ],
+    "essentials": [
+      "Wireless internet",
+      "WiFi",
+      "Internet",
+      "Towels provided",
+      "Linens provided",
+      "Air conditioning",
+      "Hair dryer",
+      "Shampoo",
+      "Toilet paper",
+      "Basic soaps",
+      "Iron & board",
+      "Heating",
+      "Fireplace"
+    ],
+    "kitchen": [
+      "Kitchen",
+      "Refrigerator",
+      "Dishwasher",
+      "Microwave",
+      "Stove",
+      "Oven",
+      "Grill",
+      "Dishes & utensils",
+      "Coffee maker",
+      "Toaster"
+    ],
+    "poolSpa": [
+      "Pool"
+    ],
+    "pets": [
+      "Pet friendly",
+      "Welcoming dogs only",
+      "Up to 23 kg per pet"
+    ],
+    "entertainment": [
+      "Television",
+      "Smart TV"
+    ],
+    "laundry": [
+      "Washing machine",
+      "Dryer"
+    ],
+    "parking": [
+      "Parking"
+    ],
+    "safety": [
+      "Carbon monoxide detector",
+      "Smoke detector"
+    ]
+  },
+  "houseRules": {
+    "checkIn": "After 4:00 PM",
+    "checkOut": "Before 11:00 AM",
+    "minimumAge": 25,
+    "children": "Children allowed: ages 0-17",
+    "events": "Events allowed: family gatherings, birthday parties, weddings (Maximum attendees: 16)",
+    "pets": "Dogs allowed: less than 23 kg per pet (limit 2 pets total)",
+    "smoking": "Smoking is not permitted",
+    "additionalRules": [
+      "For Extend Stays over 10 days The customer will be assessed an additional cleaning fee every 10 days for cleaning.",
+      "An additional $100 per night for the duration of the stay will be added to the reservation if you would like the pool heated (takes 18 hours)."
+    ]
+  },
+  "importantInfo": [
+    "This property is managed by a professional host",
+    "Extra-person charges may apply and vary depending on property policy",
+    "Government-issued photo identification and a credit card, debit card or cash deposit may be required at check-in for incidental charges",
+    "Special requests are subject to availability upon check-in and may incur additional charges; special requests cannot be guaranteed",
+    "Parties and events (including family gatherings, birthday parties and weddings) are allowed on site. Maximum attendees: 16",
+    "Host has indicated that there is a carbon monoxide detector on the property",
+    "Host has indicated that there is a smoke detector on the property"
+  ],
+  "reviews": {
+    "rating": 9.6,
+    "count": 5,
+    "breakdown": {
+      "cleanliness": 9.6,
+      "checkIn": 10,
+      "communication": 10,
+      "location": 10,
+      "listingAccuracy": 10
+    },
+    "distribution": {
+      "excellent": 4,
+      "good": 1,
+      "okay": 0,
+      "poor": 0,
+      "terrible": 0
+    },
+    "list": [
+      {
+        "rating": 10,
+        "title": "Wonderful stay",
+        "author": "Kelly P.",
+        "date": "Jun 2025",
+        "stayDuration": "3 nights",
+        "stayDate": "Jun 2025",
+        "content": null,
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 8,
+        "title": "Comfortable stay",
+        "author": "Ashley P.",
+        "date": "Jul 2025",
+        "stayDuration": "5 nights",
+        "stayDate": "Jul 2025",
+        "content": "Comfortable beds. Nice pool. Good neighborhood.",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": "Grandaughter soccer tournament trip",
+        "author": "lalo v.",
+        "date": "Jul 2025",
+        "stayDuration": "3 nights",
+        "stayDate": "Jul 2025",
+        "content": "House was clean and in a great area. It was close to many restaurants and grocery stores. Pool was nice and clean. Host was easily accessible and responded quickly to any questions we had about the home.",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": "Great Stay!",
+        "author": "Leslie B.",
+        "date": "Jun 2025",
+        "stayDuration": "3 nights",
+        "stayDate": "Jun 2025",
+        "content": "Midland's Most Marvelous with a Pool provided my family with a great stay. The house is spacious, in a nice neighborhood, and close to shopping and activities! Also, the pool was a perfect way to unwind at the end of the day. The beds were comfortable, and the house was quiet at night which induced easy sleeping. I highly recommend this house for a stay in Midland.",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": null,
+        "author": "Nathan G.",
+        "date": "Jun 2025",
+        "stayDuration": "2 nights",
+        "stayDate": "May 2025",
+        "content": null,
+        "liked": null
+      }
+    ]
+  },
+  "host": {
+    "name": "STEVEN M PALMA",
+    "isPremier": true,
+    "languages": [
+      "English"
+    ]
+  },
+  "description": "Your Midland getaway awaits at this 4-bedroom house. Each room features a cozy queen bed with 58\" smart Tv, perfect for a serene night's sleep. With amazing Backyard with pool, guests can relax and unwind enjoying a game on the backporch or grilling under the west Texas sky. The home features indoor dining for 10 and outdoor dining for 6. The kitchen is fully equipped to prepare your meals, with plenty of room for multiple cooks. Stretch out on the large sectional sofa and watch your favorite movie on the 65\" living room television. Enjoy your time in Midland at our memorable house.\n\nOur prices include all fees. No hidden fees.",
+  "images": {
+    "main": "main.webp",
+    "count": 33
+  },
+  "serviceFees": {
+    "cleaningFee": 175,
+    "deepCleanFee": 350,
+    "poolServiceFee": 50,
+    "lawnServiceFee": 75
+  },
+  "waiverRequirements": {
+    "pool": true,
+    "hotTub": false,
+    "firePit": false,
+    "general": true
+  },
+  "hasPool": true,
+  "hasHotTub": false,
+  "hasFirePit": false
+}

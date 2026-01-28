@@ -3,12 +3,19 @@
   "projectSettings": {
     "framework": "nextjs"
   },
+  "crons": [
+    {
+      "path": "/api/cron/monitor",
+      "schedule": "0,15,30,45 * * * *"
+    }
+  ],
   "buildCommand": "npm run build",
   "outputDirectory": ".next",
   "installCommand": "npm install --legacy-peer-deps",
   "devCommand": "npm run dev",
   "env": {
-    "NEXT_PUBLIC_API_URL": "https://rightathome-api.bmcii1976.workers.dev"
+    "NEXT_PUBLIC_API_URL": "https://rightathome-api.bmcii1976.workers.dev",
+    "DATABASE_URL": "file:./dev.db"
   },
   "headers": [
     {

@@ -13,21 +13,48 @@
     "dev": "turbo run dev",
     "build": "turbo run build",
     "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "clean": "turbo run clean && rm -rf node_modules/.cache",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
+
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
+    "db:migrate:prod": "prisma migrate deploy",
     "db:studio": "prisma studio",
     "db:seed": "prisma db seed",
+    "db:reset": "prisma migrate reset",
+
     "web": "npm run dev --workspace=apps/web",
+    "web:build": "npm run build --workspace=apps/web",
+    "web:start": "npm run start --workspace=apps/web",
     "mobile": "npm run start --workspace=apps/mobile",
+    "mobile:ios": "npm run ios --workspace=apps/mobile",
+    "mobile:android": "npm run android --workspace=apps/mobile",
     "desktop": "npm run start --workspace=apps/desktop",
-    "backend": "cd backend && python -m uvicorn main:app --reload --port 8000"
+    "desktop:build": "npm run build --workspace=apps/desktop",
+
+    "packages:build": "turbo run build --filter='./packages/*'",
+    "packages:types": "npm run build --workspace=packages/types",
+    "packages:utils": "npm run build --workspace=packages/utils",
+    "packages:services": "npm run build --workspace=packages/services",
+
+    "backend": "cd backend && python -m uvicorn main:app --reload --port 8000",
+    "backend:prod": "cd backend && python -m uvicorn main:app --host 0.0.0.0 --port 8000",
+
+    "prepare": "npm run db:generate && npm run packages:build",
+    "postinstall": "npm run db:generate"
   },
   "dependencies": {
     "@prisma/client": "^5.9.0"
   },
   "devDependencies": {
+    "@types/node": "^20.11.0",
+    "prettier": "^3.2.0",
     "prisma": "^5.9.0",
+    "ts-node": "^10.9.2",
     "turbo": "^1.11.0",
     "typescript": "^5.3.3"
   },

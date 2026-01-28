@@ -10,9 +10,141 @@ import dynamic from 'next/dynamic';
 import {
   Home, Star, MapPin, Calendar, ChevronRight, Play, Pause,
   Wifi, Car, Coffee, Sparkles, Shield, Clock, ArrowRight,
-  Phone, Mail, Instagram, Droplets, Flame
+  Phone, Mail, Droplets, Flame, LogIn
 } from 'lucide-react';
 import { properties as realProperties, PropertyDetails } from '@/lib/property-knowledge';
+
+// Weather data type
+interface WeatherData {
+  temp: number;
+  condition: string;
+  emoji: string;
+}
+
+// Floating Header Component
+const FloatingHeader = () => {
+  const [dateTime, setDateTime] = useState<string>('');
+  const [weather, setWeather] = useState<WeatherData | null>(null);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    // Update date/time every second
+    const updateDateTime = () => {
+      const now = new Date();
+      const options: Intl.DateTimeFormatOptions = {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+      };
+      setDateTime(now.toLocaleDateString('en-US', options));
+    };
+
+    updateDateTime();
+    const timer = setInterval(updateDateTime, 1000);
+
+    // Fetch weather
+    const fetchWeather = async () => {
+      try {
+        const res = await fetch('/api/weather');
+        const data = await res.json();
+        if (data.success && data.data) {
+          setWeather({
+            temp: Math.round(data.data.temp),
+            condition: data.data.condition,
+            emoji: getWeatherEmoji(data.data.condition),
+          });
+        } else if (data.temp) {
+          setWeather({
+            temp: data.temp,
+            condition: data.condition,
+            emoji: data.emoji || getWeatherEmoji(data.condition),
+          });
+        }
+      } catch (error) {
+        console.error('Weather fetch error:', error);
+        setWeather({ temp: 72, condition: 'Clear', emoji: '☀️' });
+      }
+    };
+
+    fetchWeather();
+    const weatherTimer = setInterval(fetchWeather, 600000); // Refresh every 10 minutes
+
+    // Handle scroll
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 50);
+    };
+    window.addEventListener('scroll', handleScroll);
+
+    return () => {
+      clearInterval(timer);
+      clearInterval(weatherTimer);
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
+
+  const getWeatherEmoji = (condition: string): string => {
+    const emojis: Record<string, string> = {
+      'Clear': '☀️',
+      'Sunny': '☀️',
+      'Clouds': '☁️',
+      'Cloudy': '☁️',
+      'Partly Cloudy': '⛅',
+      'Rain': '🌧️',
+      'Drizzle': '🌦️',
+      'Thunderstorm': '⛈️',
+      'Snow': '❄️',
+      'Mist': '🌫️',
+      'Fog': '🌫️',
+      'Haze': '🌫️',
+      'Dust': '💨',
+      'Wind': '💨',
+      'Tornado': '🌪️',
+      'Hot': '🔥',
+    };
+    return emojis[condition] || '🌡️';
+  };
+
+  return (
+    <motion.header
+      initial={{ y: -100 }}
+      animate={{ y: 0 }}
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        scrolled ? 'bg-black/80 backdrop-blur-lg shadow-lg' : 'bg-transparent'
+      }`}
+    >
+      <div className="container mx-auto px-6 py-4">
+        <div className="flex items-center justify-between">
+          {/* Date & Time */}
+          <div className="flex items-center gap-2 text-white/80">
+            <span className="text-lg">📅</span>
+            <span className="text-sm font-medium">{dateTime}</span>
+          </div>
+
+          {/* Weather */}
+          {weather && (
+            <div className="flex items-center gap-2 text-white/80">
+              <span className="text-2xl">{weather.emoji}</span>
+              <span className="text-sm font-medium">{weather.temp}°F</span>
+              <span className="text-xs text-white/50 hidden sm:inline">Midland, TX</span>
+            </div>
+          )}
+
+          {/* Login Button */}
+          <Link
+            href="/login"
+            className="flex items-center gap-2 px-5 py-2 bg-[#500000] hover:bg-[#722F37] text-white rounded-full transition-all duration-300 shadow-lg hover:shadow-xl"
+          >
+            <LogIn className="w-4 h-4" />
+            <span className="text-sm font-medium">Login</span>
+          </Link>
+        </div>
+      </div>
+    </motion.header>
+  );
+};
 
 // Dynamic import for Three.js (client-only)
 const HeroScene = dynamic(() => import('@/components/three/HeroScene'), {
@@ -51,7 +183,7 @@ const featuredProperties = realProperties.slice(0, 4).map((p, idx) => ({
   price: p.amenities.pool && p.amenities.hotTub ? 349 : p.amenities.pool || p.amenities.hotTub ? 249 : p.bedrooms >= 3 ? 199 : 149,
   rating: p.rating || 4.9,
   reviews: p.reviewCount || 50,
-  image: `/properties/${p.id}/main.png`,
+  image: `/properties/${p.id}/main.webp`,
   amenities: getPropertyAmenities(p),
 }));
 
@@ -100,17 +232,18 @@ const PropertyCard = ({ property, index }: { property: typeof featuredProperties
   }, []);
 
   return (
-    <motion.div
-      ref={cardRef}
-      initial={{ opacity: 0, y: 50 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ delay: index * 0.15, duration: 0.6 }}
-      className="property-card group cursor-pointer"
-      style={{ transformStyle: 'preserve-3d' }}
-    >
-      {/* Image Container */}
-      <div className="relative h-64 overflow-hidden rounded-t-2xl">
+    <Link href={`/properties/${property.id}`}>
+      <motion.div
+        ref={cardRef}
+        initial={{ opacity: 0, y: 50 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ delay: index * 0.15, duration: 0.6 }}
+        className="property-card group cursor-pointer"
+        style={{ transformStyle: 'preserve-3d' }}
+      >
+        {/* Image Container */}
+        <div className="relative h-64 overflow-hidden rounded-t-2xl">
         <Image
           src={property.image}
           alt={property.name}
@@ -170,12 +303,13 @@ const PropertyCard = ({ property, index }: { property: typeof featuredProperties
         </div>
 
         {/* CTA */}
-        <button className="premium-button w-full mt-6 group/btn">
+        <div className="premium-button w-full mt-6 group/btn">
           <span>View Property</span>
           <ArrowRight className="w-4 h-4 transition-transform group-hover/btn:translate-x-1" />
-        </button>
+        </div>
       </div>
     </motion.div>
+    </Link>
   );
 };
 
@@ -254,6 +388,9 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-[#0a0505] text-white overflow-x-hidden">
+      {/* Floating Header */}
+      <FloatingHeader />
+
       {/* Hero Section */}
       <motion.section
         ref={heroRef}
@@ -298,26 +435,6 @@ export default function LandingPage() {
             Experience Texas hospitality at its finest. 22 curated properties in the heart of the Permian Basin.
           </motion.p>
 
-          {/* CTA Buttons */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 1.2 }}
-            className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4"
-          >
-            <Link href="#properties" className="premium-button px-8 py-4 text-lg">
-              <span>Explore Properties</span>
-              <ChevronRight className="w-5 h-5" />
-            </Link>
-            <Link
-              href="/login"
-              className="px-8 py-4 border border-white/20 rounded-xl text-white/90
-                         hover:bg-white/10 transition-all duration-300 flex items-center gap-2"
-            >
-              <span>Login</span>
-            </Link>
-          </motion.div>
-
           {/* Scroll Indicator */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -352,7 +469,7 @@ export default function LandingPage() {
       </section>
 
       {/* About Section */}
-      <section className="py-24 animate-section">
+      <section id="about" className="py-24 animate-section">
         <div className="container mx-auto px-6">
           <div className="max-w-4xl mx-auto text-center">
             <motion.span className="text-[#d4a574] text-sm uppercase tracking-wider">
@@ -515,29 +632,50 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
             {/* Logo & About */}
             <div className="md:col-span-2">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-[#500000] to-[#8b1538]
-                                rounded-xl flex items-center justify-center">
-                  <Home className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h3 className="font-display font-bold text-xl text-white">Right at Home</h3>
-                  <p className="text-sm text-[#d4a574]">BnB • Midland, TX</p>
-                </div>
-              </div>
+              <Image
+                src="/images/logo-light.png"
+                alt="Right at Home Midland"
+                width={220}
+                height={180}
+                className="h-auto max-w-[220px]"
+              />
               <p className="mt-4 text-white/60 max-w-md">
                 22 premium vacation rentals in the heart of the Permian Basin.
                 Texas hospitality at its finest.
               </p>
               <div className="flex items-center gap-4 mt-6">
-                <a href="#" className="p-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors">
-                  <Instagram className="w-5 h-5" />
+                <a
+                  href="https://www.facebook.com/login"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors"
+                  title="Facebook"
+                >
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                  </svg>
                 </a>
-                <a href="#" className="p-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors">
-                  <Mail className="w-5 h-5" />
+                <a
+                  href="https://www.instagram.com/accounts/login"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors"
+                  title="Instagram"
+                >
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                  </svg>
                 </a>
-                <a href="#" className="p-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors">
-                  <Phone className="w-5 h-5" />
+                <a
+                  href="https://www.linkedin.com/login"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors"
+                  title="LinkedIn"
+                >
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                  </svg>
                 </a>
               </div>
             </div>
@@ -546,13 +684,26 @@ export default function LandingPage() {
             <div>
               <h4 className="font-display font-bold text-white mb-4">Quick Links</h4>
               <ul className="space-y-3">
-                {['Properties', 'About Us', 'Contact', 'FAQ'].map((link) => (
-                  <li key={link}>
-                    <a href="#" className="text-white/60 hover:text-[#d4a574] transition-colors">
-                      {link}
-                    </a>
-                  </li>
-                ))}
+                <li>
+                  <Link href="/properties" className="text-white/60 hover:text-[#d4a574] transition-colors">
+                    Properties
+                  </Link>
+                </li>
+                <li>
+                  <a href="#about" className="text-white/60 hover:text-[#d4a574] transition-colors">
+                    About Us
+                  </a>
+                </li>
+                <li>
+                  <a href="tel:+14325591904" className="text-white/60 hover:text-[#d4a574] transition-colors">
+                    Contact
+                  </a>
+                </li>
+                <li>
+                  <Link href="/concierge" className="text-white/60 hover:text-[#d4a574] transition-colors">
+                    FAQ
+                  </Link>
+                </li>
               </ul>
             </div>
 
@@ -570,7 +721,9 @@ export default function LandingPage() {
                 </li>
                 <li className="flex items-center gap-2">
                   <Mail className="w-4 h-4 text-[#d4a574]" />
-                  hello@rightathomebnb.com
+                  <a href="mailto:steven.palma@RAH-midland.com" className="hover:text-[#d4a574] transition-colors">
+                    steven.palma@RAH-midland.com
+                  </a>
                 </li>
               </ul>
             </div>
@@ -578,7 +731,29 @@ export default function LandingPage() {
 
           {/* Copyright */}
           <div className="mt-12 pt-8 border-t border-white/10 text-center text-white/40 text-sm">
-            <p>© 2024 Right at Home BnB. All rights reserved. | Steven Palma</p>
+            <p>© 2025 Right at Home BnB. All rights reserved. | Steven Palma</p>
+            <div className="mt-2 flex items-center justify-center gap-4">
+              <Link href="/privacy-policy" className="hover:text-[#d4a574] transition-colors">
+                Privacy Policy
+              </Link>
+              <span>|</span>
+              <Link href="/terms-of-service" className="hover:text-[#d4a574] transition-colors">
+                Terms of Service
+              </Link>
+            </div>
+            <div className="mt-4">
+              <a
+                href="https://echo-op.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block text-xs opacity-60 hover:opacity-100 transition-opacity"
+              >
+                Powered by{' '}
+                <span className="font-semibold bg-gradient-to-r from-purple-400 via-pink-500 via-red-500 via-orange-500 via-yellow-500 via-green-500 via-blue-500 to-purple-400 bg-[length:200%_auto] animate-[chromatic_3s_linear_infinite] bg-clip-text text-transparent">
+                  ECHO PRIME TECHNOLOGIES
+                </span>
+              </a>
+            </div>
           </div>
         </div>
       </footer>

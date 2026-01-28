@@ -14,6 +14,15 @@ export interface ElectronAPI {
     getAll: () => Promise<Record<string, unknown>>;
   };
 
+  // Database operations (Prisma via IPC)
+  db: {
+    query: <T>(model: string, args?: unknown) => Promise<T>;
+    batch: <T>(operations: Array<{ model: string; args: unknown }>) => Promise<T[]>;
+    sync: (direction: 'push' | 'pull' | 'both') => Promise<{ success: boolean; lastSync?: string; error?: string }>;
+    export: () => Promise<{ success: boolean; path?: string; error?: string; canceled?: boolean }>;
+    import: () => Promise<{ success: boolean; imported?: string; error?: string; canceled?: boolean }>;
+  };
+
   // Notifications
   notification: {
     show: (title: string, body: string, options?: NotificationOptions) => Promise<boolean>;
@@ -175,6 +184,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
     set: (key: string, value: unknown): Promise<boolean> =>
       ipcRenderer.invoke('store:set', key, value),
     getAll: (): Promise<Record<string, unknown>> => ipcRenderer.invoke('store:getAll'),
+  },
+
+  // Database operations (Prisma via IPC)
+  db: {
+    query: <T>(model: string, args?: unknown): Promise<T> =>
+      ipcRenderer.invoke('db:query', model, args),
+    batch: <T>(operations: Array<{ model: string; args: unknown }>): Promise<T[]> =>
+      ipcRenderer.invoke('db:batch', operations),
+    sync: (direction: 'push' | 'pull' | 'both') =>
+      ipcRenderer.invoke('db:sync', direction),
+    export: () => ipcRenderer.invoke('db:export'),
+    import: () => ipcRenderer.invoke('db:import'),
   },
 
   // Notifications

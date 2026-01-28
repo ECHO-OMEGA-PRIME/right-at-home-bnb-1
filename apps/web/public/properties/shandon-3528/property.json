@@ -1,0 +1,154 @@
+{
+  "id": "shandon-3528",
+  "vrboId": "4894280",
+  "title": "Right At Home-Midland Groovy Times w/Pool",
+  "tagline": "Fun retro vibes with private pool for the ultimate getaway",
+  "propertyType": "Entire home",
+  "location": {
+    "city": "Midland",
+    "state": "TX",
+    "address": "3528 Shandon",
+    "coordinates": null
+  },
+  "specs": {
+    "bedrooms": 4,
+    "bathrooms": 2,
+    "sleeps": 10
+  },
+  "rooms": [
+    {
+      "name": "Bedroom 1",
+      "beds": "1 King bed"
+    },
+    {
+      "name": "Bedroom 2",
+      "beds": "1 Queen bed"
+    },
+    {
+      "name": "Bedroom 3",
+      "beds": "1 Queen bed"
+    },
+    {
+      "name": "Bedroom 4",
+      "beds": "2 Twin beds"
+    }
+  ],
+  "spaces": [
+    "Kitchen",
+    "Living room",
+    "Separate dining area",
+    "Pool area",
+    "Backyard"
+  ],
+  "amenities": {
+    "topFamilyFriendly": [
+      "Private pool",
+      "Kitchen",
+      "Microwave",
+      "Living/dining area"
+    ],
+    "popular": [
+      "Private pool",
+      "Washing machine",
+      "Dryer",
+      "Pet-friendly",
+      "Free Wi-Fi",
+      "Air-conditioning",
+      "Outdoor space",
+      "Parking available",
+      "Barbecue"
+    ],
+    "essentials": [
+      "Wireless internet",
+      "Free wifi",
+      "Wifi speed: 500+ Mbps",
+      "Towels provided",
+      "Linens provided",
+      "Air conditioning",
+      "Hair dryer",
+      "Shampoo",
+      "Toilet paper",
+      "Paper towels",
+      "Basic soaps",
+      "Iron & board",
+      "Heating"
+    ],
+    "kitchen": [
+      "Kitchen",
+      "Refrigerator",
+      "Dishwasher",
+      "Microwave",
+      "Stove",
+      "Oven",
+      "Grill",
+      "Dishes & utensils",
+      "Dining table",
+      "Coffee maker",
+      "Toaster"
+    ],
+    "outside": [
+      "Private pool",
+      "Outdoor furniture",
+      "Backyard"
+    ],
+    "pets": [
+      "Pet friendly",
+      "Up to 23 kg per pet"
+    ],
+    "entertainment": [
+      "Television",
+      "Smart TV"
+    ],
+    "laundry": [
+      "Washing machine",
+      "Dryer"
+    ],
+    "parking": [
+      "Parking",
+      "Driveway"
+    ]
+  },
+  "houseRules": {
+    "checkIn": "After 3:00 pm",
+    "checkOut": "Before 11:00 am",
+    "children": "Allowed",
+    "events": "No events allowed",
+    "pets": "Allowed (up to 23 kg per pet)",
+    "smoking": "No smoking"
+  },
+  "importantInfo": [
+    "Minimum age to rent: 25",
+    "Pool safety rules apply"
+  ],
+  "reviews": {
+    "rating": 9,
+    "count": 0,
+    "breakdown": {}
+  },
+  "host": {
+    "name": "STEVEN M PALMA",
+    "isPremier": true,
+    "languages": [
+      "English"
+    ]
+  },
+  "images": {
+    "main": "main.webp",
+    "count": 52
+  },
+  "serviceFees": {
+    "cleaningFee": 175,
+    "deepCleanFee": 350,
+    "poolServiceFee": 50,
+    "lawnServiceFee": 75
+  },
+  "waiverRequirements": {
+    "pool": true,
+    "hotTub": true,
+    "firePit": false,
+    "general": true
+  },
+  "hasPool": true,
+  "hasHotTub": true,
+  "hasFirePit": false
+}

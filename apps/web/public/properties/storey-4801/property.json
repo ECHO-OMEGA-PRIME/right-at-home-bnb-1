@@ -1,0 +1,508 @@
+{
+  "id": "storey-4801",
+  "vrboId": "2643822",
+  "title": "Right At Home-Midland Destination Getaway-reduced due to cancellation",
+  "tagline": "Vacation home in Midland with kitchen and balcony",
+  "propertyType": "Entire home",
+  "location": {
+    "city": "Midland",
+    "state": "TX",
+    "address": "4801 Storey",
+    "coordinates": null
+  },
+  "specs": {
+    "bedrooms": 4,
+    "bathrooms": 2,
+    "sleeps": 10
+  },
+  "rooms": [
+    {
+      "name": "Bedroom 1",
+      "beds": "2 Queen Beds"
+    },
+    {
+      "name": "Bedroom 2",
+      "beds": "1 Queen Bed"
+    },
+    {
+      "name": "Bedroom 3",
+      "beds": "1 Queen Bed"
+    },
+    {
+      "name": "Bedroom 4",
+      "beds": "1 Queen Bed"
+    }
+  ],
+  "bathrooms": [
+    {
+      "name": "Bathroom 1",
+      "type": "Full",
+      "features": [
+        "Bathtub or shower",
+        "Toilet",
+        "Soap",
+        "Towels",
+        "Shampoo"
+      ]
+    },
+    {
+      "name": "Bathroom 2",
+      "type": "Full",
+      "features": [
+        "Bathtub or shower",
+        "Toilet",
+        "Soap",
+        "Towels",
+        "Shampoo",
+        "Hair dryer"
+      ]
+    }
+  ],
+  "spaces": [
+    "Deck or patio",
+    "Kitchen",
+    "Dining area"
+  ],
+  "amenities": {
+    "topFamilyFriendly": [
+      "Kitchen",
+      "Microwave"
+    ],
+    "popular": [
+      "Washer",
+      "Dryer",
+      "Pet friendly",
+      "Air conditioning",
+      "Outdoor Space",
+      "Parking available",
+      "Barbecue grill",
+      "Fireplace"
+    ],
+    "essentials": [
+      "Wireless internet",
+      "WiFi",
+      "Wifi speed: 500+ Mbps",
+      "Internet",
+      "Towels provided",
+      "Air conditioning",
+      "Hair dryer",
+      "Shampoo",
+      "Toilet paper",
+      "Paper towels",
+      "Basic soaps",
+      "Iron & board",
+      "Heating",
+      "Fireplace"
+    ],
+    "kitchen": [
+      "Kitchen",
+      "Refrigerator",
+      "Dishwasher",
+      "Microwave",
+      "Stove",
+      "Oven",
+      "Grill",
+      "Dishes & utensils",
+      "Dining table",
+      "Coffee maker",
+      "Toaster"
+    ],
+    "pets": [
+      "Pet friendly",
+      "2 pets total (up to 50 lbs per pet)"
+    ],
+    "entertainment": [
+      "Television",
+      "Smart TV",
+      "Satellite / cable"
+    ],
+    "laundry": [
+      "Washing machine",
+      "Dryer"
+    ],
+    "parking": [
+      "Parking"
+    ],
+    "safety": [
+      "Carbon monoxide detector",
+      "Smoke detector",
+      "Fenced yard"
+    ]
+  },
+  "houseRules": {
+    "checkIn": "After 3:00 PM",
+    "checkOut": "Before 12:00 PM",
+    "minimumAge": 25,
+    "children": "Children allowed: ages 0-17",
+    "events": "No events allowed",
+    "pets": "Pets allowed: less than 23 kg per pet (limit 2 pets total)",
+    "smoking": "Smoking is not permitted",
+    "additionalRules": [
+      "For Extend Stays over 10 days The customer will be assessed an additional cleaning fee every 10 days for cleaning.",
+      "Allow access on the first of the month for filter exchange and quarterly exterminations."
+    ]
+  },
+  "importantInfo": [
+    "Extra-person charges may apply and vary depending on property policy",
+    "Government-issued photo identification and a credit card, debit card or cash deposit may be required at check-in for incidental charges",
+    "Special requests are subject to availability upon check-in and may incur additional charges; special requests cannot be guaranteed",
+    "On-site parties or group events are strictly prohibited",
+    "Host has indicated that there is a carbon monoxide detector on the property",
+    "Host has indicated that there is a smoke detector on the property"
+  ],
+  "reviews": {
+    "rating": 8.2,
+    "count": 22,
+    "breakdown": {
+      "cleanliness": 8,
+      "checkIn": 9,
+      "communication": 9,
+      "location": 8.6,
+      "listingAccuracy": 8.6
+    },
+    "list": [
+      {
+        "rating": 8,
+        "title": null,
+        "author": "Martha B.",
+        "date": "Nov 2025",
+        "stayDuration": "3 nights",
+        "content": "Clean and comfortable for our needs.",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 6,
+        "title": null,
+        "author": "Verified traveller",
+        "date": "Dec 2025",
+        "stayDuration": "3 nights",
+        "content": "Host was amazing and answered EVERY phone call we made the first day. We didn't find any hand/face towels in the home. The bathroom rugs in the master bathroom need to be laundered, and our confirmation email with specifics hadn't been updated to reflect new house rules. Those are a few of the little things we'd like to mention but in NO way did that hamper our stay.",
+        "liked": [
+          "communication"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": "Family reunion for my 83 yo Dad",
+        "author": "Pamela P.",
+        "date": "Jul 2025",
+        "stayDuration": "2 nights",
+        "content": "The house was absolutely beautiful. And our host Steven was very helpful and responded to questions immediately. I highly recommend him and hope to be back again soon.",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 6,
+        "title": null,
+        "author": "Nicha A.",
+        "date": "Nov 2025",
+        "stayDuration": "5 nights",
+        "content": "Pics look much better than in person. House too busy with too many patterns. Pets allowed, but fence and yard unsafe for them. Holes in fence and items in yard that could hurt animals. Sliding glass patio and 1 window at back of house locks not working. Keypad on door, but turnable lock also on front door allowed us to lock ourselves out. Good thing we'd forgot to put pool stick back at sliding door because we let ourselves rt back in.",
+        "liked": [
+          "check-in",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 8,
+        "title": "Nice stay",
+        "author": "Verified traveller",
+        "date": "Feb 2025",
+        "stayDuration": "13 nights",
+        "content": "Very responsive host",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 2,
+        "title": "work trip",
+        "author": "Ashley C.",
+        "date": "Jun 2025",
+        "stayDuration": "2 nights",
+        "content": "According to my workers this stay was very unpleasant. Front door had to be locked with a piece of wood, refrigerator did not work causing all of their food to go bad, dishwasher did not work as well, the worst was dirty sheets and hair from previous guest on the mattress. We will not stay here again.",
+        "disliked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": "Nice Place - Worked Great for our Family",
+        "author": "John G.",
+        "date": "Mar 2023",
+        "stayDuration": "2 nights",
+        "content": "Nice place to stay for families. Owner was great to work with. No major issues. It was our first time in Midland/Odessa. It made it nice.",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": "Awesome",
+        "author": "Timothy K.",
+        "location": "Houston",
+        "date": "Oct 2023",
+        "stayDuration": "9 nights",
+        "content": "Place was over and beyond my expectations",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 8,
+        "title": "Bedding",
+        "author": "Richard S.",
+        "date": "Mar 2023",
+        "stayDuration": "2 nights",
+        "content": "One bed had pubic hair on sheets and lip gloss on pillow.",
+        "liked": [
+          "cleanliness",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 6,
+        "title": "Get what you pay for",
+        "author": "John T.",
+        "date": "Nov 2025",
+        "stayDuration": "2 nights",
+        "content": "Stayed two nights while attending wedding. It was fine for the brief times that we were actually there. But I would have had serious issues if we had to stay much longer than we did. House is old and needs a lot of repairs.",
+        "liked": [
+          "check-in",
+          "communication"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": "Family Christmas",
+        "author": "Crystal M.",
+        "date": "Jan 2023",
+        "stayDuration": "2 nights",
+        "content": "I rented the house for my family who all came to Midland to have Christmas with my nephew and his family. It was going to be a total of 3 couples and my mother. I wanted us all to have our own bedrooms so that noone would be sleeping on couches or blow up mattresses. Several of us like to watch TV in bed until we fall asleep. So I also LOVED that each bedroom had its own TV. The sectional gave us plenty of room to sit and hang out. The fenced in backyard and covered deck were also great to have. There was even a beautiful Christmas tree for us to enjoy.",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 2,
+        "title": "Testing in midland",
+        "author": "Sherry W.",
+        "date": "Mar 2023",
+        "stayDuration": "1 night",
+        "content": "The house we originally rented was pulled out from under us at the last minute. When we arrived in looked like the ghetto part of town, mop bucket & cleaning supplies were in middle of living room, the back yard was so small an area it was worthless to us for our dogs. Then cleaning lady comes barging thru the house without knocking to get her supplies. I'm glad we only booked this place for 1 nite as it was totally unacceptable. Also problems with leaking water. I'll never book this again!",
+        "disliked": [
+          "cleanliness",
+          "check-in",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 8,
+        "title": "Great place.",
+        "author": "Marcos E.",
+        "date": "Oct 2025",
+        "stayDuration": "3 nights",
+        "content": null,
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 8,
+        "title": "Weekend escape to West Texas",
+        "author": "Melissa I.",
+        "date": "Jun 2022",
+        "stayDuration": "3 nights",
+        "content": "This property has great beds to sleep in and several beds/rooms which is a great plus. Unfortunately I think the people who last stayed there did not care for the home well. I communicated with the owner/property manager and all of the issues were corrected in nearly an hour! Great response time!",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": "Like home",
+        "author": "Bertha Z.",
+        "date": "May 2022",
+        "stayDuration": "2 nights",
+        "content": "We enjoyed our stay. Everything we needed was nearby, nice quiet neighborhood. It felt just like home or even better",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": "Amazing host",
+        "author": "Della H.",
+        "date": "Mar 2022",
+        "stayDuration": "4 nights",
+        "content": "Everything was great. You feel right at home. Felt very safe here. Steven has been amazing in hosting.",
+        "liked": [
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": null,
+        "author": "Larry J.",
+        "date": "Nov 2025",
+        "stayDuration": "11 nights",
+        "content": null,
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": null,
+        "author": "Cody M.",
+        "date": "Oct 2025",
+        "stayDuration": "10 nights",
+        "content": null,
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": null,
+        "author": "John Michael A.",
+        "date": "Oct 2025",
+        "stayDuration": "3 nights",
+        "content": null,
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 8,
+        "title": null,
+        "author": "Charlie T.",
+        "date": "Jul 2025",
+        "stayDuration": "2 nights",
+        "content": null,
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 8,
+        "title": null,
+        "author": "Tammy H.",
+        "date": "Jun 2025",
+        "stayDuration": "6 nights",
+        "content": null,
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": null,
+        "author": "Jessica G.",
+        "date": "Jan 2025",
+        "stayDuration": "2 nights",
+        "content": null,
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      }
+    ]
+  },
+  "host": {
+    "name": "STEVEN M PALMA",
+    "isPremier": true,
+    "languages": [
+      "English"
+    ]
+  },
+  "description": "Four bedroom two bath with easy access to interstate 20 just off of Loop 250 on the west side of Midland fully fenced yard equipped kitchen as well as grill and covered patio area. There are 50 inch TVs in every bedroom as well as a 65 inch TV in the living room there's a D stream app for cable TV and HBO max to enjoy. Our prices include all fees. No hidden fees.",
+  "images": {
+    "main": "main.webp",
+    "count": 37
+  },
+  "serviceFees": {
+    "cleaningFee": 175,
+    "deepCleanFee": 350,
+    "poolServiceFee": 0,
+    "lawnServiceFee": 75
+  },
+  "waiverRequirements": {
+    "pool": false,
+    "hotTub": true,
+    "firePit": false,
+    "general": true
+  },
+  "hasPool": false,
+  "hasHotTub": true,
+  "hasFirePit": false
+}

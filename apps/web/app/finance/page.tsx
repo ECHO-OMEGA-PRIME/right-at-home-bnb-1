@@ -20,15 +20,18 @@
  * @owner Steven Palma - Midland, TX
  */
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   DollarSign, TrendingUp, TrendingDown, BarChart3, PieChart,
   Calendar, Download, Filter, ArrowUpRight, ArrowDownRight,
   Receipt, CreditCard, Building2, Wallet, Target, ChevronRight,
   Plus, X, FileText, FileSpreadsheet, Car, Calculator, AlertCircle,
-  Check, Loader2, RefreshCw, Home, ChevronDown
+  Check, Loader2, RefreshCw, Home, ChevronDown, Camera, Upload, Image,
+  Lightbulb, AlertTriangle, Sparkles, Award, TrendingUp as Growth,
+  ClipboardList, Zap, Brain, MapPin, Star, Users, BookOpen
 } from 'lucide-react';
+import DashboardShell from '@/components/layout/DashboardShell';
 
 // Types
 interface Property {
@@ -70,7 +73,34 @@ interface ForecastEntry {
 }
 
 type TimeRange = 'monthly' | 'quarterly' | 'annual';
-type ViewMode = 'overview' | 'revenue' | 'expenses' | 'pl' | 'tax';
+type ViewMode = 'overview' | 'revenue' | 'expenses' | 'pl' | 'tax' | 'reports';
+
+// AI Recommendation types
+interface AIRecommendation {
+  propertyId: string;
+  propertyName: string;
+  type: 'improvement' | 'warning' | 'opportunity';
+  priority: 'high' | 'medium' | 'low';
+  title: string;
+  description: string;
+  potentialImpact: string;
+  actionItems: string[];
+}
+
+// Portfolio metrics
+interface PortfolioMetrics {
+  totalProperties: number;
+  totalRevenue: number;
+  totalExpenses: number;
+  netProfit: number;
+  avgRevenuePerProperty: number;
+  topPerformer: { name: string; profit: number };
+  bottomPerformer: { name: string; profit: number };
+  occupancyRate: number;
+  profitMargin: number;
+  yoyGrowth: number;
+  monthlyTrend: 'up' | 'down' | 'stable';
+}
 
 // API Base URL - Uses the complete financial system endpoints
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
@@ -158,6 +188,9 @@ export default function FinanceDashboard() {
   const [properties] = useState<Property[]>(MOCK_PROPERTIES);
   const [recentExpenses, setRecentExpenses] = useState<ExpenseEntry[]>([]);
   const [forecast, setForecast] = useState<ForecastEntry[]>([]);
+  const [portfolioMetrics, setPortfolioMetrics] = useState<PortfolioMetrics | null>(null);
+  const [aiRecommendations, setAiRecommendations] = useState<AIRecommendation[]>([]);
+  const [showYearEndModal, setShowYearEndModal] = useState(false);
 
   // Expense form state
   const [expenseForm, setExpenseForm] = useState({
@@ -171,6 +204,12 @@ export default function FinanceDashboard() {
     is_tax_deductible: true,
     notes: ''
   });
+
+  // Receipt image state
+  const [receiptImage, setReceiptImage] = useState<string | null>(null);
+  const [receiptFileName, setReceiptFileName] = useState<string>('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch financial data
   useEffect(() => {
@@ -186,11 +225,125 @@ export default function FinanceDashboard() {
       setFinancialData(mockData);
       setRecentExpenses(mockData.recentExpenses);
       setForecast(mockData.forecast);
+      setPortfolioMetrics(generatePortfolioMetrics());
+      setAiRecommendations(generateAIRecommendations());
     } catch (error) {
       console.error('Error fetching financial data:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  // Generate Portfolio Metrics
+  const generatePortfolioMetrics = (): PortfolioMetrics => {
+    const totalRevenue = 475000;
+    const totalExpenses = 115000;
+    const netProfit = totalRevenue - totalExpenses;
+
+    return {
+      totalProperties: 22,
+      totalRevenue,
+      totalExpenses,
+      netProfit,
+      avgRevenuePerProperty: Math.round(totalRevenue / 22),
+      topPerformer: { name: 'Lincoln Green Ranch', profit: 42500 },
+      bottomPerformer: { name: 'Garfield Getaway', profit: 8200 },
+      occupancyRate: 82,
+      profitMargin: parseFloat(((netProfit / totalRevenue) * 100).toFixed(1)),
+      yoyGrowth: 15.7,
+      monthlyTrend: 'up'
+    };
+  };
+
+  // Generate AI Recommendations based on property performance
+  const generateAIRecommendations = (): AIRecommendation[] => {
+    return [
+      {
+        propertyId: 'prop_4',
+        propertyName: 'Garfield Getaway',
+        type: 'warning',
+        priority: 'high',
+        title: 'Underperforming Property - Needs Attention',
+        description: 'This property is generating 45% less revenue than the portfolio average. Occupancy is at 62% vs 82% portfolio average.',
+        potentialImpact: '+$8,500/year if brought to average',
+        actionItems: [
+          'Review and update listing photos - last updated 8 months ago',
+          'Consider adjusting nightly rate - currently $25 above market',
+          'Add amenities guests are requesting (hot tub, workspace)',
+          'Increase marketing on Airbnb and VRBO'
+        ]
+      },
+      {
+        propertyId: 'prop_7',
+        propertyName: 'Permian Paradise',
+        type: 'opportunity',
+        priority: 'high',
+        title: 'High Demand - Consider Price Increase',
+        description: 'This property has 95% occupancy and frequent 5-star reviews. Market analysis shows similar properties charging 18% more.',
+        potentialImpact: '+$4,200/year with 15% price increase',
+        actionItems: [
+          'Increase base nightly rate by 15%',
+          'Add premium pricing for peak oil field rotation weekends',
+          'Consider adding mid-week corporate discounts to maintain occupancy'
+        ]
+      },
+      {
+        propertyId: 'prop_2',
+        propertyName: 'Basin View Cottage',
+        type: 'improvement',
+        priority: 'medium',
+        title: 'Reduce Cleaning Costs',
+        description: 'Cleaning expenses are 28% higher than similar properties. Average cleaning cost per turnover is $145 vs portfolio average of $95.',
+        potentialImpact: '+$2,400/year in cost savings',
+        actionItems: [
+          'Renegotiate cleaning contract or find alternative provider',
+          'Implement self-checkout procedures to reduce cleaning time',
+          'Stock more supplies in bulk to reduce restocking fees'
+        ]
+      },
+      {
+        propertyId: 'prop_1',
+        propertyName: 'Castleford Estate',
+        type: 'opportunity',
+        priority: 'medium',
+        title: 'Extend Average Stay Duration',
+        description: 'Average stay is 2.3 nights vs portfolio average of 3.8 nights. Longer stays mean fewer turnovers and lower costs.',
+        potentialImpact: '+$3,100/year from reduced turnover costs',
+        actionItems: [
+          'Offer weekly discount (10-15% off)',
+          'Target oil field workers with monthly rates',
+          'Update listing to highlight workspace amenities'
+        ]
+      },
+      {
+        propertyId: 'prop_9',
+        propertyName: 'Oil Field Oasis',
+        type: 'warning',
+        priority: 'low',
+        title: 'Maintenance Costs Trending Up',
+        description: 'Maintenance expenses increased 35% over last quarter. HVAC system shows signs of aging.',
+        potentialImpact: 'Avoid $3,000+ emergency repair',
+        actionItems: [
+          'Schedule preventive HVAC inspection',
+          'Get quotes for system replacement before summer',
+          'Consider home warranty for older appliances'
+        ]
+      },
+      {
+        propertyId: 'prop_5',
+        propertyName: 'Lone Star Luxury',
+        type: 'improvement',
+        priority: 'low',
+        title: 'Optimize Utility Costs',
+        description: 'Electric bill is 40% above comparable properties. Smart thermostat data shows inefficient heating/cooling patterns.',
+        potentialImpact: '+$1,800/year in utility savings',
+        actionItems: [
+          'Adjust smart thermostat schedules between guests',
+          'Install LED lighting throughout property',
+          'Check for air leaks around doors and windows'
+        ]
+      }
+    ];
   };
 
   // Generate mock financial data
@@ -284,6 +437,40 @@ export default function FinanceDashboard() {
     };
   };
 
+  // Handle image capture from camera
+  const handleCameraCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setReceiptImage(reader.result as string);
+        setReceiptFileName(file.name);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Handle file upload
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setReceiptImage(reader.result as string);
+        setReceiptFileName(file.name);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Remove receipt image
+  const removeReceiptImage = () => {
+    setReceiptImage(null);
+    setReceiptFileName('');
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    if (cameraInputRef.current) cameraInputRef.current.value = '';
+  };
+
   // Handle expense submission
   const handleExpenseSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -322,6 +509,8 @@ export default function FinanceDashboard() {
         is_tax_deductible: true,
         notes: ''
       });
+      // Clear receipt image
+      removeReceiptImage();
     } catch (error) {
       console.error('Error adding expense:', error);
     } finally {
@@ -369,6 +558,7 @@ export default function FinanceDashboard() {
   }, [financialData, totalExpenses]);
 
   return (
+    <DashboardShell>
     <div className="min-h-screen bg-[#F5F5F0]">
       {/* Header */}
       <header className="bg-white border-b border-[#2D2D2D]/10 sticky top-0 z-40">
@@ -417,18 +607,26 @@ export default function FinanceDashboard() {
               { key: 'revenue', label: 'Revenue' },
               { key: 'expenses', label: 'Expenses' },
               { key: 'pl', label: 'P&L' },
-              { key: 'tax', label: 'Tax' }
-            ].map(({ key, label }) => (
+              { key: 'tax', label: 'Tax' },
+              { key: 'reports', label: 'Reports', badge: true }
+            ].map(({ key, label, badge }) => (
               <button
                 key={key}
                 onClick={() => setViewMode(key as ViewMode)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 ${
                   viewMode === key
                     ? 'bg-[#500000] text-white'
                     : 'text-[#2D2D2D]/60 hover:text-[#500000]'
                 }`}
               >
                 {label}
+                {badge && (
+                  <span className={`px-1.5 py-0.5 text-xs rounded-full ${
+                    viewMode === key ? 'bg-white/20' : 'bg-[#500000]/10 text-[#500000]'
+                  }`}>
+                    AI
+                  </span>
+                )}
               </button>
             ))}
           </div>
@@ -842,9 +1040,450 @@ export default function FinanceDashboard() {
                 ))}
               </div>
             </motion.div>
+
+            {/* Reports Tab Content */}
+            {viewMode === 'reports' && portfolioMetrics && (
+              <div className="space-y-8">
+                {/* Portfolio Overview Section */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-gradient-to-br from-[#500000] to-[#722F37] rounded-2xl p-8 text-white"
+                >
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center">
+                      <BookOpen className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-['Playfair_Display'] font-bold">
+                        Portfolio Overview
+                      </h2>
+                      <p className="text-white/70">Complete financial summary for {selectedYear}</p>
+                    </div>
+                  </div>
+
+                  <div className="grid md:grid-cols-4 gap-6">
+                    <div className="bg-white/10 rounded-xl p-4">
+                      <div className="text-white/60 text-sm mb-1">Total Properties</div>
+                      <div className="text-3xl font-bold">{portfolioMetrics.totalProperties}</div>
+                      <div className="text-white/50 text-xs mt-1">Active rentals</div>
+                    </div>
+                    <div className="bg-white/10 rounded-xl p-4">
+                      <div className="text-white/60 text-sm mb-1">Total Revenue</div>
+                      <div className="text-3xl font-bold">${(portfolioMetrics.totalRevenue / 1000).toFixed(0)}K</div>
+                      <div className="flex items-center gap-1 text-emerald-300 text-xs mt-1">
+                        <TrendingUp className="w-3 h-3" />
+                        +{portfolioMetrics.yoyGrowth}% YoY
+                      </div>
+                    </div>
+                    <div className="bg-white/10 rounded-xl p-4">
+                      <div className="text-white/60 text-sm mb-1">Net Profit</div>
+                      <div className="text-3xl font-bold">${(portfolioMetrics.netProfit / 1000).toFixed(0)}K</div>
+                      <div className="text-white/50 text-xs mt-1">{portfolioMetrics.profitMargin}% margin</div>
+                    </div>
+                    <div className="bg-white/10 rounded-xl p-4">
+                      <div className="text-white/60 text-sm mb-1">Avg per Property</div>
+                      <div className="text-3xl font-bold">${(portfolioMetrics.avgRevenuePerProperty / 1000).toFixed(1)}K</div>
+                      <div className="text-white/50 text-xs mt-1">Annual revenue</div>
+                    </div>
+                  </div>
+
+                  <div className="grid md:grid-cols-2 gap-6 mt-6">
+                    <div className="bg-white/10 rounded-xl p-4 flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                        <Award className="w-6 h-6 text-emerald-300" />
+                      </div>
+                      <div>
+                        <div className="text-white/60 text-sm">Top Performer</div>
+                        <div className="font-semibold">{portfolioMetrics.topPerformer.name}</div>
+                        <div className="text-emerald-300 text-sm">${portfolioMetrics.topPerformer.profit.toLocaleString()} profit</div>
+                      </div>
+                    </div>
+                    <div className="bg-white/10 rounded-xl p-4 flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-full bg-amber-500/20 flex items-center justify-center">
+                        <AlertTriangle className="w-6 h-6 text-amber-300" />
+                      </div>
+                      <div>
+                        <div className="text-white/60 text-sm">Needs Attention</div>
+                        <div className="font-semibold">{portfolioMetrics.bottomPerformer.name}</div>
+                        <div className="text-amber-300 text-sm">${portfolioMetrics.bottomPerformer.profit.toLocaleString()} profit</div>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+
+                {/* AI Recommendations Section */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 }}
+                  className="bg-white rounded-2xl shadow-sm border border-[#2D2D2D]/5"
+                >
+                  <div className="p-6 border-b border-[#2D2D2D]/10">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center">
+                          <Brain className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="text-xl font-['Playfair_Display'] font-semibold text-[#2D2D2D]">
+                            AI-Powered Recommendations
+                          </h3>
+                          <p className="text-sm text-[#2D2D2D]/60">
+                            Actionable insights to optimize your portfolio
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-sm font-medium">
+                          ${aiRecommendations.reduce((acc, r) => {
+                            const impact = r.potentialImpact.match(/\$[\d,]+/);
+                            return acc + (impact ? parseInt(impact[0].replace(/[$,]/g, '')) : 0);
+                          }, 0).toLocaleString()} potential savings
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="divide-y divide-[#2D2D2D]/5">
+                    {aiRecommendations.map((rec, index) => (
+                      <motion.div
+                        key={rec.propertyId}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        className="p-6 hover:bg-[#F5F5F0]/50 transition-colors"
+                      >
+                        <div className="flex items-start gap-4">
+                          <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                            rec.type === 'warning' ? 'bg-red-100' :
+                            rec.type === 'opportunity' ? 'bg-emerald-100' :
+                            'bg-amber-100'
+                          }`}>
+                            {rec.type === 'warning' ? (
+                              <AlertTriangle className={`w-6 h-6 text-red-600`} />
+                            ) : rec.type === 'opportunity' ? (
+                              <Zap className={`w-6 h-6 text-emerald-600`} />
+                            ) : (
+                              <Lightbulb className={`w-6 h-6 text-amber-600`} />
+                            )}
+                          </div>
+
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <h4 className="font-semibold text-[#2D2D2D]">{rec.title}</h4>
+                              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                                rec.priority === 'high' ? 'bg-red-100 text-red-700' :
+                                rec.priority === 'medium' ? 'bg-amber-100 text-amber-700' :
+                                'bg-gray-100 text-gray-700'
+                              }`}>
+                                {rec.priority.charAt(0).toUpperCase() + rec.priority.slice(1)} Priority
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-2 text-sm text-[#2D2D2D]/60 mb-3">
+                              <MapPin className="w-4 h-4" />
+                              <span>{rec.propertyName}</span>
+                            </div>
+
+                            <p className="text-sm text-[#2D2D2D]/80 mb-4">{rec.description}</p>
+
+                            <div className="bg-[#F5F5F0] rounded-xl p-4 mb-4">
+                              <div className="flex items-center gap-2 text-sm font-medium text-[#500000] mb-2">
+                                <Target className="w-4 h-4" />
+                                Potential Impact: {rec.potentialImpact}
+                              </div>
+                            </div>
+
+                            <div className="space-y-2">
+                              <div className="text-sm font-medium text-[#2D2D2D]">Action Items:</div>
+                              {rec.actionItems.map((item, i) => (
+                                <div key={i} className="flex items-start gap-2 text-sm text-[#2D2D2D]/70">
+                                  <Check className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />
+                                  <span>{item}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                </motion.div>
+
+                {/* Year-End Report Export Section */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="bg-white rounded-2xl shadow-sm border border-[#2D2D2D]/5 p-6"
+                >
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-10 h-10 rounded-xl bg-[#500000]/10 flex items-center justify-center">
+                      <ClipboardList className="w-5 h-5 text-[#500000]" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-['Playfair_Display'] font-semibold text-[#2D2D2D]">
+                        Year-End Report Export
+                      </h3>
+                      <p className="text-sm text-[#2D2D2D]/60">
+                        Generate comprehensive reports for tax preparation and analysis
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid md:grid-cols-3 gap-4">
+                    {/* Portfolio Overview PDF */}
+                    <div className="border border-[#2D2D2D]/10 rounded-xl p-5 hover:border-[#500000]/30 transition-colors">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                          <BarChart3 className="w-5 h-5 text-blue-600" />
+                        </div>
+                        <div>
+                          <h4 className="font-medium text-[#2D2D2D]">Portfolio Overview</h4>
+                          <p className="text-xs text-[#2D2D2D]/50">Full property summary</p>
+                        </div>
+                      </div>
+                      <p className="text-sm text-[#2D2D2D]/60 mb-4">
+                        Complete overview of all properties including revenue, expenses, occupancy, and performance metrics.
+                      </p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleExport('pdf', 'portfolio_overview')}
+                          disabled={exporting}
+                          className="flex-1 px-3 py-2 text-sm font-medium bg-[#500000] text-white rounded-lg hover:bg-[#722F37] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                        >
+                          <FileText className="w-4 h-4" />
+                          PDF
+                        </button>
+                        <button
+                          onClick={() => handleExport('csv', 'portfolio_overview')}
+                          disabled={exporting}
+                          className="flex-1 px-3 py-2 text-sm font-medium bg-[#F5F5F0] text-[#2D2D2D] rounded-lg hover:bg-[#500000]/10 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                        >
+                          <FileSpreadsheet className="w-4 h-4" />
+                          CSV
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Per-Property P&L */}
+                    <div className="border border-[#2D2D2D]/10 rounded-xl p-5 hover:border-[#500000]/30 transition-colors">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
+                          <Building2 className="w-5 h-5 text-purple-600" />
+                        </div>
+                        <div>
+                          <h4 className="font-medium text-[#2D2D2D]">Per-Property P&L</h4>
+                          <p className="text-xs text-[#2D2D2D]/50">Detailed breakdown</p>
+                        </div>
+                      </div>
+                      <p className="text-sm text-[#2D2D2D]/60 mb-4">
+                        Individual profit & loss statements for each property with expense categorization.
+                      </p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleExport('pdf', 'per_property_pl')}
+                          disabled={exporting}
+                          className="flex-1 px-3 py-2 text-sm font-medium bg-[#500000] text-white rounded-lg hover:bg-[#722F37] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                        >
+                          <FileText className="w-4 h-4" />
+                          PDF
+                        </button>
+                        <button
+                          onClick={() => handleExport('csv', 'per_property_pl')}
+                          disabled={exporting}
+                          className="flex-1 px-3 py-2 text-sm font-medium bg-[#F5F5F0] text-[#2D2D2D] rounded-lg hover:bg-[#500000]/10 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                        >
+                          <FileSpreadsheet className="w-4 h-4" />
+                          CSV
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Complete Year-End Package */}
+                    <div className="border-2 border-[#500000]/20 bg-[#500000]/5 rounded-xl p-5">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 rounded-lg bg-[#500000] flex items-center justify-center">
+                          <Star className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <h4 className="font-medium text-[#2D2D2D]">Year-End Package</h4>
+                          <p className="text-xs text-[#500000]">All reports combined</p>
+                        </div>
+                      </div>
+                      <p className="text-sm text-[#2D2D2D]/60 mb-4">
+                        Complete package with all reports, Schedule E data, and AI recommendations for your accountant.
+                      </p>
+                      <button
+                        onClick={() => setShowYearEndModal(true)}
+                        disabled={exporting}
+                        className="w-full px-4 py-2.5 bg-gradient-to-r from-[#500000] to-[#722F37] text-white font-semibold rounded-lg shadow-lg shadow-[#500000]/20 disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        {exporting ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Download className="w-4 h-4" />
+                        )}
+                        Generate Package
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+
+                {/* Quick Stats for Reports */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="grid md:grid-cols-4 gap-4"
+                >
+                  <div className="bg-white rounded-xl p-4 shadow-sm border border-[#2D2D2D]/5">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center">
+                        <TrendingUp className="w-5 h-5 text-emerald-600" />
+                      </div>
+                      <div>
+                        <div className="text-xs text-[#2D2D2D]/50">YoY Growth</div>
+                        <div className="text-xl font-bold text-emerald-600">+{portfolioMetrics.yoyGrowth}%</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-white rounded-xl p-4 shadow-sm border border-[#2D2D2D]/5">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                        <Users className="w-5 h-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <div className="text-xs text-[#2D2D2D]/50">Occupancy Rate</div>
+                        <div className="text-xl font-bold text-blue-600">{portfolioMetrics.occupancyRate}%</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-white rounded-xl p-4 shadow-sm border border-[#2D2D2D]/5">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
+                        <Wallet className="w-5 h-5 text-purple-600" />
+                      </div>
+                      <div>
+                        <div className="text-xs text-[#2D2D2D]/50">Profit Margin</div>
+                        <div className="text-xl font-bold text-purple-600">{portfolioMetrics.profitMargin}%</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-white rounded-xl p-4 shadow-sm border border-[#2D2D2D]/5">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center">
+                        <Lightbulb className="w-5 h-5 text-amber-600" />
+                      </div>
+                      <div>
+                        <div className="text-xs text-[#2D2D2D]/50">Recommendations</div>
+                        <div className="text-xl font-bold text-amber-600">{aiRecommendations.length}</div>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
+            )}
           </>
         )}
       </main>
+
+      {/* Year-End Package Modal */}
+      <AnimatePresence>
+        {showYearEndModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+            onClick={() => setShowYearEndModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-2xl shadow-2xl max-w-lg w-full"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-6 border-b border-[#2D2D2D]/10">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#500000] to-[#722F37] flex items-center justify-center">
+                      <ClipboardList className="w-5 h-5 text-white" />
+                    </div>
+                    <h2 className="text-xl font-['Playfair_Display'] font-bold text-[#2D2D2D]">
+                      Year-End Report Package
+                    </h2>
+                  </div>
+                  <button
+                    onClick={() => setShowYearEndModal(false)}
+                    className="p-2 hover:bg-[#F5F5F0] rounded-lg transition-colors"
+                  >
+                    <X className="w-5 h-5 text-[#2D2D2D]/60" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-6">
+                <p className="text-sm text-[#2D2D2D]/60 mb-6">
+                  Generate a complete year-end package for {selectedYear} with all the reports your accountant needs.
+                </p>
+
+                <div className="space-y-3 mb-6">
+                  {[
+                    { label: 'Portfolio Overview Report', desc: 'Summary of all 22 properties' },
+                    { label: 'Per-Property P&L Statements', desc: 'Individual profit/loss for each property' },
+                    { label: 'Schedule E Tax Data', desc: 'IRS-ready rental income reporting' },
+                    { label: 'Expense Categorization', desc: 'Tax-deductible expense breakdown' },
+                    { label: 'AI Recommendations Summary', desc: 'Optimization insights for next year' },
+                    { label: 'Monthly Revenue Trends', desc: 'Month-by-month performance data' },
+                  ].map((item, i) => (
+                    <div key={i} className="flex items-center gap-3 p-3 bg-[#F5F5F0] rounded-lg">
+                      <Check className="w-5 h-5 text-emerald-500" />
+                      <div>
+                        <div className="font-medium text-sm text-[#2D2D2D]">{item.label}</div>
+                        <div className="text-xs text-[#2D2D2D]/50">{item.desc}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      handleExport('pdf', 'year_end_package');
+                      setShowYearEndModal(false);
+                    }}
+                    disabled={exporting}
+                    className="flex-1 px-4 py-3 bg-gradient-to-r from-[#500000] to-[#722F37] text-white font-semibold rounded-xl shadow-lg shadow-[#500000]/20 disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {exporting ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <>
+                        <FileText className="w-5 h-5" />
+                        Download PDF Package
+                      </>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleExport('csv', 'year_end_package');
+                      setShowYearEndModal(false);
+                    }}
+                    disabled={exporting}
+                    className="px-4 py-3 border border-[#2D2D2D]/20 text-[#2D2D2D] font-medium rounded-xl hover:bg-[#F5F5F0] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    <FileSpreadsheet className="w-5 h-5" />
+                    CSV
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Add Expense Modal */}
       <AnimatePresence>
@@ -887,11 +1526,11 @@ export default function FinanceDashboard() {
                     required
                     value={expenseForm.property_id}
                     onChange={(e) => setExpenseForm({ ...expenseForm, property_id: e.target.value })}
-                    className="w-full px-4 py-2.5 border border-[#2D2D2D]/20 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#500000]/30"
+                    className="w-full px-4 py-2.5 border border-[#2D2D2D]/20 rounded-xl bg-white text-[#2D2D2D] focus:outline-none focus:ring-2 focus:ring-[#500000]/30"
                   >
-                    <option value="">Select property</option>
+                    <option value="" className="text-[#2D2D2D]">Select property</option>
                     {properties.map(prop => (
-                      <option key={prop.id} value={prop.id}>{prop.name}</option>
+                      <option key={prop.id} value={prop.id} className="text-[#2D2D2D]">{prop.name}</option>
                     ))}
                   </select>
                 </div>
@@ -904,10 +1543,10 @@ export default function FinanceDashboard() {
                   <select
                     value={expenseForm.category}
                     onChange={(e) => setExpenseForm({ ...expenseForm, category: e.target.value })}
-                    className="w-full px-4 py-2.5 border border-[#2D2D2D]/20 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#500000]/30"
+                    className="w-full px-4 py-2.5 border border-[#2D2D2D]/20 rounded-xl bg-white text-[#2D2D2D] focus:outline-none focus:ring-2 focus:ring-[#500000]/30"
                   >
                     {EXPENSE_CATEGORIES.map(cat => (
-                      <option key={cat.value} value={cat.value}>{cat.label}</option>
+                      <option key={cat.value} value={cat.value} className="text-[#2D2D2D]">{cat.label}</option>
                     ))}
                   </select>
                 </div>
@@ -975,17 +1614,89 @@ export default function FinanceDashboard() {
                   />
                 </div>
 
-                {/* Receipt URL */}
+                {/* Receipt Image - Camera & File Upload */}
+                <div>
+                  <label className="block text-sm font-medium text-[#2D2D2D] mb-2">
+                    Receipt Image
+                  </label>
+
+                  {receiptImage ? (
+                    <div className="relative">
+                      <div className="relative w-full h-48 bg-[#F5F5F0] rounded-xl overflow-hidden border border-[#2D2D2D]/10">
+                        <img
+                          src={receiptImage}
+                          alt="Receipt"
+                          className="w-full h-full object-contain"
+                        />
+                        <button
+                          type="button"
+                          onClick={removeReceiptImage}
+                          className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-lg"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <p className="text-xs text-[#2D2D2D]/60 mt-2 truncate">
+                        {receiptFileName}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-3">
+                      {/* Camera Capture Button */}
+                      <input
+                        ref={cameraInputRef}
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        onChange={handleCameraCapture}
+                        className="hidden"
+                        id="camera-input"
+                      />
+                      <label
+                        htmlFor="camera-input"
+                        className="flex flex-col items-center justify-center gap-2 p-4 border-2 border-dashed border-[#500000]/30 rounded-xl cursor-pointer hover:bg-[#500000]/5 transition-colors"
+                      >
+                        <div className="w-12 h-12 rounded-full bg-[#500000]/10 flex items-center justify-center">
+                          <Camera className="w-6 h-6 text-[#500000]" />
+                        </div>
+                        <span className="text-sm font-medium text-[#500000]">Take Photo</span>
+                        <span className="text-xs text-[#2D2D2D]/50">Use camera</span>
+                      </label>
+
+                      {/* File Upload Button */}
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*,.pdf"
+                        onChange={handleFileUpload}
+                        className="hidden"
+                        id="file-input"
+                      />
+                      <label
+                        htmlFor="file-input"
+                        className="flex flex-col items-center justify-center gap-2 p-4 border-2 border-dashed border-[#722F37]/30 rounded-xl cursor-pointer hover:bg-[#722F37]/5 transition-colors"
+                      >
+                        <div className="w-12 h-12 rounded-full bg-[#722F37]/10 flex items-center justify-center">
+                          <Upload className="w-6 h-6 text-[#722F37]" />
+                        </div>
+                        <span className="text-sm font-medium text-[#722F37]">Add File</span>
+                        <span className="text-xs text-[#2D2D2D]/50">From device</span>
+                      </label>
+                    </div>
+                  )}
+                </div>
+
+                {/* Receipt URL (optional fallback) */}
                 <div>
                   <label className="block text-sm font-medium text-[#2D2D2D] mb-1">
-                    Receipt URL
+                    Or paste Receipt URL
                   </label>
                   <input
                     type="url"
                     value={expenseForm.receipt_url}
                     onChange={(e) => setExpenseForm({ ...expenseForm, receipt_url: e.target.value })}
                     placeholder="https://..."
-                    className="w-full px-4 py-2.5 border border-[#2D2D2D]/20 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#500000]/30"
+                    className="w-full px-4 py-2.5 border border-[#2D2D2D]/20 rounded-xl bg-white text-[#2D2D2D] focus:outline-none focus:ring-2 focus:ring-[#500000]/30"
                   />
                 </div>
 
@@ -1200,5 +1911,6 @@ export default function FinanceDashboard() {
         )}
       </AnimatePresence>
     </div>
+    </DashboardShell>
   );
 }

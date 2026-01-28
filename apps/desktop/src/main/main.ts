@@ -787,6 +787,253 @@ ipcMain.handle('app:checkForUpdates', () => {
 });
 
 // ============================================================================
+// Database Operations (Prisma via IPC)
+// ============================================================================
+
+// Import Prisma client - will be initialized on first use
+let prisma: ReturnType<typeof import('@prisma/client').PrismaClient> | null = null;
+
+async function getPrisma() {
+  if (!prisma) {
+    const { PrismaClient } = await import('@prisma/client');
+    prisma = new PrismaClient({
+      datasources: {
+        db: {
+          url: process.env.DATABASE_URL || `file:${path.join(app.getPath('userData'), 'rightathome.db')}`,
+        },
+      },
+    });
+  }
+  return prisma;
+}
+
+// Generic database query handler
+ipcMain.handle('db:query', async (_event, model: string, args: unknown) => {
+  try {
+    const client = await getPrisma();
+    const [modelName, operation] = model.split('.');
+
+    // Map model names to Prisma model accessors
+    const modelMap: Record<string, keyof typeof client> = {
+      properties: 'property',
+      propertyPhotos: 'propertyPhoto',
+      bookings: 'booking',
+      guests: 'guest',
+      cleaningJobs: 'cleaningJob',
+      smartLocks: 'smartLock',
+      expenses: 'expense',
+      messages: 'message',
+      users: 'user',
+      auditLogs: 'auditLog',
+      settings: 'setting',
+      conciergeQueries: 'conciergeQuery',
+    };
+
+    const prismaModel = modelMap[modelName];
+    if (!prismaModel) {
+      throw new Error(`Unknown model: ${modelName}`);
+    }
+
+    // Execute the operation
+    const model_ = client[prismaModel] as Record<string, (args: unknown) => Promise<unknown>>;
+    const result = await model_[operation](args);
+
+    return result;
+  } catch (error) {
+    console.error('Database query error:', error);
+    throw error;
+  }
+});
+
+// Batch operations for efficiency
+ipcMain.handle('db:batch', async (_event, operations: Array<{ model: string; args: unknown }>) => {
+  try {
+    const client = await getPrisma();
+    const results = await client.$transaction(
+      operations.map(({ model, args }) => {
+        const [modelName, operation] = model.split('.');
+        const modelMap: Record<string, string> = {
+          properties: 'property',
+          propertyPhotos: 'propertyPhoto',
+          bookings: 'booking',
+          guests: 'guest',
+          cleaningJobs: 'cleaningJob',
+          smartLocks: 'smartLock',
+          expenses: 'expense',
+          messages: 'message',
+          users: 'user',
+          auditLogs: 'auditLog',
+          settings: 'setting',
+        };
+        const prismaModel = modelMap[modelName];
+        return (client as Record<string, Record<string, (args: unknown) => unknown>>)[prismaModel][operation](args);
+      })
+    );
+    return results;
+  } catch (error) {
+    console.error('Database batch error:', error);
+    throw error;
+  }
+});
+
+// Sync data with remote API
+ipcMain.handle('db:sync', async (_event, direction: 'push' | 'pull' | 'both') => {
+  try {
+    const apiUrl = store.get('apiUrl');
+    const client = await getPrisma();
+    const lastSync = store.get('lastSync');
+
+    if (direction === 'pull' || direction === 'both') {
+      // Pull remote changes
+      const response = await fetch(`${apiUrl}/sync/pull?since=${lastSync || ''}`);
+      if (response.ok) {
+        const data = await response.json();
+        // Apply changes to local database
+        for (const { model, operation, data: itemData } of data.changes) {
+          const modelMap: Record<string, string> = {
+            Property: 'property',
+            Booking: 'booking',
+            Guest: 'guest',
+            CleaningJob: 'cleaningJob',
+          };
+          const prismaModel = modelMap[model];
+          if (prismaModel && operation === 'upsert') {
+            await (client as Record<string, Record<string, (args: unknown) => unknown>>)[prismaModel].upsert({
+              where: { id: itemData.id },
+              update: itemData,
+              create: itemData,
+            });
+          }
+        }
+      }
+    }
+
+    if (direction === 'push' || direction === 'both') {
+      // Push local changes (simplified - in production would track changes)
+      // For now, just update the lastSync timestamp
+    }
+
+    store.set('lastSync', new Date().toISOString());
+    return { success: true, lastSync: store.get('lastSync') };
+  } catch (error) {
+    console.error('Sync error:', error);
+    return { success: false, error: String(error) };
+  }
+});
+
+// Export database to JSON
+ipcMain.handle('db:export', async () => {
+  try {
+    const client = await getPrisma();
+    const data = {
+      properties: await client.property.findMany({ include: { photos: true } }),
+      bookings: await client.booking.findMany(),
+      guests: await client.guest.findMany(),
+      cleaningJobs: await client.cleaningJob.findMany(),
+      expenses: await client.expense.findMany(),
+      smartLocks: await client.smartLock.findMany(),
+      exportedAt: new Date().toISOString(),
+    };
+
+    const result = await dialog.showSaveDialog(mainWindow!, {
+      title: 'Export Database',
+      defaultPath: `rightathome-backup-${new Date().toISOString().split('T')[0]}.json`,
+      filters: [{ name: 'JSON', extensions: ['json'] }],
+    });
+
+    if (!result.canceled && result.filePath) {
+      await fs.promises.writeFile(result.filePath, JSON.stringify(data, null, 2));
+      return { success: true, path: result.filePath };
+    }
+
+    return { success: false, canceled: true };
+  } catch (error) {
+    console.error('Export error:', error);
+    return { success: false, error: String(error) };
+  }
+});
+
+// Import database from JSON
+ipcMain.handle('db:import', async () => {
+  try {
+    const result = await dialog.showOpenDialog(mainWindow!, {
+      title: 'Import Database',
+      filters: [{ name: 'JSON', extensions: ['json'] }],
+      properties: ['openFile'],
+    });
+
+    if (result.canceled || result.filePaths.length === 0) {
+      return { success: false, canceled: true };
+    }
+
+    const fileContent = await fs.promises.readFile(result.filePaths[0], 'utf-8');
+    const data = JSON.parse(fileContent);
+    const client = await getPrisma();
+
+    // Import in transaction
+    await client.$transaction(async (tx) => {
+      // Import properties and photos
+      for (const property of data.properties || []) {
+        const { photos, ...propertyData } = property;
+        await tx.property.upsert({
+          where: { id: propertyData.id },
+          update: propertyData,
+          create: propertyData,
+        });
+        for (const photo of photos || []) {
+          await tx.propertyPhoto.upsert({
+            where: { id: photo.id },
+            update: photo,
+            create: photo,
+          });
+        }
+      }
+
+      // Import guests
+      for (const guest of data.guests || []) {
+        await tx.guest.upsert({
+          where: { id: guest.id },
+          update: guest,
+          create: guest,
+        });
+      }
+
+      // Import bookings
+      for (const booking of data.bookings || []) {
+        await tx.booking.upsert({
+          where: { id: booking.id },
+          update: booking,
+          create: booking,
+        });
+      }
+
+      // Import cleaning jobs
+      for (const job of data.cleaningJobs || []) {
+        await tx.cleaningJob.upsert({
+          where: { id: job.id },
+          update: job,
+          create: job,
+        });
+      }
+
+      // Import expenses
+      for (const expense of data.expenses || []) {
+        await tx.expense.upsert({
+          where: { id: expense.id },
+          update: expense,
+          create: expense,
+        });
+      }
+    });
+
+    return { success: true, imported: result.filePaths[0] };
+  } catch (error) {
+    console.error('Import error:', error);
+    return { success: false, error: String(error) };
+  }
+});
+
+// ============================================================================
 // App Lifecycle
 // ============================================================================
 

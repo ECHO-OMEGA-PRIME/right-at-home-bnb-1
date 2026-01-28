@@ -81,9 +81,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(transformProperty(property));
     }
 
-    // Return all properties
+    // Return all properties wrapped in data object for consistency
     const transformedProperties = properties.map(transformProperty);
-    return NextResponse.json(transformedProperties);
+    return NextResponse.json({ data: transformedProperties, total: transformedProperties.length });
   } catch (error) {
     console.error('Error fetching properties:', error);
     return NextResponse.json({ error: 'Failed to fetch properties' }, { status: 500 });

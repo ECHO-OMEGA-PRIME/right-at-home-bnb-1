@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 120" fill="none">
+  <!-- Right at Home - Script Text -->
+  <text x="140" y="35" text-anchor="middle" font-family="'Brush Script MT', 'Segoe Script', cursive" font-size="32" fill="#500000" font-weight="400">
+    Right at Home
+  </text>
+
+  <!-- Midland Skyline -->
+  <path d="
+    M 20 85
+    L 20 70
+    L 30 70
+    L 30 65
+    L 35 65
+    L 35 55
+    L 40 55
+    L 40 70
+    L 50 70
+    L 50 60
+    L 55 60
+    L 55 50
+    L 60 50
+    L 60 45
+    L 65 45
+    L 65 55
+    L 75 55
+    L 75 45
+    L 80 45
+    L 80 35
+    L 85 35
+    L 85 30
+    L 90 30
+    L 90 35
+    L 95 35
+    L 95 45
+    L 100 45
+    L 100 40
+    L 110 40
+    L 110 35
+    L 115 35
+    L 115 25
+    L 120 25
+    L 120 30
+    L 125 30
+    L 125 35
+    L 130 35
+    L 130 45
+    L 140 45
+    L 140 35
+    L 145 35
+    L 145 30
+    L 150 30
+    L 150 25
+    L 155 25
+    L 155 30
+    L 160 30
+    L 160 40
+    L 170 40
+    L 170 35
+    L 175 35
+    L 175 45
+    L 185 45
+    L 185 40
+    L 190 40
+    L 190 50
+    L 200 50
+    L 200 55
+    L 210 55
+    L 210 50
+    L 215 50
+    L 215 60
+    L 225 60
+    L 225 55
+    L 230 55
+    L 230 65
+    L 240 65
+    L 240 60
+    L 250 60
+    L 250 70
+    L 260 70
+    L 260 85
+    L 20 85
+    Z
+  " fill="#500000" opacity="0.95"/>
+
+  <!-- Baseline under skyline -->
+  <line x1="15" y1="85" x2="265" y2="85" stroke="#500000" stroke-width="2"/>
+
+  <!-- Midland - Script Text -->
+  <text x="180" y="108" text-anchor="middle" font-family="'Brush Script MT', 'Segoe Script', cursive" font-size="28" fill="#500000" font-weight="400" font-style="italic">
+    Midland
+  </text>
+
+  <!-- Underline for Midland -->
+  <line x1="130" y1="112" x2="230" y2="112" stroke="#500000" stroke-width="1.5"/>
+</svg>

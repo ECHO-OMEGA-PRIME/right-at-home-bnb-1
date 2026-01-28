@@ -1,0 +1,66 @@
+#!/usr/bin/env python3
+"""Save Storey images to JSON"""
+import json
+from datetime import datetime
+from pathlib import Path
+
+OUTPUT_DIR = Path(__file__).parent / "vrbo_images"
+OUTPUT_DIR.mkdir(exist_ok=True)
+
+images = [
+    "https://media.vrbo.com/lodging/75000000/74880000/74874000/74873930/07fbc037.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/75000000/74880000/74874000/74873930/11c222b9.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/75000000/74880000/74874000/74873930/212c1502.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/75000000/74880000/74874000/74873930/2422d38e.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/75000000/74880000/74874000/74873930/2497205c.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/75000000/74880000/74874000/74873930/254ebdac.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/75000000/74880000/74874000/74873930/3cdc4d29.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/75000000/74880000/74874000/74873930/3f0ba081.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/75000000/74880000/74874000/74873930/425c0335.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/75000000/74880000/74874000/74873930/46114158.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/75000000/74880000/74874000/74873930/4949794b.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/75000000/74880000/74874000/74873930/4b83be09.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/75000000/74880000/74874000/74873930/4ba2d4ef.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/75000000/74880000/74874000/74873930/534697f3.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/75000000/74880000/74874000/74873930/5b35bd4f.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/75000000/74880000/74874000/74873930/627bf913.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/75000000/74880000/74874000/74873930/63a521e5.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/75000000/74880000/74874000/74873930/6db7cfb6.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/75000000/74880000/74874000/74873930/7b9bffbe.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/75000000/74880000/74874000/74873930/7f70babc.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/75000000/74880000/74874000/74873930/8535d132.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/75000000/74880000/74874000/74873930/8daefe93.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/75000000/74880000/74874000/74873930/8ecf61f2.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/75000000/74880000/74874000/74873930/913aac60.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/75000000/74880000/74874000/74873930/944fa51a.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/75000000/74880000/74874000/74873930/9cd1b0dd.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/75000000/74880000/74874000/74873930/ae061554.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/75000000/74880000/74874000/74873930/b4c1517a.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/75000000/74880000/74874000/74873930/d00e62f8.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/75000000/74880000/74874000/74873930/d38870ef.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/75000000/74880000/74874000/74873930/d4b8c033.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/75000000/74880000/74874000/74873930/e652533a.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/75000000/74880000/74874000/74873930/ee659559.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/75000000/74880000/74874000/74873930/efce43d0.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/75000000/74880000/74874000/74873930/f2203f42.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/75000000/74880000/74874000/74873930/f542c2d6.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/75000000/74880000/74874000/74873930/f873e818.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+    "https://media.vrbo.com/lodging/75000000/74880000/74874000/74873930/w522h350x0y0-afaf2622.jpg?impolicy=resizecrop&rw=1200&ra=fit",
+]
+
+result = {
+    "propertyId": "storey-2103",
+    "propertyName": "Right At Home-Midland Destination Getaway",
+    "vrboId": "2643822",
+    "vrboUrl": "https://www.vrbo.com/2643822",
+    "galleryUrl": "https://www.vrbo.com/2643822?pwaThumbnailDialog=thumbnail-gallery",
+    "images": images,
+    "count": len(images),
+    "scrapedAt": datetime.now().isoformat()
+}
+
+output_file = OUTPUT_DIR / "storey-2103.json"
+with open(output_file, 'w') as f:
+    json.dump(result, f, indent=2)
+
+print(f"Saved {len(images)} images to {output_file}")

@@ -9,6 +9,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast, { Toaster } from 'react-hot-toast';
+import DashboardShell from '@/components/layout/DashboardShell';
 import {
   Lock, Key, Thermometer, Users, Clock, Bell, Plus,
   Trash2, Eye, EyeOff, Copy, RefreshCw, Home, User,
@@ -1094,11 +1095,12 @@ export default function SmartHomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F5F0]">
-      <Toaster position="top-right" />
+    <DashboardShell>
+      <div className="min-h-screen bg-[#F5F5F0]">
+        <Toaster position="top-right" />
 
-      {/* Header */}
-      <header className="bg-white border-b border-[#2D2D2D]/10 sticky top-0 z-40">
+        {/* Header */}
+        <header className="bg-white border-b border-[#2D2D2D]/10 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
@@ -1520,11 +1522,12 @@ export default function SmartHomePage() {
         onSubmit={handleAddCode}
       />
 
-      {/* Keyboard Shortcuts */}
-      <div className="fixed bottom-4 right-4 text-xs text-[#2D2D2D]/40">
-        <kbd className="px-2 py-1 bg-white rounded shadow">Ctrl</kbd>+
-        <kbd className="px-2 py-1 bg-white rounded shadow">K</kbd> to search
+        {/* Keyboard Shortcuts */}
+        <div className="fixed bottom-4 right-4 text-xs text-[#2D2D2D]/40">
+          <kbd className="px-2 py-1 bg-white rounded shadow">Ctrl</kbd>+
+          <kbd className="px-2 py-1 bg-white rounded shadow">K</kbd> to search
+        </div>
       </div>
-    </div>
+    </DashboardShell>
   );
 }

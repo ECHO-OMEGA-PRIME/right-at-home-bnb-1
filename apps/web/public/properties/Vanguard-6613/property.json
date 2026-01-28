@@ -1,0 +1,498 @@
+{
+  "id": "Vanguard-6613",
+  "vrboId": "3559249",
+  "title": "Right At Home-Midland Vanguard Velvet Lounge",
+  "tagline": "Holiday home in Midland with kitchen and patio",
+  "propertyType": "Entire home",
+  "location": {
+    "city": "Midland",
+    "state": "TX",
+    "address": "6613 Vanguard",
+    "coordinates": null
+  },
+  "specs": {
+    "bedrooms": 4,
+    "bathrooms": 2,
+    "sleeps": 8
+  },
+  "rooms": [
+    {
+      "name": "Bedroom 1",
+      "beds": "1 Queen Bed"
+    },
+    {
+      "name": "Bedroom 2",
+      "beds": "1 Queen Bed"
+    },
+    {
+      "name": "Bedroom 3",
+      "beds": "1 Queen Bed"
+    },
+    {
+      "name": "Bedroom 4",
+      "beds": "1 Queen Bed"
+    }
+  ],
+  "bathrooms": [
+    {
+      "name": "Bathroom 1",
+      "type": "Full",
+      "features": []
+    },
+    {
+      "name": "Bathroom 2",
+      "type": "Full",
+      "features": []
+    }
+  ],
+  "spaces": [
+    "Deck or patio",
+    "Kitchen",
+    "Dining area"
+  ],
+  "amenities": {
+    "topFamilyFriendly": [
+      "Kitchen",
+      "Microwave",
+      "Living/dining area"
+    ],
+    "popular": [
+      "Pool",
+      "Washing machine",
+      "Dryer",
+      "Pet-friendly",
+      "Free Wi-Fi",
+      "Air-conditioning",
+      "Outdoor space",
+      "Parking available",
+      "Barbecue",
+      "Fireplace"
+    ],
+    "essentials": [
+      "Wireless internet",
+      "Free wifi",
+      "Internet",
+      "Towels provided",
+      "Linens provided",
+      "Air conditioning",
+      "Hair dryer",
+      "Shampoo",
+      "Toilet paper",
+      "Paper towels",
+      "Basic soaps",
+      "Iron & board",
+      "Heating",
+      "Fireplace",
+      "Desk",
+      "Desk chair"
+    ],
+    "kitchen": [
+      "Kitchen",
+      "Refrigerator",
+      "Dishwasher",
+      "Microwave",
+      "Stove",
+      "Oven",
+      "Grill",
+      "Kitchen island",
+      "Dishes & utensils",
+      "Dining table",
+      "Coffee maker",
+      "Toaster"
+    ],
+    "poolSpa": [
+      "Communal pool",
+      "Pool"
+    ],
+    "outside": [
+      "Outdoor furniture"
+    ],
+    "pets": [
+      "Pet friendly",
+      "Up to 23 kg per pet"
+    ],
+    "entertainment": [
+      "Television",
+      "Smart TV"
+    ],
+    "laundry": [
+      "Washing machine",
+      "Dryer"
+    ],
+    "parking": [
+      "Parking"
+    ],
+    "safety": [
+      "Carbon monoxide detector not reported",
+      "Smoke detector not reported",
+      "Fenced yard"
+    ]
+  },
+  "houseRules": {
+    "checkIn": "After 4:00 PM",
+    "checkOut": "Before 11:00 AM",
+    "minimumAge": 25,
+    "children": "Children allowed: ages 0-17",
+    "events": "No events allowed",
+    "pets": "Pets allowed: less than 23 kg per pet (limit 2 pets total)",
+    "smoking": "Smoking is not permitted",
+    "additionalRules": [
+      "For Extend Stays over 10 days The customer will be assessed an additional cleaning fee every 10 days for cleaning.",
+      "Allow access on the first for filter change and quarterly exterminations."
+    ]
+  },
+  "importantInfo": [
+    "Extra-person charges may apply and vary depending on property policy",
+    "Government-issued photo identification and a credit card, debit card or cash deposit may be required at check-in for incidental charges",
+    "Special requests are subject to availability upon check-in and may incur additional charges; special requests cannot be guaranteed",
+    "On-site parties or group events are strictly prohibited",
+    "Host has not indicated whether there is a carbon monoxide detector on the property; consider bringing a portable detector with you on the trip",
+    "Host has not indicated whether there is a smoke detector on the property"
+  ],
+  "reviews": {
+    "rating": 9.2,
+    "count": 19,
+    "breakdown": {
+      "cleanliness": 9,
+      "checkIn": 9.4,
+      "communication": 9,
+      "location": 9.2,
+      "listingAccuracy": 9.4
+    },
+    "distribution": {
+      "excellent": 15,
+      "good": 2,
+      "okay": 1,
+      "poor": 0,
+      "terrible": 1
+    },
+    "list": [
+      {
+        "rating": 8,
+        "title": null,
+        "author": "Mary E.",
+        "date": "Dec 2025",
+        "stayDuration": "5 nights",
+        "stayDate": "Nov 2025",
+        "content": "The host was great. We really enjoyed our stay.",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": "Weekend Family Getaway",
+        "author": "Crystal L.",
+        "date": "Jul 2025",
+        "stayDuration": "4 nights",
+        "stayDate": "Jul 2025",
+        "content": "It was a great experience and property. We would definitely do it again",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": null,
+        "author": "José G.",
+        "date": "Aug 2025",
+        "stayDuration": "17 nights",
+        "stayDate": "Jul 2025",
+        "content": "Everything was so perfect!! I recommend this house and host a hundred percent",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": "Midland TX House",
+        "author": "LORRAINE S.",
+        "date": "May 2025",
+        "stayDuration": "4 nights",
+        "stayDate": "Apr 2025",
+        "content": "Great location, clean, comfortable & affordable",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": "Perfect Stay in Midland!",
+        "author": "Isaac H.",
+        "date": "Jul 2025",
+        "stayDuration": "2 nights",
+        "stayDate": "Jul 2025",
+        "content": "We had a wonderful stay at this Midland home! The property was clean, spacious, and exactly as described in the listing. It had everything we needed for a comfortable and relaxing visit — from a well-stocked kitchen to cozy beds and a peaceful neighborhood. The hosts were very responsive and made check-in easy. You can tell they care about their guests and go the extra mile to make sure everything is just right. Whether you're in town for work or a getaway, this house is a great place to stay. We'll definitely be back next time we're in Midland!",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": "Clean and welcoming",
+        "author": "ESRA Event Manager S.",
+        "date": "Jun 2025",
+        "stayDuration": "12 nights",
+        "stayDate": "Jun 2025",
+        "content": "We booked the house for about ten days, during a rocket competition, it was clean with nice amenities - shampoo and conditioner, plenty of kitchen utensils, plenty of towels, and the couple times I called the host, there was an immediate response.",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": "Nice home.",
+        "author": "Angela C.",
+        "date": "Mar 2025",
+        "stayDuration": "3 nights",
+        "stayDate": "Mar 2025",
+        "content": "Perfect for what we needed.",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": null,
+        "author": "Renan M.",
+        "date": "Apr 2025",
+        "stayDuration": "4 nights",
+        "stayDate": "Mar 2025",
+        "content": "House was very clean",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": "Midland Tournament",
+        "author": "Adventures with Chef T",
+        "date": "Mar 2025",
+        "stayDuration": "3 nights",
+        "stayDate": "Mar 2025",
+        "content": "Our host had great communication and accommodating our check in and out process. He communicated so well and made us feel so comfortable. I traveled from El Paso for a football tournament and needed access to a kitchen to run my food truck! The home was great and spacious! I will definitely book again!",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": "Family get together",
+        "author": "Ronald O.",
+        "date": "Jan 2025",
+        "stayDuration": "2 nights",
+        "stayDate": "Jan 2025",
+        "content": "Just as advertised. It was good. I would definitely do it again.",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 6,
+        "title": null,
+        "author": "Megan Mark D.",
+        "date": "Oct 2025",
+        "stayDuration": "21 nights",
+        "stayDate": "Sep 2025",
+        "content": "We arrived late in the evening to a home with food debris all over the sofa, chairs, kitchen floor. So I inquired if possibly the cleaning had been missed. I was told no, it was definitely cleaned. Thinking perhaps they did not realize it had been \"missed\" I sent photos. The sheets were either terribly stained or simply dirty. We were unable to sleep on them and every bed and pillow was very dirty. The owner did send someone over after two hours with clean sheets. I cleaned the fridge and the house so we could stay there as we did not have time to relocate. The owner was unpleasant to work with. If the house was cleaned it would be great! There was other problems like a stopped up sink, but the owner informed me he was out of the country and he would send me a property manager photo number but he never did. After we cleaned it, we stayed without incident. The neighborhood was quiet.",
+        "liked": [
+          "check-in",
+          "location",
+          "listing accuracy"
+        ],
+        "disliked": [
+          "cleanliness",
+          "communication"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": "Great Experience",
+        "author": "Rusty L.",
+        "date": "Oct 2023",
+        "stayDuration": "4 nights",
+        "stayDate": "Oct 2023",
+        "content": "The house was even nicer than I expected. The interior of this house is very well done. Everything we needed and very clean, comfortable and up to date. Will definitely stay here again when traveling with multiple business associates. Beats hotels by a mile.",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 2,
+        "title": "A Nightmare to say the least",
+        "author": "Sherry S.",
+        "date": "Nov 2023",
+        "stayDuration": "4 nights",
+        "stayDate": "Nov 2023",
+        "content": "I booked and payed in full this home 2 1/2 Months before the Thanksgiving holiday to have a great selection of available homes, I was coming to visit my Mother who has MS and can't travel. Two weeks before Thanks Giving I get a text from the Host ,a Realtor - Steven Palma and he cancels my booking, he said he rented it long term. To say I was devastated, was an understatement. The listing did not indicate there was a possibility that the home would cancel because it was on the market. The host did offer me another listing but I had to pay an additional $400.00 and he asked me to Venmo the $$ directly to him, not go through Vrbo. Now, the optional home that I ended up in was disgusted nasty. Immediately walking in there were pet stains on the rug. There was trash as in garbage under the bed, the trash had not been taken out, dishwasher was full of dirty dishes, the sheets had makeup on the pillow cases and clearly were not washed, the mattresses we later discover upon stripping the beds at checkout were covered in urine stains and blood -biohazard, the patio was covered in leaves and rocks, the outdoor heater we all broken and busted, hot tub had no chemicals. My goodness I could go on and on. The house smelled of cats and we were sick the entire time we were in the home but would start feeling better when we would go outside or leave the premises. Check the Host on your potential booking, he has many homes in Midland. RUN",
+        "disliked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": null,
+        "author": "fred h.",
+        "date": "Jan 2026",
+        "stayDuration": "2 nights",
+        "stayDate": "Dec 2025",
+        "content": "Very responsive and quick to support!",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": null,
+        "author": "Robert J.",
+        "date": "Oct 2025",
+        "stayDuration": "3 nights",
+        "stayDate": "Oct 2025",
+        "content": "Nice set up and felt very safe",
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": null,
+        "author": "Beverly B.",
+        "date": "Oct 2025",
+        "stayDuration": "2 nights",
+        "stayDate": "Sep 2025",
+        "content": null,
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 8,
+        "title": "Nice",
+        "author": "Carlos S.",
+        "date": "Jun 2025",
+        "stayDuration": "4 nights",
+        "stayDate": "May 2025",
+        "content": null,
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": null,
+        "author": "Drew Z.",
+        "date": "May 2025",
+        "stayDuration": "12 nights",
+        "stayDate": "Mar 2025",
+        "content": null,
+        "liked": [
+          "cleanliness",
+          "check-in",
+          "communication",
+          "location",
+          "listing accuracy"
+        ]
+      },
+      {
+        "rating": 10,
+        "title": null,
+        "author": "Ashtyn Z.",
+        "date": "Dec 2024",
+        "stayDuration": "3 nights",
+        "stayDate": "Oct 2024",
+        "content": null,
+        "liked": null
+      }
+    ]
+  },
+  "host": {
+    "name": "STEVEN M PALMA",
+    "isPremier": true,
+    "languages": [
+      "English"
+    ]
+  },
+  "description": "Welcome to this mid century, modern classic Home, conveniently located near the stadium off of Loop 250 and 191. Grants an easy access to both Midland and Odessa this home features, four bedrooms two baths and open concept for living and dining as well as a large fenced backyard for your pets. Great for families as well as there is a community pool within the neighborhood that you have access to or just to enjoy the comforts of home and utilize the backyard with Grill or the fully equipped kitchen everything you need to enjoy your stay.",
+  "images": {
+    "main": "main.webp",
+    "count": 30
+  },
+  "serviceFees": {
+    "cleaningFee": 175,
+    "deepCleanFee": 350,
+    "poolServiceFee": 50,
+    "lawnServiceFee": 75
+  },
+  "waiverRequirements": {
+    "pool": true,
+    "hotTub": true,
+    "firePit": false,
+    "general": true
+  },
+  "hasPool": true,
+  "hasHotTub": true,
+  "hasFirePit": false
+}

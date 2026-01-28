@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
-  View, Text, ScrollView, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform
+  View, Text, ScrollView, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator
 } from 'react-native';
+import { chatWithSteven } from '../services/echo-prime';
 
 const COLORS = {
   maroon: '#500000',
@@ -15,6 +16,7 @@ interface Message {
   id: number;
   role: 'user' | 'assistant';
   content: string;
+  emotion?: string;
 }
 
 const QuickButton = ({ emoji, label, onPress }: any) => (
@@ -26,42 +28,47 @@ const QuickButton = ({ emoji, label, onPress }: any) => (
 
 export default function ConciergeScreen() {
   const [messages, setMessages] = useState<Message[]>([
-    { id: 1, role: 'assistant', content: "Hi! I'm your Right at Home concierge. How can I help you enjoy Midland today?" }
+    { id: 1, role: 'assistant', content: "Hi! I'm Steven, your Right at Home AI concierge. How can I help you enjoy Midland today? 🏠" }
   ]);
   const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
     scrollRef.current?.scrollToEnd({ animated: true });
   }, [messages]);
 
-  const sendMessage = (text: string) => {
-    if (!text.trim()) return;
-    
+  const sendMessage = async (text: string) => {
+    if (!text.trim() || isLoading) return;
+
     const userMsg: Message = { id: Date.now(), role: 'user', content: text };
     setMessages(prev => [...prev, userMsg]);
     setInput('');
+    setIsLoading(true);
 
-    // Simulate AI response
-    setTimeout(() => {
-      let response = "I'd be happy to help! What would you like to know?";
-      const q = text.toLowerCase();
+    try {
+      // Real AI response from Echo Prime with Steven personality
+      const response = await chatWithSteven(text);
 
-      if (q.includes('restaurant') || q.includes('eat') || q.includes('food')) {
-        response = "🍽️ Top picks in Midland:\n\n• Cork & Pig Tavern - Great wine bar\n• Venezia - Italian\n• The Garlic Press - Fine dining\n• Cancun - Authentic Mexican\n\nWant directions to any of these?";
-      } else if (q.includes('bar') || q.includes('wine') || q.includes('drink')) {
-        response = "🍷 Wine & cocktail spots:\n\n• The Blue Door - Elegant wine bar\n• Tall City Brewing - Local craft beer\n• Sip Patio Bar - Trendy cocktails\n\nThe Blue Door is my personal favorite!";
-      } else if (q.includes('wifi') || q.includes('password')) {
-        response = "📶 WiFi Info:\n\nNetwork: RightAtHome_Guest\nPassword: Welcome2024\n\nRouter is near the living room TV!";
-      } else if (q.includes('checkout')) {
-        response = "⏰ Checkout is at 11:00 AM\n\nBefore you go:\n✓ Keys on counter\n✓ Close windows\n✓ Take out trash\n\nWant a late checkout? Just ask!";
-      } else if (q.includes('late checkout')) {
-        response = "I'll request a late checkout for you! What time would you prefer? I'll check with Steven and text you confirmation.";
-      }
-
-      const assistantMsg: Message = { id: Date.now() + 1, role: 'assistant', content: response };
+      const assistantMsg: Message = {
+        id: Date.now() + 1,
+        role: 'assistant',
+        content: response.response,
+        emotion: response.emotion?.primary_emotion
+      };
       setMessages(prev => [...prev, assistantMsg]);
-    }, 800);
+    } catch (error) {
+      // Fallback response if API fails
+      console.error('Chat error:', error);
+      const fallbackMsg: Message = {
+        id: Date.now() + 1,
+        role: 'assistant',
+        content: "I'm having trouble connecting right now. Please try again in a moment, or contact Steven directly for urgent needs. 📞"
+      };
+      setMessages(prev => [...prev, fallbackMsg]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -85,7 +92,7 @@ export default function ConciergeScreen() {
         contentContainerStyle={styles.messagesContent}
       >
         {messages.map(msg => (
-          <View 
+          <View
             key={msg.id}
             style={[
               styles.messageBubble,
@@ -100,6 +107,14 @@ export default function ConciergeScreen() {
             </Text>
           </View>
         ))}
+        {isLoading && (
+          <View style={[styles.messageBubble, styles.assistantBubble]}>
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="small" color={COLORS.maroon} />
+              <Text style={styles.loadingText}>Steven is typing...</Text>
+            </View>
+          </View>
+        )}
       </ScrollView>
 
       {/* Input */}
@@ -113,11 +128,16 @@ export default function ConciergeScreen() {
           returnKeyType="send"
           onSubmitEditing={() => sendMessage(input)}
         />
-        <TouchableOpacity 
-          style={styles.sendButton}
+        <TouchableOpacity
+          style={[styles.sendButton, isLoading && styles.sendButtonDisabled]}
           onPress={() => sendMessage(input)}
+          disabled={isLoading}
         >
-          <Text style={styles.sendText}>→</Text>
+          {isLoading ? (
+            <ActivityIndicator size="small" color={COLORS.white} />
+          ) : (
+            <Text style={styles.sendText}>→</Text>
+          )}
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
@@ -141,5 +161,8 @@ const styles = StyleSheet.create({
   inputContainer: { flexDirection: 'row', padding: 12, gap: 8, backgroundColor: COLORS.white, borderTopWidth: 1, borderTopColor: '#EEE' },
   input: { flex: 1, backgroundColor: COLORS.cream, borderRadius: 24, paddingHorizontal: 20, paddingVertical: 12, fontSize: 16 },
   sendButton: { width: 48, height: 48, backgroundColor: COLORS.maroon, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
+  sendButtonDisabled: { opacity: 0.6 },
   sendText: { color: COLORS.white, fontSize: 20, fontWeight: 'bold' },
+  loadingContainer: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  loadingText: { color: COLORS.charcoal, fontSize: 14, fontStyle: 'italic' },
 });

@@ -1,0 +1,161 @@
+{
+  "id": "chelsea-3210",
+  "vrboId": "2643784",
+  "title": "Right At Home-Midland Retreat with covered patio",
+  "tagline": "Holiday home in Midland with kitchen and furnished patio",
+  "propertyType": "Entire home",
+  "location": {
+    "city": "Midland",
+    "state": "TX",
+    "address": "3210 Chelsea",
+    "coordinates": null
+  },
+  "specs": {
+    "bedrooms": 4,
+    "bathrooms": 2,
+    "sleeps": 8
+  },
+  "rooms": [
+    {
+      "name": "Bedroom 1",
+      "beds": "1 King bed"
+    },
+    {
+      "name": "Bedroom 2",
+      "beds": "1 Queen bed"
+    },
+    {
+      "name": "Bedroom 3",
+      "beds": "1 Queen bed"
+    },
+    {
+      "name": "Bedroom 4",
+      "beds": "2 Twin beds"
+    }
+  ],
+  "spaces": [
+    "Deck or patio",
+    "Kitchen",
+    "Separate dining area",
+    "Living room"
+  ],
+  "amenities": {
+    "topFamilyFriendly": [
+      "Kitchen",
+      "Microwave",
+      "Living/dining area"
+    ],
+    "popular": [
+      "Washing machine",
+      "Dryer",
+      "Pet-friendly",
+      "Free Wi-Fi",
+      "Air-conditioning",
+      "Outdoor space",
+      "Parking available",
+      "Barbecue",
+      "Fireplace"
+    ],
+    "essentials": [
+      "Wireless internet",
+      "Free wifi",
+      "Wifi speed: 500+ Mbps",
+      "Towels provided",
+      "Linens provided",
+      "Air conditioning",
+      "Hair dryer",
+      "Shampoo",
+      "Toilet paper",
+      "Paper towels",
+      "Basic soaps",
+      "Iron & board",
+      "Heating",
+      "Fireplace"
+    ],
+    "kitchen": [
+      "Kitchen",
+      "Refrigerator",
+      "Dishwasher",
+      "Microwave",
+      "Stove",
+      "Oven",
+      "Grill",
+      "Dishes & utensils",
+      "Dining table",
+      "Coffee maker",
+      "Toaster"
+    ],
+    "outside": [
+      "Outdoor furniture",
+      "Covered patio"
+    ],
+    "pets": [
+      "Pet friendly",
+      "Up to 23 kg per pet"
+    ],
+    "entertainment": [
+      "Television",
+      "Smart TV"
+    ],
+    "laundry": [
+      "Washing machine",
+      "Dryer"
+    ],
+    "parking": [
+      "Parking",
+      "Garage"
+    ]
+  },
+  "houseRules": {
+    "checkIn": "After 3:00 pm",
+    "checkOut": "Before 11:00 am",
+    "children": "Allowed",
+    "events": "No events allowed",
+    "pets": "Allowed (up to 23 kg per pet)",
+    "smoking": "No smoking"
+  },
+  "importantInfo": [
+    "Minimum age to rent: 25",
+    "Carbon monoxide detector not reported",
+    "Smoke detector not reported"
+  ],
+  "reviews": {
+    "rating": 9,
+    "count": 29,
+    "breakdown": {
+      "listing": 8.6,
+      "cleanliness": 10,
+      "checkIn": 10,
+      "communication": 9.2,
+      "location": 9.4,
+      "value": 9.8,
+      "amenities": 8.8
+    }
+  },
+  "host": {
+    "name": "STEVEN M PALMA",
+    "isPremier": true,
+    "languages": [
+      "English"
+    ]
+  },
+  "images": {
+    "main": "main.webp",
+    "count": 36
+  },
+  "serviceFees": {
+    "cleaningFee": 175,
+    "deepCleanFee": 350,
+    "poolServiceFee": 0,
+    "lawnServiceFee": 75
+  },
+  "waiverRequirements": {
+    "pool": false,
+    "hotTub": true,
+    "firePit": false,
+    "general": true
+  },
+  "hasPool": false,
+  "hasHotTub": true,
+  "hasFirePit": false
+}

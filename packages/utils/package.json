@@ -1,0 +1,55 @@
+{
+  "name": "@rightathome/utils",
+  "version": "1.0.0",
+  "description": "Utility functions for Right at Home BnB - formatting, calculations, validation",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./formatting": {
+      "import": "./dist/formatting.mjs",
+      "require": "./dist/formatting.js",
+      "types": "./dist/formatting.d.ts"
+    },
+    "./calculations": {
+      "import": "./dist/calculations.mjs",
+      "require": "./dist/calculations.js",
+      "types": "./dist/calculations.d.ts"
+    },
+    "./validators": {
+      "import": "./dist/validators.mjs",
+      "require": "./dist/validators.js",
+      "types": "./dist/validators.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsup src/index.ts src/formatting.ts src/calculations.ts src/validators.ts --format cjs,esm --dts --clean",
+    "dev": "tsup --watch",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "date-fns": "^3.3.0",
+    "date-fns-tz": "^2.0.0"
+  },
+  "devDependencies": {
+    "tsup": "^8.0.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.2.0"
+  },
+  "peerDependencies": {
+    "@rightathome/types": "^1.0.0"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "license": "PROPRIETARY"
+}
