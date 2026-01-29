@@ -19,14 +19,16 @@ ELEVENLABS_BASE_URL = "https://api.elevenlabs.io/v1"
 
 # Voice IDs for different personas
 VOICE_IDS = {
-    # Professional female voice for guest interactions
-    "concierge": "21m00Tcm4TlvDq8ikWAM",  # Rachel - Professional, warm
-    # Professional male voice alternative
-    "concierge_male": "VR6AewLTigWG4xSOukaG",  # Arnold - Professional
+    # Steven Palma's cloned voice - PRIMARY for all guest interactions
+    "steven": "x05uMBE6cWXb4gZ7XriE",  # Steven Palma - Cloned voice
+    "concierge": "x05uMBE6cWXb4gZ7XriE",  # Steven's voice for guest interactions
+    # Professional female voice alternative
+    "concierge_female": "21m00Tcm4TlvDq8ikWAM",  # Rachel - Professional, warm
     # Friendly, casual voice for notifications
     "friendly": "EXAVITQu4vr4xnSDxMaL",  # Bella - Friendly, casual
     # Texas accent option
     "texas": "TxGEqnHWrfWFTfGW9XjX",  # Josh - Southern accent
+    # Backup: Cartesia Steven voice ID: 8cc5dbf8-eb58-4369-b09d-cab9edd35157
 }
 
 # Voice settings presets
@@ -58,8 +60,8 @@ class VoiceService:
     def __init__(self):
         self.api_key = ELEVENLABS_API_KEY
         self.base_url = ELEVENLABS_BASE_URL
-        self.default_model = "eleven_turbo_v2"  # Fast, high quality
-        self.default_voice = VOICE_IDS["concierge"]
+        self.default_model = "eleven_v3"  # Production v3 with emotions
+        self.default_voice = VOICE_IDS["steven"]  # Steven Palma's cloned voice
 
     @property
     def headers(self) -> Dict[str, str]:

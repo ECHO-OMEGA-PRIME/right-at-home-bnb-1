@@ -23,15 +23,31 @@ import {
   type ConversationEntry,
 } from '@/lib/steven-memory';
 
+// Guest Intelligence API endpoint
+const GUEST_INTEL_API = process.env.BACKEND_URL || 'http://localhost:8000';
+
+interface GuestIntelContext {
+  fullContext: string;
+  quickContext: string;
+  riskLevel: string;
+  banned: boolean;
+  vipTier: string;
+  lifetimeValue: number;
+  totalStays: number;
+  complaintCount: number;
+  damageHistory: boolean;
+}
+
 // API Keys
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
 
-// ElevenLabs v3 Alpha Configuration - Steven's Voice
+// ElevenLabs v3 Configuration - Steven's CLONED Voice
 const STEVEN_VOICE_CONFIG = {
-  voice_id: process.env.ELEVENLABS_STEVEN_VOICE_ID || 'keDMh3sQlEXKM4EQxvvi', // ECHO Prime voice (until Steven clone ready)
-  model_id: 'eleven_v3_alpha', // Latest v3 Alpha model with emotions
+  voice_id: process.env.ELEVENLABS_STEVEN_VOICE_ID || 'x05uMBE6cWXb4gZ7XriE', // Steven Palma's cloned voice
+  model_id: 'eleven_v3', // Production v3 model with emotions
   name: 'Steven',
+  // Backup: Cartesia voice_id: '8cc5dbf8-eb58-4369-b09d-cab9edd35157'
 };
 
 // Emotion Settings for ElevenLabs v3 Alpha

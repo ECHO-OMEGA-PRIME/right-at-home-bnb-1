@@ -101,6 +101,15 @@ from routes.grading import router as grading_router
 from routes.dossiers import router as dossiers_router
 from routes.smart_home import router as smart_home_router
 
+# Guest Intelligence System
+from routes.guest_intel import router as guest_intel_router
+
+# Concierge Service - Weather, Local Recommendations, Appointments
+from routes.concierge import router as concierge_enhanced_router
+
+# Ultimate Concierge - Full AI assistant with Steven call escalation
+from routes.ultimate_concierge import router as ultimate_concierge_router
+
 # Import routers - New Services (Phase 8+)
 from routes.briefing import router as briefing_router
 from routes.wine_cellar import router as wine_cellar_router
@@ -159,8 +168,18 @@ app.include_router(grading_router, prefix="/api/grading", tags=["Cleaner Grading
 # Customer Dossiers - Every review, good/bad guest tracking, AI notes
 app.include_router(dossiers_router, prefix="/api/dossiers", tags=["Customer Dossiers"])
 
+# Guest Intelligence - Infinite memory, stays, reviews, complaints, damages
+app.include_router(guest_intel_router, tags=["Guest Intelligence"])
+
 # Smart Home - Google Nest, thermostats, locks, energy monitoring
 app.include_router(smart_home_router, prefix="/api/smart-home", tags=["Smart Home Integration"])
+
+# Ultimate Concierge - AI assistant with Steven call escalation, local search, bookings
+app.include_router(ultimate_concierge_router, tags=["Ultimate Concierge"])
+
+# Concierge V2 Upgrades - Late checkout, check-in automation, preferences, etc.
+from routes.concierge_v2 import router as concierge_v2_router
+app.include_router(concierge_v2_router, tags=["Concierge V2 Upgrades"])
 
 # ============================================================================
 # NEW SERVICES (Phase 8+)
