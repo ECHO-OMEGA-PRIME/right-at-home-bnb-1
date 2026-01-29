@@ -535,68 +535,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Testimonials Section */}
-      <section className="py-24 animate-section">
-        <div className="container mx-auto px-6">
-          <div className="text-center mb-16">
-            <span className="text-[#d4a574] text-sm uppercase tracking-wider">
-              Guest Reviews
-            </span>
-            <h2 className="text-4xl md:text-5xl font-display font-bold mt-4">
-              What Our Guests <span className="text-[#d4a574]">Say</span>
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              {
-                name: "Sarah M.",
-                location: "Houston, TX",
-                text: "Absolutely stunning property! The attention to detail was incredible. Steven was so responsive and helpful. Will definitely book again!",
-                rating: 5
-              },
-              {
-                name: "James R.",
-                location: "Dallas, TX",
-                text: "Best Airbnb experience I've ever had. Clean, comfortable, and perfectly located for our work trip to the Permian Basin.",
-                rating: 5
-              },
-              {
-                name: "Michelle K.",
-                location: "Austin, TX",
-                text: "We felt right at home from the moment we walked in. The property exceeded all expectations. Highly recommend!",
-                rating: 5
-              }
-            ].map((review, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.15 }}
-                className="glass-glow p-8 rounded-2xl"
-              >
-                <div className="flex items-center gap-1 mb-4">
-                  {[...Array(review.rating)].map((_, j) => (
-                    <Star key={j} className="w-5 h-5 text-[#d4a574] fill-[#d4a574]" />
-                  ))}
-                </div>
-                <p className="text-white/80 italic">&ldquo;{review.text}&rdquo;</p>
-                <div className="mt-6 flex items-center gap-3">
-                  <div className="w-10 h-10 bg-[#500000] rounded-full flex items-center justify-center text-white font-bold">
-                    {review.name.charAt(0)}
-                  </div>
-                  <div>
-                    <p className="font-medium text-white">{review.name}</p>
-                    <p className="text-sm text-white/50">{review.location}</p>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* CTA Section */}
       <section className="py-24 bg-gradient-to-b from-[#0a0505] to-[#1a0808]">
         <div className="container mx-auto px-6">

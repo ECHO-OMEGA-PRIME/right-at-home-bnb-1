@@ -1,0 +1,14 @@
+# Cloud Run ignore file
+.git
+.gitignore
+README.md
+Dockerfile
+.dockerignore
+node_modules
+npm-debug.log
+.railway
+.env.railway
+start-railway.sh
+Procfile
+runtime.txt
+requirements-full.txt
