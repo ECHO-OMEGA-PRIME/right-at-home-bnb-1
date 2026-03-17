@@ -8,7 +8,7 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Eye, EyeOff, Lock, Mail, ArrowRight, Code } from 'lucide-react';
@@ -17,6 +17,8 @@ import { signInWithGoogle, signInWithApple, signInWithEmail } from '@/lib/auth';
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -34,7 +36,7 @@ export default function LoginPage() {
       if (user) {
         localStorage.setItem('user_role', user.role || loginType);
         toast.success('Welcome back!');
-        router.push('/dashboard');
+        router.push(callbackUrl);
       }
     } catch (error: any) {
       console.error('Login error:', error);
@@ -62,7 +64,7 @@ export default function LoginPage() {
       if (user) {
         localStorage.setItem('user_role', user.role || 'guest');
         toast.success(`Welcome, ${user.displayName || 'Guest'}!`);
-        router.push('/dashboard');
+        router.push(callbackUrl);
       }
     } catch (error: any) {
       console.error('Google sign-in error:', error);
@@ -83,7 +85,7 @@ export default function LoginPage() {
       if (user) {
         localStorage.setItem('user_role', user.role || 'guest');
         toast.success(`Welcome, ${user.displayName || 'Guest'}!`);
-        router.push('/dashboard');
+        router.push(callbackUrl);
       }
     } catch (error: any) {
       console.error('Apple sign-in error:', error);

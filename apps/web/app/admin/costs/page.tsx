@@ -1,0 +1,519 @@
+'use client';
+
+import { useState, useMemo } from 'react';
+import {
+  DollarSign,
+  TrendingUp,
+  TrendingDown,
+  PieChart,
+  Plus,
+  Filter,
+  Download,
+  Building2,
+  Wrench,
+  Zap,
+  Droplets,
+  Shield,
+  Wifi,
+  Truck,
+  ShoppingCart,
+  Users,
+  X,
+  ChevronDown,
+  ChevronUp,
+  BarChart3,
+  AlertTriangle,
+} from 'lucide-react';
+
+function formatMoney(cents: number): string {
+  const dollars = cents / 100;
+  return dollars.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+}
+
+type ExpenseCategory =
+  | 'Utilities'
+  | 'Maintenance'
+  | 'Supplies'
+  | 'Insurance'
+  | 'Marketing'
+  | 'Payroll'
+  | 'Mortgage'
+  | 'Property Tax'
+  | 'Internet/Cable'
+  | 'Landscaping';
+
+interface Expense {
+  id: string;
+  date: string;
+  category: ExpenseCategory;
+  description: string;
+  amountCents: number;
+  property: string;
+  vendor: string;
+  recurring: boolean;
+}
+
+interface PropertyProfit {
+  name: string;
+  address: string;
+  revenueCents: number;
+  expensesCents: number;
+  nightsAvailable: number;
+  nightsBooked: number;
+  avgNightlyRateCents: number;
+}
+
+const CATEGORY_COLORS: Record<ExpenseCategory, string> = {
+  Utilities: '#ef4444',
+  Maintenance: '#f97316',
+  Supplies: '#eab308',
+  Insurance: '#22c55e',
+  Marketing: '#3b82f6',
+  Payroll: '#8b5cf6',
+  Mortgage: '#ec4899',
+  'Property Tax': '#14b8a6',
+  'Internet/Cable': '#6366f1',
+  Landscaping: '#a855f7',
+};
+
+const CATEGORY_ICONS: Record<ExpenseCategory, typeof DollarSign> = {
+  Utilities: Zap,
+  Maintenance: Wrench,
+  Supplies: ShoppingCart,
+  Insurance: Shield,
+  Marketing: TrendingUp,
+  Payroll: Users,
+  Mortgage: Building2,
+  'Property Tax': DollarSign,
+  'Internet/Cable': Wifi,
+  Landscaping: Droplets,
+};
+
+const PROPERTIES = [
+  '1201 W Industrial Ave', '1203 W Industrial Ave', '1205 W Industrial Ave',
+  '1207 W Industrial Ave', '1209 W Industrial Ave', '1211 W Industrial Ave',
+  '3010 W Kansas Ave', '3012 W Kansas Ave', '3014 W Kansas Ave',
+  '3016 W Kansas Ave', '3018 W Kansas Ave', '4501 Neely Ave',
+  '4503 Neely Ave', '4505 Neely Ave', '4507 Neely Ave',
+  '4509 Neely Ave', '2800 W Cuthbert Ave', '2802 W Cuthbert Ave',
+  '2804 W Cuthbert Ave', '2806 W Cuthbert Ave', '8100 E Hwy 80',
+  '8102 E Hwy 80',
+];
+
+const MOCK_EXPENSES: Expense[] = [
+  { id: 'EXP-001', date: '2026-03-01', category: 'Utilities', description: 'Electric bill - Industrial cluster', amountCents: 287500, property: '1201 W Industrial Ave', vendor: 'Oncor Electric', recurring: true },
+  { id: 'EXP-002', date: '2026-03-01', category: 'Utilities', description: 'Water/sewer - Industrial cluster', amountCents: 145000, property: '1203 W Industrial Ave', vendor: 'City of Midland', recurring: true },
+  { id: 'EXP-003', date: '2026-03-02', category: 'Maintenance', description: 'HVAC repair - Unit 3A compressor', amountCents: 85000, property: '3010 W Kansas Ave', vendor: 'West TX HVAC', recurring: false },
+  { id: 'EXP-004', date: '2026-03-03', category: 'Supplies', description: 'Bulk linens order - 50 sets', amountCents: 375000, property: '4501 Neely Ave', vendor: 'Allied Hospitality', recurring: false },
+  { id: 'EXP-005', date: '2026-03-03', category: 'Insurance', description: 'Property liability - Q1 premium', amountCents: 420000, property: '2800 W Cuthbert Ave', vendor: 'State Farm', recurring: true },
+  { id: 'EXP-006', date: '2026-03-04', category: 'Marketing', description: 'Airbnb promoted listing - March', amountCents: 150000, property: '8100 E Hwy 80', vendor: 'Airbnb', recurring: true },
+  { id: 'EXP-007', date: '2026-03-05', category: 'Payroll', description: 'Biweekly payroll - 10 employees', amountCents: 1850000, property: '1201 W Industrial Ave', vendor: 'Internal', recurring: true },
+  { id: 'EXP-008', date: '2026-03-05', category: 'Mortgage', description: 'Mortgage payment - Industrial 1-6', amountCents: 985000, property: '1201 W Industrial Ave', vendor: 'First Basin Credit Union', recurring: true },
+  { id: 'EXP-009', date: '2026-03-06', category: 'Property Tax', description: 'Monthly escrow - Midland County', amountCents: 310000, property: '3010 W Kansas Ave', vendor: 'Midland County Tax', recurring: true },
+  { id: 'EXP-010', date: '2026-03-07', category: 'Internet/Cable', description: 'Fiber internet - 22 units', amountCents: 220000, property: '4501 Neely Ave', vendor: 'Suddenlink', recurring: true },
+  { id: 'EXP-011', date: '2026-03-08', category: 'Landscaping', description: 'Monthly lawn service - all properties', amountCents: 180000, property: '1201 W Industrial Ave', vendor: 'Green Thumb Midland', recurring: true },
+  { id: 'EXP-012', date: '2026-03-09', category: 'Maintenance', description: 'Plumbing - water heater replacement', amountCents: 125000, property: '4507 Neely Ave', vendor: "Mike's Plumbing", recurring: false },
+  { id: 'EXP-013', date: '2026-03-10', category: 'Supplies', description: 'Cleaning chemicals bulk order', amountCents: 89500, property: '2800 W Cuthbert Ave', vendor: 'Sysco Midland', recurring: false },
+  { id: 'EXP-014', date: '2026-03-11', category: 'Utilities', description: 'Gas bill - Kansas cluster', amountCents: 165000, property: '3012 W Kansas Ave', vendor: 'Atmos Energy', recurring: true },
+  { id: 'EXP-015', date: '2026-03-12', category: 'Marketing', description: 'Google Ads - local STR campaign', amountCents: 75000, property: '8102 E Hwy 80', vendor: 'Google', recurring: true },
+  { id: 'EXP-016', date: '2026-03-13', category: 'Maintenance', description: 'Pest control - quarterly treatment', amountCents: 66000, property: '1205 W Industrial Ave', vendor: 'ABC Pest Control', recurring: true },
+  { id: 'EXP-017', date: '2026-03-14', category: 'Supplies', description: 'Toiletries restock - travel size', amountCents: 45000, property: '3014 W Kansas Ave', vendor: 'Dollar General Dist.', recurring: false },
+  { id: 'EXP-018', date: '2026-03-15', category: 'Insurance', description: 'Workers comp premium - Q1', amountCents: 185000, property: '1201 W Industrial Ave', vendor: 'Texas Mutual', recurring: true },
+  { id: 'EXP-019', date: '2026-03-15', category: 'Payroll', description: 'Biweekly payroll - 10 employees', amountCents: 1850000, property: '1201 W Industrial Ave', vendor: 'Internal', recurring: true },
+  { id: 'EXP-020', date: '2026-03-16', category: 'Mortgage', description: 'Mortgage payment - Kansas 1-5', amountCents: 875000, property: '3010 W Kansas Ave', vendor: 'Prosperity Bank', recurring: true },
+];
+
+const PROPERTY_PROFITS: PropertyProfit[] = PROPERTIES.map((name, i) => {
+  const baseRevenue = 450000 + (i % 5) * 85000 + (i % 3) * 45000;
+  const baseExpense = 280000 + (i % 4) * 55000 + (i % 7) * 25000;
+  const nightsAvail = 31;
+  const nightsBooked = 18 + (i % 11);
+  const avgRate = Math.round(baseRevenue / nightsBooked);
+  return {
+    name,
+    address: `${name}, Midland, TX 79701`,
+    revenueCents: baseRevenue,
+    expensesCents: baseExpense,
+    nightsAvailable: nightsAvail,
+    nightsBooked,
+    avgNightlyRateCents: avgRate,
+  };
+});
+
+function SvgPieChart({ data }: { data: { label: string; value: number; color: string }[] }) {
+  const total = data.reduce((s, d) => s + d.value, 0);
+  if (total === 0) return null;
+  let cumulative = 0;
+  const slices = data.filter(d => d.value > 0).map((d) => {
+    const startAngle = (cumulative / total) * 2 * Math.PI - Math.PI / 2;
+    cumulative += d.value;
+    const endAngle = (cumulative / total) * 2 * Math.PI - Math.PI / 2;
+    const largeArc = d.value / total > 0.5 ? 1 : 0;
+    const x1 = 100 + 80 * Math.cos(startAngle);
+    const y1 = 100 + 80 * Math.sin(startAngle);
+    const x2 = 100 + 80 * Math.cos(endAngle);
+    const y2 = 100 + 80 * Math.sin(endAngle);
+    return {
+      ...d,
+      path: `M100,100 L${x1},${y1} A80,80 0 ${largeArc},1 ${x2},${y2} Z`,
+      pct: ((d.value / total) * 100).toFixed(1),
+    };
+  });
+
+  return (
+    <svg viewBox="0 0 200 200" className="w-full h-full">
+      {slices.map((s, i) => (
+        <path key={i} d={s.path} fill={s.color} stroke="white" strokeWidth="1.5">
+          <title>{s.label}: {s.pct}%</title>
+        </path>
+      ))}
+    </svg>
+  );
+}
+
+export default function CostsPage() {
+  const [expenses, setExpenses] = useState<Expense[]>(MOCK_EXPENSES);
+  const [filterCategory, setFilterCategory] = useState<ExpenseCategory | 'All'>('All');
+  const [filterProperty, setFilterProperty] = useState<string>('All');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [sortField, setSortField] = useState<'date' | 'amountCents' | 'category'>('date');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const [showProfitTable, setShowProfitTable] = useState(false);
+
+  const [newExpense, setNewExpense] = useState({
+    date: '2026-03-17',
+    category: 'Maintenance' as ExpenseCategory,
+    description: '',
+    amountCents: 0,
+    property: PROPERTIES[0],
+    vendor: '',
+    recurring: false,
+  });
+
+  const filteredExpenses = useMemo(() => {
+    let result = [...expenses];
+    if (filterCategory !== 'All') result = result.filter(e => e.category === filterCategory);
+    if (filterProperty !== 'All') result = result.filter(e => e.property === filterProperty);
+    result.sort((a, b) => {
+      const mul = sortDir === 'asc' ? 1 : -1;
+      if (sortField === 'date') return mul * a.date.localeCompare(b.date);
+      if (sortField === 'amountCents') return mul * (a.amountCents - b.amountCents);
+      return mul * a.category.localeCompare(b.category);
+    });
+    return result;
+  }, [expenses, filterCategory, filterProperty, sortField, sortDir]);
+
+  const categoryTotals = useMemo(() => {
+    const map: Record<string, number> = {};
+    expenses.forEach(e => {
+      map[e.category] = (map[e.category] || 0) + e.amountCents;
+    });
+    return Object.entries(map)
+      .map(([label, value]) => ({ label, value, color: CATEGORY_COLORS[label as ExpenseCategory] }))
+      .sort((a, b) => b.value - a.value);
+  }, [expenses]);
+
+  const totalExpensesCents = expenses.reduce((s, e) => s + e.amountCents, 0);
+  const recurringCents = expenses.filter(e => e.recurring).reduce((s, e) => s + e.amountCents, 0);
+  const oneTimeCents = totalExpensesCents - recurringCents;
+  const avgPerProperty = Math.round(totalExpensesCents / 22);
+
+  const totalPortfolioRevenue = PROPERTY_PROFITS.reduce((s, p) => s + p.revenueCents, 0);
+  const totalPortfolioExpenses = PROPERTY_PROFITS.reduce((s, p) => s + p.expensesCents, 0);
+  const portfolioNOI = totalPortfolioRevenue - totalPortfolioExpenses;
+  const portfolioMargin = totalPortfolioRevenue > 0 ? ((portfolioNOI / totalPortfolioRevenue) * 100).toFixed(1) : '0.0';
+
+  function toggleSort(field: 'date' | 'amountCents' | 'category') {
+    if (sortField === field) setSortDir(d => (d === 'asc' ? 'desc' : 'asc'));
+    else { setSortField(field); setSortDir('desc'); }
+  }
+
+  function handleAddExpense() {
+    if (!newExpense.description || newExpense.amountCents <= 0) return;
+    const id = `EXP-${String(expenses.length + 1).padStart(3, '0')}`;
+    setExpenses(prev => [{ ...newExpense, id }, ...prev]);
+    setShowAddModal(false);
+    setNewExpense({ date: '2026-03-17', category: 'Maintenance', description: '', amountCents: 0, property: PROPERTIES[0], vendor: '', recurring: false });
+  }
+
+  const SortIcon = ({ field }: { field: string }) => {
+    if (sortField !== field) return <ChevronDown className="w-3 h-3 opacity-30" />;
+    return sortDir === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />;
+  };
+
+  return (
+    <div className="p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Cost Tracker</h1>
+          <p className="text-sm text-gray-500">March 2026 expense overview across 22 properties</p>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={() => setShowProfitTable(p => !p)} className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm font-medium">
+            <BarChart3 className="w-4 h-4" /> {showProfitTable ? 'Hide' : 'Show'} Profitability
+          </button>
+          <button onClick={() => setShowAddModal(true)} className="flex items-center gap-2 px-4 py-2 bg-[#500000] text-white rounded-lg hover:bg-[#3C1518] text-sm font-medium">
+            <Plus className="w-4 h-4" /> Add Expense
+          </button>
+        </div>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-red-100 rounded-lg"><DollarSign className="w-5 h-5 text-red-600" /></div>
+            <div>
+              <p className="text-xs text-gray-500 uppercase tracking-wide">Total Expenses</p>
+              <p className="text-xl font-bold text-gray-900">{formatMoney(totalExpensesCents)}</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-blue-100 rounded-lg"><TrendingUp className="w-5 h-5 text-blue-600" /></div>
+            <div>
+              <p className="text-xs text-gray-500 uppercase tracking-wide">Recurring</p>
+              <p className="text-xl font-bold text-gray-900">{formatMoney(recurringCents)}</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-amber-100 rounded-lg"><AlertTriangle className="w-5 h-5 text-amber-600" /></div>
+            <div>
+              <p className="text-xs text-gray-500 uppercase tracking-wide">One-Time</p>
+              <p className="text-xl font-bold text-gray-900">{formatMoney(oneTimeCents)}</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-emerald-100 rounded-lg"><Building2 className="w-5 h-5 text-emerald-600" /></div>
+            <div>
+              <p className="text-xs text-gray-500 uppercase tracking-wide">Avg / Property</p>
+              <p className="text-xl font-bold text-gray-900">{formatMoney(avgPerProperty)}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Pie Chart + Category Breakdown */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <PieChart className="w-5 h-5 text-[#500000]" /> Expense Breakdown
+          </h2>
+          <div className="w-48 h-48 mx-auto mb-4">
+            <SvgPieChart data={categoryTotals} />
+          </div>
+          <div className="text-center text-sm text-gray-500">{expenses.length} expenses this month</div>
+        </div>
+
+        <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Category Totals</h2>
+          <div className="space-y-3">
+            {categoryTotals.map(ct => {
+              const pct = totalExpensesCents > 0 ? (ct.value / totalExpensesCents) * 100 : 0;
+              const Icon = CATEGORY_ICONS[ct.label as ExpenseCategory] || DollarSign;
+              return (
+                <div key={ct.label} className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: ct.color + '20' }}>
+                    <Icon className="w-4 h-4" style={{ color: ct.color }} />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="font-medium text-gray-700">{ct.label}</span>
+                      <span className="text-gray-900 font-semibold">{formatMoney(ct.value)}</span>
+                    </div>
+                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: ct.color }} />
+                    </div>
+                  </div>
+                  <span className="text-xs text-gray-500 w-12 text-right">{pct.toFixed(1)}%</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="bg-white rounded-xl border border-gray-200 p-4">
+        <div className="flex flex-wrap items-center gap-4">
+          <Filter className="w-4 h-4 text-gray-400" />
+          <select value={filterCategory} onChange={e => setFilterCategory(e.target.value as ExpenseCategory | 'All')} className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm">
+            <option value="All">All Categories</option>
+            {Object.keys(CATEGORY_COLORS).map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+          <select value={filterProperty} onChange={e => setFilterProperty(e.target.value)} className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm">
+            <option value="All">All Properties</option>
+            {PROPERTIES.map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
+          <span className="text-sm text-gray-500 ml-auto">{filteredExpenses.length} expenses</span>
+          <button className="flex items-center gap-1 text-sm text-[#500000] hover:underline"><Download className="w-3.5 h-3.5" /> Export CSV</button>
+        </div>
+      </div>
+
+      {/* Expense Table */}
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50 border-b border-gray-200">
+            <tr>
+              <th className="px-4 py-3 text-left font-semibold text-gray-600 cursor-pointer select-none" onClick={() => toggleSort('date')}>
+                <span className="flex items-center gap-1">Date <SortIcon field="date" /></span>
+              </th>
+              <th className="px-4 py-3 text-left font-semibold text-gray-600 cursor-pointer select-none" onClick={() => toggleSort('category')}>
+                <span className="flex items-center gap-1">Category <SortIcon field="category" /></span>
+              </th>
+              <th className="px-4 py-3 text-left font-semibold text-gray-600">Description</th>
+              <th className="px-4 py-3 text-left font-semibold text-gray-600">Property</th>
+              <th className="px-4 py-3 text-left font-semibold text-gray-600">Vendor</th>
+              <th className="px-4 py-3 text-right font-semibold text-gray-600 cursor-pointer select-none" onClick={() => toggleSort('amountCents')}>
+                <span className="flex items-center justify-end gap-1">Amount <SortIcon field="amountCents" /></span>
+              </th>
+              <th className="px-4 py-3 text-center font-semibold text-gray-600">Type</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredExpenses.map((e, i) => {
+              const Icon = CATEGORY_ICONS[e.category] || DollarSign;
+              return (
+                <tr key={e.id} className={`border-b border-gray-100 hover:bg-gray-50 ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}>
+                  <td className="px-4 py-3 text-gray-600">{e.date}</td>
+                  <td className="px-4 py-3">
+                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium" style={{ backgroundColor: CATEGORY_COLORS[e.category] + '15', color: CATEGORY_COLORS[e.category] }}>
+                      <Icon className="w-3 h-3" /> {e.category}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 font-medium text-gray-900">{e.description}</td>
+                  <td className="px-4 py-3 text-gray-600 text-xs">{e.property}</td>
+                  <td className="px-4 py-3 text-gray-600">{e.vendor}</td>
+                  <td className="px-4 py-3 text-right font-semibold text-gray-900">{formatMoney(e.amountCents)}</td>
+                  <td className="px-4 py-3 text-center">
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${e.recurring ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>
+                      {e.recurring ? 'Recurring' : 'One-time'}
+                    </span>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Profitability Table */}
+      {showProfitTable && (
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+            <h2 className="text-lg font-semibold text-gray-900">Property Profitability - March 2026</h2>
+            <p className="text-xs text-gray-500 mt-1">
+              Portfolio NOI: <span className="font-bold text-emerald-600">{formatMoney(portfolioNOI)}</span> | Margin: {portfolioMargin}% | Total Revenue: {formatMoney(totalPortfolioRevenue)}
+            </p>
+          </div>
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 border-b border-gray-200">
+              <tr>
+                <th className="px-4 py-3 text-left font-semibold text-gray-600">Property</th>
+                <th className="px-4 py-3 text-right font-semibold text-gray-600">Revenue</th>
+                <th className="px-4 py-3 text-right font-semibold text-gray-600">Expenses</th>
+                <th className="px-4 py-3 text-right font-semibold text-gray-600">NOI</th>
+                <th className="px-4 py-3 text-right font-semibold text-gray-600">Margin</th>
+                <th className="px-4 py-3 text-center font-semibold text-gray-600">Occupancy</th>
+                <th className="px-4 py-3 text-right font-semibold text-gray-600">ADR</th>
+                <th className="px-4 py-3 text-right font-semibold text-gray-600">RevPAR</th>
+              </tr>
+            </thead>
+            <tbody>
+              {PROPERTY_PROFITS.map((p, i) => {
+                const noi = p.revenueCents - p.expensesCents;
+                const margin = p.revenueCents > 0 ? ((noi / p.revenueCents) * 100).toFixed(1) : '0.0';
+                const occupancy = ((p.nightsBooked / p.nightsAvailable) * 100).toFixed(0);
+                const revPAR = Math.round(p.revenueCents / p.nightsAvailable);
+                const isNeg = noi < 0;
+                return (
+                  <tr key={p.name} className={`border-b border-gray-100 hover:bg-gray-50 ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}>
+                    <td className="px-4 py-2.5 font-medium text-gray-900 text-xs">{p.name}</td>
+                    <td className="px-4 py-2.5 text-right text-emerald-700 font-medium">{formatMoney(p.revenueCents)}</td>
+                    <td className="px-4 py-2.5 text-right text-red-600 font-medium">{formatMoney(p.expensesCents)}</td>
+                    <td className={`px-4 py-2.5 text-right font-bold ${isNeg ? 'text-red-600' : 'text-emerald-700'}`}>
+                      <span className="inline-flex items-center gap-1">
+                        {isNeg ? <TrendingDown className="w-3 h-3" /> : <TrendingUp className="w-3 h-3" />}
+                        {formatMoney(noi)}
+                      </span>
+                    </td>
+                    <td className={`px-4 py-2.5 text-right font-semibold ${parseFloat(margin) < 20 ? 'text-amber-600' : 'text-emerald-700'}`}>{margin}%</td>
+                    <td className="px-4 py-2.5 text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                          <div className="h-full bg-[#500000] rounded-full" style={{ width: `${occupancy}%` }} />
+                        </div>
+                        <span className="text-xs text-gray-600">{occupancy}%</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-2.5 text-right text-gray-700">{formatMoney(p.avgNightlyRateCents)}</td>
+                    <td className="px-4 py-2.5 text-right font-semibold text-[#500000]">{formatMoney(revPAR)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Add Expense Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-bold text-gray-900">Add Expense</h2>
+              <button onClick={() => setShowAddModal(false)} className="p-1 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                  <input type="date" value={newExpense.date} onChange={e => setNewExpense(p => ({ ...p, date: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                  <select value={newExpense.category} onChange={e => setNewExpense(p => ({ ...p, category: e.target.value as ExpenseCategory }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                    {Object.keys(CATEGORY_COLORS).map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <input type="text" value={newExpense.description} onChange={e => setNewExpense(p => ({ ...p, description: e.target.value }))} placeholder="HVAC repair, Unit 3A..." className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Amount ($)</label>
+                  <input type="number" step="0.01" min="0" value={(newExpense.amountCents / 100).toFixed(2)} onChange={e => setNewExpense(p => ({ ...p, amountCents: Math.round(parseFloat(e.target.value || '0') * 100) }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Vendor</label>
+                  <input type="text" value={newExpense.vendor} onChange={e => setNewExpense(p => ({ ...p, vendor: e.target.value }))} placeholder="Vendor name..." className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Property</label>
+                <select value={newExpense.property} onChange={e => setNewExpense(p => ({ ...p, property: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                  {PROPERTIES.map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
+              </div>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={newExpense.recurring} onChange={e => setNewExpense(p => ({ ...p, recurring: e.target.checked }))} className="rounded border-gray-300 text-[#500000] focus:ring-[#500000]" />
+                <span className="text-sm text-gray-700">Recurring expense</span>
+              </label>
+              <div className="flex justify-end gap-3 pt-2">
+                <button onClick={() => setShowAddModal(false)} className="px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">Cancel</button>
+                <button onClick={handleAddExpense} className="px-4 py-2 bg-[#500000] text-white rounded-lg text-sm hover:bg-[#3C1518] font-medium">Add Expense</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

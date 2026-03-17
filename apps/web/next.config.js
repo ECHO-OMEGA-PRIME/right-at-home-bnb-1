@@ -1,20 +1,19 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  output: 'standalone',
+  transpilePackages: ['lucide-react'],
   images: {
-    domains: ['localhost', 'rightathomebnb.com', 'rah-midland.com'],
+    domains: [
+      'localhost',
+      'rightathomebnb.com',
+      'rah-midland.com',
+      'images.unsplash.com',
+      'lh3.googleusercontent.com',
+    ],
   },
-  // Mark twilio as server-only external - it's only used in API routes
   experimental: {
     serverComponentsExternalPackages: ['twilio'],
-  },
-  async rewrites() {
-    return [
-      {
-        source: '/api/:path*',
-        destination: 'http://localhost:8000/api/:path*',
-      },
-    ];
   },
 };
 

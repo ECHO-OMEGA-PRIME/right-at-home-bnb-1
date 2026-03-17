@@ -12,6 +12,21 @@ import {
   AppUser,
 } from '@/lib/auth';
 
+
+// Cookie helpers for middleware auth
+function setAuthCookie(token: string) {
+  if (typeof document !== 'undefined') {
+    const maxAge = 60 * 60 * 24 * 30; // 30 days
+    document.cookie = `rah-auth-token=${token}; path=/; max-age=${maxAge}; SameSite=Lax`;
+  }
+}
+
+function clearAuthCookie() {
+  if (typeof document !== 'undefined') {
+    document.cookie = 'rah-auth-token=; path=/; max-age=0';
+  }
+}
+
 interface AuthContextType {
   user: User | null;
   appUser: AppUser | null;
@@ -59,6 +74,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           lastLogin: devUser.lastLogin,
         } as AppUser);
         setIsDevMode(true);
+        setAuthCookie('dev-mode-' + devUser.uid);
         return true;
       } catch (err) {
         console.error('Error parsing dev user:', err);
@@ -93,6 +109,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(firebaseUser);
 
       if (firebaseUser) {
+        const token = await firebaseUser.getIdToken();
+        setAuthCookie(token);
         await loadUserData();
       } else {
         // Check dev mode again if no firebase user
@@ -152,6 +170,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.removeItem('user_role');
       }
       setIsDevMode(false);
+      clearAuthCookie();
 
       // Sign out from Firebase if there's a user
       if (user) {
