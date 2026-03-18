@@ -50,23 +50,8 @@ const sourceLabels: Record<Guest['source'], string> = {
   referral: 'Referral',
 };
 
-const guests: Guest[] = [
-  { id: 'G001', name: 'Amanda Richardson', email: 'amanda.r@pioneeroil.com', phone: '(432) 555-0101', totalStays: 14, totalSpent: 4200000, vipTier: 'platinum', lastVisit: '2026-03-10', avgRating: 5.0, source: 'direct', notes: 'Monthly pipeline inspector. Prefers Sunset Villa king suite.' },
-  { id: 'G002', name: 'Robert Chen', email: 'r.chen@basineng.com', phone: '(432) 555-0102', totalStays: 8, totalSpent: 2800000, vipTier: 'gold', lastVisit: '2026-03-05', avgRating: 4.8, source: 'direct', notes: 'Basin Engineering PM. Books for crew of 4.' },
-  { id: 'G003', name: 'Jennifer Lopez-Martinez', email: 'jlm@outlook.com', phone: '(915) 555-0103', totalStays: 6, totalSpent: 1650000, vipTier: 'gold', lastVisit: '2026-02-28', avgRating: 4.5, source: 'airbnb', notes: 'Family visits from El Paso. Needs pack-n-play.' },
-  { id: 'G004', name: 'Michael Thompson', email: 'mthompson@gmail.com', phone: '(214) 555-0104', totalStays: 3, totalSpent: 720000, vipTier: 'silver', lastVisit: '2026-02-15', avgRating: 4.0, source: 'vrbo', notes: 'Local referral. Uses properties for family visits.' },
-  { id: 'G005', name: 'Sarah Williams', email: 'swilliams@chevron.com', phone: '(713) 555-0105', totalStays: 11, totalSpent: 3850000, vipTier: 'platinum', lastVisit: '2026-03-12', avgRating: 4.9, source: 'direct', notes: 'Chevron field supervisor. 2-week blocks. Sends referrals.' },
-  { id: 'G006', name: 'James Porter', email: 'jporter@gmail.com', phone: '(806) 555-0106', totalStays: 1, totalSpent: 180000, vipTier: 'bronze', lastVisit: '2026-03-08', avgRating: 5.0, source: 'airbnb', notes: 'First-time guest. UTPB graduation ceremony.' },
-  { id: 'G007', name: 'Patricia Dawson', email: 'pdawson@dawsondrilling.com', phone: '(432) 555-0107', totalStays: 9, totalSpent: 2970000, vipTier: 'gold', lastVisit: '2026-02-20', avgRating: 4.7, source: 'direct', notes: 'Dawson Drilling owner. Premium properties only.' },
-  { id: 'G008', name: 'Tom Baker', email: 'tombaker77@yahoo.com', phone: '(325) 555-0108', totalStays: 2, totalSpent: 480000, vipTier: 'bronze', lastVisit: '2025-11-15', avgRating: 3.5, source: 'vrbo', notes: 'Had parking issue. Left 3-star review. At risk.' },
-  { id: 'G009', name: 'Emily Nguyen', email: 'emily.n@gmail.com', phone: '(512) 555-0109', totalStays: 4, totalSpent: 1120000, vipTier: 'silver', lastVisit: '2026-01-20', avgRating: 4.8, source: 'airbnb', notes: 'Travel nurse assignments. Month-long stays.' },
-  { id: 'G010', name: 'David Hernandez', email: 'dhernandez@halliburton.com', phone: '(832) 555-0110', totalStays: 7, totalSpent: 2450000, vipTier: 'gold', lastVisit: '2026-03-01', avgRating: 4.6, source: 'direct', notes: 'Halliburton completions team. Monthly crew rotations.' },
-  { id: 'G011', name: 'Karen Mitchell', email: 'kmitch@remax.com', phone: '(432) 555-0111', totalStays: 1, totalSpent: 95000, vipTier: 'bronze', lastVisit: '2026-03-14', avgRating: 0, source: 'referral', notes: 'RE/MAX agent. Referred by Sarah Williams.' },
-  { id: 'G012', name: 'William Foster', email: 'wfoster@outlook.com', phone: '(972) 555-0112', totalStays: 5, totalSpent: 1750000, vipTier: 'silver', lastVisit: '2025-12-28', avgRating: 4.4, source: 'google', notes: 'Regular quarterly visitor. Needs win-back offer.' },
-  { id: 'G013', name: 'Maria Gonzalez', email: 'mgonzalez@pxd.com', phone: '(432) 555-0113', totalStays: 10, totalSpent: 3100000, vipTier: 'platinum', lastVisit: '2026-03-15', avgRating: 4.9, source: 'direct', notes: 'Pioneer Natural Resources. Long-term project housing.' },
-  { id: 'G014', name: 'Brian Kelly', email: 'bkelly@diamondback.com', phone: '(432) 555-0114', totalStays: 3, totalSpent: 810000, vipTier: 'silver', lastVisit: '2026-02-10', avgRating: 4.2, source: 'vrbo', notes: 'Diamondback Energy contractor. Crew of 3.' },
-  { id: 'G015', name: 'Lisa Kowalski', email: 'lisakow@gmail.com', phone: '(469) 555-0115', totalStays: 2, totalSpent: 390000, vipTier: 'bronze', lastVisit: '2026-03-02', avgRating: 2.0, source: 'vrbo', notes: 'Complained about noisy neighbors. Left 2-star review.' },
-];
+// Guest data loaded from API — no hardcoded mock data
+const guests: Guest[] = [];
 
 type SortField = 'name' | 'totalStays' | 'totalSpent' | 'lastVisit';
 type SortDir = 'asc' | 'desc';
@@ -364,7 +349,11 @@ export default function GuestCRM() {
           </table>
         </div>
         {filtered.length === 0 && (
-          <div className="p-12 text-center text-gray-400">No guests match your filters.</div>
+          <div className="p-12 text-center text-gray-400">
+            {guests.length === 0
+              ? 'No guest data yet. Guests will appear here as bookings are synced from Airbnb and VRBO.'
+              : 'No guests match your filters.'}
+          </div>
         )}
       </div>
 

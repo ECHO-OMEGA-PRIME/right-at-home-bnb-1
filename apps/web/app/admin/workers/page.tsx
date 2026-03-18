@@ -35,16 +35,8 @@ const WORKER_TYPE_CONFIG: Record<WorkerType, { label: string; icon: typeof Users
   yard: { label: 'Yard / Lawn', icon: TreePine, color: 'text-green-600', bgColor: 'bg-green-600' },
 };
 
-// ─── Initial Data (matches lock API worker registry) ─────────────────────────
-
-const INITIAL_WORKERS: Worker[] = [
-  { id: 'W-STEVEN', name: 'Steven Palma', type: 'owner', email: 'steven@rah-midland.com', phone: '', code: '830522', active: true, lock_count: 22, properties: ['All Properties'], hired_date: '2024-01-01', notes: 'Property owner — full access' },
-  { id: 'W-BREE', name: 'Bree Belleville', type: 'cleaner', email: 'bree@rah-midland.com', phone: '432-238-4426', code: '247391', active: true, lock_count: 22, properties: ['All Properties'], hired_date: '2025-06-01', notes: 'Lead cleaner — Clean Brees. Turnover cleanings, deep cleans, inspections.' },
-  { id: 'W-BOBBY', name: 'Bobby McWilliams', type: 'admin', email: 'bobby@rah-midland.com', phone: '', code: '197463', active: true, lock_count: 22, properties: ['All Properties'], hired_date: '2025-01-01', notes: 'Admin — also handles cleaning, maintenance, and one hot tub.' },
-  { id: 'W-LISA', name: 'Lisa Hernandez', type: 'pool', email: 'lisa@rah-midland.com', phone: '', code: '518642', active: true, lock_count: 22, properties: ['All Properties'], hired_date: '2025-08-01', notes: 'Pool technician — chemical testing, equipment maintenance.' },
-  { id: 'W-CARLOS', name: 'Carlos Gutierrez', type: 'maintenance', email: 'carlos@rah-midland.com', phone: '', code: '673815', active: true, lock_count: 22, properties: ['All Properties'], hired_date: '2025-09-01', notes: 'Maintenance tech — HVAC, plumbing, electrical, repairs.' },
-  { id: 'W-JUAN', name: 'Juan Martinez', type: 'yard', email: 'juan@rah-midland.com', phone: '', code: '904276', active: true, lock_count: 22, properties: ['All Properties'], hired_date: '2025-07-01', notes: 'Yard crew lead — mowing, landscaping, seasonal work.' },
-];
+// Workers loaded from the smart-home lock API — no hardcoded data
+const INITIAL_WORKERS: Worker[] = [];
 
 // ─── Component ───────────────────────────────────────────────────────────────
 

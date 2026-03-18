@@ -21,35 +21,13 @@ interface Task {
   notes: string; createdAt: string; estimatedMinutes: number;
 }
 
-const PROPERTIES = [
-  'Desert Rose Villa', 'Permian Sunset', 'Basin View Loft', 'Wildcatter Suite',
-  'Oil Patch Palace', 'Derrick Heights', 'Pump Jack Place', 'Midland Manor',
-  'West Texas Haven', 'Roughneck Retreat', 'Pumpjack Patio', 'Lone Star Lodge',
-  'Tumbleweed Terrace', 'Cactus Creek Cottage', 'Mesquite Meadows', 'Prairie Wind Place',
-  'Sandstorm Suite', 'Rig Runner Ranch', 'Oilfield Oasis', 'Panhandle Paradise',
-  'Dusty Trail Duplex', 'Horizon Heights',
-];
+// Properties and assignees loaded from database — empty until configured
+const PROPERTIES: string[] = [];
 
-const ASSIGNEES = ['Maria Garcia', 'James Wilson', 'Aisha Patel', 'Robert Chen', 'Carlos Mendez', 'Linda Thompson', 'David Okonkwo', 'Michael Brown'];
+const ASSIGNEES: string[] = [];
 
-const INITIAL_TASKS: Task[] = [
-  { id: 'T001', title: 'Turnover clean after checkout', type: 'Cleaning', property: 'Desert Rose Villa', assignee: 'Maria Garcia', priority: 'High', dueDate: '2026-03-17', dueTime: '14:00', status: 'Pending', notes: 'Guest checking in at 4 PM', createdAt: '2026-03-17T08:00:00', estimatedMinutes: 90 },
-  { id: 'T002', title: 'Fix leaking kitchen faucet', type: 'Maintenance', property: 'Basin View Loft', assignee: 'James Wilson', priority: 'Medium', dueDate: '2026-03-17', dueTime: '16:00', status: 'Assigned', notes: 'Slow drip, washer replacement', createdAt: '2026-03-16T14:00:00', estimatedMinutes: 60 },
-  { id: 'T003', title: 'Pre-arrival inspection', type: 'Inspection', property: 'Wildcatter Suite', assignee: 'Robert Chen', priority: 'High', dueDate: '2026-03-17', dueTime: '12:00', status: 'In Progress', notes: 'VIP guest - 5-star review history', createdAt: '2026-03-17T09:00:00', estimatedMinutes: 45 },
-  { id: 'T004', title: 'Restock toiletries', type: 'Supply Run', property: 'Oil Patch Palace', assignee: 'Linda Thompson', priority: 'Low', dueDate: '2026-03-18', dueTime: '10:00', status: 'Pending', notes: 'Shampoo, conditioner, body wash', createdAt: '2026-03-17T07:30:00', estimatedMinutes: 30 },
-  { id: 'T005', title: 'Guest requests extra pillows', type: 'Guest Request', property: 'Midland Manor', assignee: 'Aisha Patel', priority: 'Medium', dueDate: '2026-03-17', dueTime: '15:00', status: 'Assigned', notes: '2 extra pillows + extra blanket', createdAt: '2026-03-17T10:15:00', estimatedMinutes: 20 },
-  { id: 'T006', title: 'Deep clean - monthly schedule', type: 'Cleaning', property: 'Permian Sunset', assignee: 'David Okonkwo', priority: 'Medium', dueDate: '2026-03-18', dueTime: '09:00', status: 'Pending', notes: 'Include carpet shampoo and window cleaning', createdAt: '2026-03-16T08:00:00', estimatedMinutes: 180 },
-  { id: 'T007', title: 'Replace HVAC filter', type: 'Maintenance', property: 'Derrick Heights', assignee: 'Carlos Mendez', priority: 'Low', dueDate: '2026-03-19', dueTime: '11:00', status: 'Pending', notes: 'Use 20x25x1 MERV 13', createdAt: '2026-03-17T08:30:00', estimatedMinutes: 30 },
-  { id: 'T008', title: 'Post-checkout inspection', type: 'Inspection', property: 'Roughneck Retreat', assignee: 'Robert Chen', priority: 'High', dueDate: '2026-03-17', dueTime: '11:00', status: 'Completed', notes: 'Check for damages - party group', createdAt: '2026-03-17T07:00:00', estimatedMinutes: 45 },
-  { id: 'T009', title: 'Turnover clean', type: 'Cleaning', property: 'Pumpjack Patio', assignee: 'Maria Garcia', priority: 'High', dueDate: '2026-03-17', dueTime: '13:00', status: 'In Progress', notes: 'Standard turnover', createdAt: '2026-03-17T08:30:00', estimatedMinutes: 75 },
-  { id: 'T010', title: 'Fix broken towel rack', type: 'Maintenance', property: 'Lone Star Lodge', assignee: 'Michael Brown', priority: 'Medium', dueDate: '2026-03-17', dueTime: '17:00', status: 'Assigned', notes: 'Master bathroom, wall anchor may need replacement', createdAt: '2026-03-16T18:00:00', estimatedMinutes: 45 },
-  { id: 'T011', title: 'Restock cleaning supplies', type: 'Supply Run', property: 'Cactus Creek Cottage', assignee: 'Linda Thompson', priority: 'Low', dueDate: '2026-03-18', dueTime: '09:00', status: 'Pending', notes: 'All-purpose cleaner, glass cleaner, trash bags', createdAt: '2026-03-17T09:00:00', estimatedMinutes: 40 },
-  { id: 'T012', title: 'Guest WiFi not working', type: 'Guest Request', property: 'West Texas Haven', assignee: 'James Wilson', priority: 'Urgent', dueDate: '2026-03-17', dueTime: '10:30', status: 'In Progress', notes: 'Router may need restart, guest working remotely', createdAt: '2026-03-17T10:00:00', estimatedMinutes: 30 },
-  { id: 'T013', title: 'Turnover clean after 5-night stay', type: 'Cleaning', property: 'Mesquite Meadows', assignee: 'Aisha Patel', priority: 'Medium', dueDate: '2026-03-18', dueTime: '11:00', status: 'Pending', notes: 'Extended stay - extra attention to kitchen', createdAt: '2026-03-17T06:00:00', estimatedMinutes: 120 },
-  { id: 'T014', title: 'Landscaping - trim hedges', type: 'Maintenance', property: 'Prairie Wind Place', assignee: 'Carlos Mendez', priority: 'Low', dueDate: '2026-03-20', dueTime: '08:00', status: 'Pending', notes: 'Front yard hedges overgrown', createdAt: '2026-03-15T12:00:00', estimatedMinutes: 120 },
-  { id: 'T015', title: 'Post-checkout standard clean', type: 'Cleaning', property: 'Horizon Heights', assignee: 'David Okonkwo', priority: 'High', dueDate: '2026-03-17', dueTime: '15:00', status: 'Completed', notes: 'Quick turnaround - next guest at 5 PM', createdAt: '2026-03-17T09:30:00', estimatedMinutes: 75 },
-  { id: 'T016', title: 'Annual fire extinguisher check', type: 'Inspection', property: 'Sandstorm Suite', assignee: 'Robert Chen', priority: 'Medium', dueDate: '2026-03-21', dueTime: '10:00', status: 'Pending', notes: 'All 3 extinguishers due for annual inspection', createdAt: '2026-03-14T08:00:00', estimatedMinutes: 30 },
-];
+// Dispatch tasks loaded from database — create tasks via the form
+const INITIAL_TASKS: Task[] = [];
 
 const COLUMNS: { status: TaskStatus; color: string; bgColor: string; icon: typeof Clock }[] = [
   { status: 'Pending', color: 'text-gray-600', bgColor: 'bg-gray-100', icon: Clock },

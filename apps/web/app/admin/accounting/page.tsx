@@ -52,132 +52,47 @@ interface JournalEntry {
   status: 'posted' | 'pending' | 'draft';
 }
 
+// Summary cards — populated from API when accounting is connected
 const summaryCards: SummaryCard[] = [
   {
     label: 'Revenue MTD',
-    value: 18745200,
-    change: 12.4,
+    value: 0,
+    change: 0,
     icon: TrendingUp,
     color: 'text-emerald-600',
     bgColor: 'bg-emerald-50',
   },
   {
     label: 'Expenses MTD',
-    value: 9832100,
-    change: -3.2,
+    value: 0,
+    change: 0,
     icon: TrendingDown,
     color: 'text-red-600',
     bgColor: 'bg-red-50',
   },
   {
     label: 'Net Income',
-    value: 8913100,
-    change: 28.7,
+    value: 0,
+    change: 0,
     icon: DollarSign,
     color: 'text-[#500000]',
     bgColor: 'bg-[#500000]/5',
   },
   {
     label: 'Cash Balance',
-    value: 34521800,
-    change: 5.1,
+    value: 0,
+    change: 0,
     icon: Wallet,
     color: 'text-blue-600',
     bgColor: 'bg-blue-50',
   },
 ];
 
-const recentEntries: JournalEntry[] = [
-  {
-    id: 'JE-2026-0312',
-    date: '2026-03-15',
-    description: 'Airbnb payout - 14 properties',
-    debitAccount: 'Cash - Operating',
-    creditAccount: 'Rental Revenue',
-    debitAmount: 4231500,
-    creditAmount: 4231500,
-    status: 'posted',
-  },
-  {
-    id: 'JE-2026-0311',
-    date: '2026-03-14',
-    description: 'Midland Electric - 22 units March',
-    debitAccount: 'Utilities Expense',
-    creditAccount: 'Cash - Operating',
-    debitAmount: 486200,
-    creditAmount: 486200,
-    status: 'posted',
-  },
-  {
-    id: 'JE-2026-0310',
-    date: '2026-03-13',
-    description: 'VRBO payout - 8 properties',
-    debitAccount: 'Cash - Operating',
-    creditAccount: 'Rental Revenue',
-    debitAmount: 2187400,
-    creditAmount: 2187400,
-    status: 'posted',
-  },
-  {
-    id: 'JE-2026-0309',
-    date: '2026-03-12',
-    description: 'ABC Cleaning Services - deep cleans x6',
-    debitAccount: 'Cleaning Expense',
-    creditAccount: 'Accounts Payable',
-    debitAmount: 189000,
-    creditAmount: 189000,
-    status: 'pending',
-  },
-  {
-    id: 'JE-2026-0308',
-    date: '2026-03-11',
-    description: 'Home Depot - maintenance supplies',
-    debitAccount: 'Maintenance & Repairs',
-    creditAccount: 'Credit Card - Business',
-    debitAmount: 73425,
-    creditAmount: 73425,
-    status: 'posted',
-  },
-  {
-    id: 'JE-2026-0307',
-    date: '2026-03-10',
-    description: 'Booking.com payout - 5 properties',
-    debitAccount: 'Cash - Operating',
-    creditAccount: 'Rental Revenue',
-    debitAmount: 1542800,
-    creditAmount: 1542800,
-    status: 'posted',
-  },
-  {
-    id: 'JE-2026-0306',
-    date: '2026-03-09',
-    description: 'Property insurance - Q1 installment',
-    debitAccount: 'Insurance Expense',
-    creditAccount: 'Cash - Operating',
-    debitAmount: 345600,
-    creditAmount: 345600,
-    status: 'posted',
-  },
-  {
-    id: 'JE-2026-0305',
-    date: '2026-03-08',
-    description: 'Guest damage deposit refund - Unit 7',
-    debitAccount: 'Security Deposits',
-    creditAccount: 'Cash - Operating',
-    debitAmount: 50000,
-    creditAmount: 50000,
-    status: 'draft',
-  },
-];
+// Journal entries loaded from API — no hardcoded mock data
+const recentEntries: JournalEntry[] = [];
 
-const monthlyPL = [
-  { month: 'Oct', revenue: 16200000, expenses: 9100000, net: 7100000 },
-  { month: 'Nov', revenue: 14800000, expenses: 8900000, net: 5900000 },
-  { month: 'Dec', revenue: 19500000, expenses: 10200000, net: 9300000 },
-  { month: 'Jan', revenue: 12100000, expenses: 8700000, net: 3400000 },
-  { month: 'Feb', revenue: 15600000, expenses: 9400000, net: 6200000 },
-  { month: 'Mar', revenue: 18745200, expenses: 9832100, net: 8913100 },
-];
+// Monthly P&L loaded from API — no hardcoded mock data
+const monthlyPL: { month: string; revenue: number; expenses: number; net: number }[] = [];
 
 const statusColors: Record<string, string> = {
   posted: 'bg-emerald-100 text-emerald-700',

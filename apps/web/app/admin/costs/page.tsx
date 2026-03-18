@@ -89,56 +89,15 @@ const CATEGORY_ICONS: Record<ExpenseCategory, typeof DollarSign> = {
   Landscaping: Droplets,
 };
 
-const PROPERTIES = [
-  '1201 W Industrial Ave', '1203 W Industrial Ave', '1205 W Industrial Ave',
-  '1207 W Industrial Ave', '1209 W Industrial Ave', '1211 W Industrial Ave',
-  '3010 W Kansas Ave', '3012 W Kansas Ave', '3014 W Kansas Ave',
-  '3016 W Kansas Ave', '3018 W Kansas Ave', '4501 Neely Ave',
-  '4503 Neely Ave', '4505 Neely Ave', '4507 Neely Ave',
-  '4509 Neely Ave', '2800 W Cuthbert Ave', '2802 W Cuthbert Ave',
-  '2804 W Cuthbert Ave', '2806 W Cuthbert Ave', '8100 E Hwy 80',
-  '8102 E Hwy 80',
+// Properties loaded from database
+const PROPERTIES: string[] = [
 ];
 
-const MOCK_EXPENSES: Expense[] = [
-  { id: 'EXP-001', date: '2026-03-01', category: 'Utilities', description: 'Electric bill - Industrial cluster', amountCents: 287500, property: '1201 W Industrial Ave', vendor: 'Oncor Electric', recurring: true },
-  { id: 'EXP-002', date: '2026-03-01', category: 'Utilities', description: 'Water/sewer - Industrial cluster', amountCents: 145000, property: '1203 W Industrial Ave', vendor: 'City of Midland', recurring: true },
-  { id: 'EXP-003', date: '2026-03-02', category: 'Maintenance', description: 'HVAC repair - Unit 3A compressor', amountCents: 85000, property: '3010 W Kansas Ave', vendor: 'West TX HVAC', recurring: false },
-  { id: 'EXP-004', date: '2026-03-03', category: 'Supplies', description: 'Bulk linens order - 50 sets', amountCents: 375000, property: '4501 Neely Ave', vendor: 'Allied Hospitality', recurring: false },
-  { id: 'EXP-005', date: '2026-03-03', category: 'Insurance', description: 'Property liability - Q1 premium', amountCents: 420000, property: '2800 W Cuthbert Ave', vendor: 'State Farm', recurring: true },
-  { id: 'EXP-006', date: '2026-03-04', category: 'Marketing', description: 'Airbnb promoted listing - March', amountCents: 150000, property: '8100 E Hwy 80', vendor: 'Airbnb', recurring: true },
-  { id: 'EXP-007', date: '2026-03-05', category: 'Payroll', description: 'Biweekly payroll - 10 employees', amountCents: 1850000, property: '1201 W Industrial Ave', vendor: 'Internal', recurring: true },
-  { id: 'EXP-008', date: '2026-03-05', category: 'Mortgage', description: 'Mortgage payment - Industrial 1-6', amountCents: 985000, property: '1201 W Industrial Ave', vendor: 'First Basin Credit Union', recurring: true },
-  { id: 'EXP-009', date: '2026-03-06', category: 'Property Tax', description: 'Monthly escrow - Midland County', amountCents: 310000, property: '3010 W Kansas Ave', vendor: 'Midland County Tax', recurring: true },
-  { id: 'EXP-010', date: '2026-03-07', category: 'Internet/Cable', description: 'Fiber internet - 22 units', amountCents: 220000, property: '4501 Neely Ave', vendor: 'Suddenlink', recurring: true },
-  { id: 'EXP-011', date: '2026-03-08', category: 'Landscaping', description: 'Monthly lawn service - all properties', amountCents: 180000, property: '1201 W Industrial Ave', vendor: 'Green Thumb Midland', recurring: true },
-  { id: 'EXP-012', date: '2026-03-09', category: 'Maintenance', description: 'Plumbing - water heater replacement', amountCents: 125000, property: '4507 Neely Ave', vendor: "Mike's Plumbing", recurring: false },
-  { id: 'EXP-013', date: '2026-03-10', category: 'Supplies', description: 'Cleaning chemicals bulk order', amountCents: 89500, property: '2800 W Cuthbert Ave', vendor: 'Sysco Midland', recurring: false },
-  { id: 'EXP-014', date: '2026-03-11', category: 'Utilities', description: 'Gas bill - Kansas cluster', amountCents: 165000, property: '3012 W Kansas Ave', vendor: 'Atmos Energy', recurring: true },
-  { id: 'EXP-015', date: '2026-03-12', category: 'Marketing', description: 'Google Ads - local STR campaign', amountCents: 75000, property: '8102 E Hwy 80', vendor: 'Google', recurring: true },
-  { id: 'EXP-016', date: '2026-03-13', category: 'Maintenance', description: 'Pest control - quarterly treatment', amountCents: 66000, property: '1205 W Industrial Ave', vendor: 'ABC Pest Control', recurring: true },
-  { id: 'EXP-017', date: '2026-03-14', category: 'Supplies', description: 'Toiletries restock - travel size', amountCents: 45000, property: '3014 W Kansas Ave', vendor: 'Dollar General Dist.', recurring: false },
-  { id: 'EXP-018', date: '2026-03-15', category: 'Insurance', description: 'Workers comp premium - Q1', amountCents: 185000, property: '1201 W Industrial Ave', vendor: 'Texas Mutual', recurring: true },
-  { id: 'EXP-019', date: '2026-03-15', category: 'Payroll', description: 'Biweekly payroll - 10 employees', amountCents: 1850000, property: '1201 W Industrial Ave', vendor: 'Internal', recurring: true },
-  { id: 'EXP-020', date: '2026-03-16', category: 'Mortgage', description: 'Mortgage payment - Kansas 1-5', amountCents: 875000, property: '3010 W Kansas Ave', vendor: 'Prosperity Bank', recurring: true },
-];
+// Expenses loaded from database — add via the expense form
+const MOCK_EXPENSES: Expense[] = [];
 
-const PROPERTY_PROFITS: PropertyProfit[] = PROPERTIES.map((name, i) => {
-  const baseRevenue = 450000 + (i % 5) * 85000 + (i % 3) * 45000;
-  const baseExpense = 280000 + (i % 4) * 55000 + (i % 7) * 25000;
-  const nightsAvail = 31;
-  const nightsBooked = 18 + (i % 11);
-  const avgRate = Math.round(baseRevenue / nightsBooked);
-  return {
-    name,
-    address: `${name}, Midland, TX 79701`,
-    revenueCents: baseRevenue,
-    expensesCents: baseExpense,
-    nightsAvailable: nightsAvail,
-    nightsBooked,
-    avgNightlyRateCents: avgRate,
-  };
-});
+// Property profits loaded from database — no mock data
+const PROPERTY_PROFITS: PropertyProfit[] = [];
 
 function SvgPieChart({ data }: { data: { label: string; value: number; color: string }[] }) {
   const total = data.reduce((s, d) => s + d.value, 0);
@@ -185,7 +144,7 @@ export default function CostsPage() {
     category: 'Maintenance' as ExpenseCategory,
     description: '',
     amountCents: 0,
-    property: PROPERTIES[0],
+    property: PROPERTIES[0] || '',
     vendor: '',
     recurring: false,
   });

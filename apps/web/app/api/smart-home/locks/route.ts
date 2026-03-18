@@ -44,27 +44,13 @@ const WORKER_REGISTRY: WorkerEntry[] = [
 // Map code → worker for identification
 const CODE_TO_WORKER = new Map(WORKER_REGISTRY.map(w => [w.code, w]));
 
-// ─── Mock Lock Data (used when Tuya not configured) ──────────────────────────
+// ─── Lock Data (populated from Tuya when configured, empty otherwise) ────────
 
-const mockLocks: any[] = [
-  { id: 'LOCK-001', property_id: 'PROP-001', property_name: 'The Oasis', name: 'Front Door', device_type: 'arpha_d280w', status: 'locked', battery_percent: 92, is_online: true, codes: [...WORKER_REGISTRY.map(w => ({ code: w.code, label: `${w.type === 'owner' ? 'Owner' : w.type.charAt(0).toUpperCase() + w.type.slice(1)} — ${w.name}`, permanent: true, active: true })), { code: '5519', label: 'Guest — Johnson Family', valid_from: '2026-03-20T15:00:00Z', valid_until: '2026-03-23T11:00:00Z', permanent: false, active: true }], last_activity: { action: 'locked', by: 'auto-lock', at: '2026-03-18T08:00:00Z' }, auto_lock_minutes: 5 },
-  { id: 'LOCK-002', property_id: 'PROP-002', property_name: 'Desert Rose', name: 'Front Door', device_type: 'arpha_d280w', status: 'locked', battery_percent: 85, is_online: true, codes: WORKER_REGISTRY.map(w => ({ code: w.code, label: `${w.type === 'owner' ? 'Owner' : w.type.charAt(0).toUpperCase() + w.type.slice(1)} — ${w.name}`, permanent: true, active: true })), last_activity: { action: 'unlocked', by: `code-${WORKER_REGISTRY[1].code}`, by_name: 'Bree Belleville', at: '2026-03-18T09:02:00Z' }, auto_lock_minutes: 5 },
-  { id: 'LOCK-003', property_id: 'PROP-003', property_name: 'Sunset Villa', name: 'Front Door', device_type: 'arpha_d280w', status: 'locked', battery_percent: 71, is_online: true, codes: WORKER_REGISTRY.map(w => ({ code: w.code, label: `${w.type === 'owner' ? 'Owner' : w.type.charAt(0).toUpperCase() + w.type.slice(1)} — ${w.name}`, permanent: true, active: true })), last_activity: { action: 'locked', by: 'auto-lock', at: '2026-03-17T22:00:00Z' }, auto_lock_minutes: 5 },
-  { id: 'LOCK-004', property_id: 'PROP-004', property_name: 'Patio Home — Garfield', name: 'Front Door', device_type: 'arpha_d280w', status: 'unlocked', battery_percent: 48, is_online: true, codes: WORKER_REGISTRY.map(w => ({ code: w.code, label: `${w.type === 'owner' ? 'Owner' : w.type.charAt(0).toUpperCase() + w.type.slice(1)} — ${w.name}`, permanent: true, active: true })), last_activity: { action: 'unlocked', by: `code-${WORKER_REGISTRY[3].code}`, by_name: 'Carlos Gutierrez', at: '2026-03-18T10:15:00Z' }, auto_lock_minutes: 5 },
-];
+const mockLocks: any[] = [];
 
-// ─── Mock Activity Log ───────────────────────────────────────────────────────
+// ─── Activity Log (populated from Tuya when configured) ─────────────────────
 
-const mockActivityLog = [
-  { id: 'EVT-001', lock_id: 'LOCK-002', property_name: 'Desert Rose', action: 'unlocked', method: 'code', code_used: '247391', worker_name: 'Bree Belleville', worker_type: 'cleaner', timestamp: '2026-03-18T09:02:00Z' },
-  { id: 'EVT-002', lock_id: 'LOCK-002', property_name: 'Desert Rose', action: 'locked', method: 'auto-lock', code_used: null, worker_name: null, worker_type: null, timestamp: '2026-03-18T09:02:30Z' },
-  { id: 'EVT-003', lock_id: 'LOCK-001', property_name: 'The Oasis', action: 'unlocked', method: 'code', code_used: '247391', worker_name: 'Bree Belleville', worker_type: 'cleaner', timestamp: '2026-03-18T10:15:00Z' },
-  { id: 'EVT-004', lock_id: 'LOCK-004', property_name: 'Patio Home — Garfield', action: 'unlocked', method: 'code', code_used: '673815', worker_name: 'Carlos Gutierrez', worker_type: 'maintenance', timestamp: '2026-03-18T10:15:00Z' },
-  { id: 'EVT-005', lock_id: 'LOCK-003', property_name: 'Sunset Villa', action: 'unlocked', method: 'code', code_used: '518642', worker_name: 'Lisa Hernandez', worker_type: 'pool', timestamp: '2026-03-18T08:30:00Z' },
-  { id: 'EVT-006', lock_id: 'LOCK-003', property_name: 'Sunset Villa', action: 'locked', method: 'auto-lock', code_used: null, worker_name: null, worker_type: null, timestamp: '2026-03-18T08:30:30Z' },
-  { id: 'EVT-007', lock_id: 'LOCK-001', property_name: 'The Oasis', action: 'unlocked', method: 'code', code_used: '518642', worker_name: 'Lisa Hernandez', worker_type: 'pool', timestamp: '2026-03-18T09:45:00Z' },
-  { id: 'EVT-008', lock_id: 'LOCK-001', property_name: 'The Oasis', action: 'locked', method: 'auto-lock', code_used: null, worker_name: null, worker_type: null, timestamp: '2026-03-18T09:45:30Z' },
-];
+const mockActivityLog: any[] = [];
 
 // ─── GET /api/smart-home/locks ───────────────────────────────────────────────
 
@@ -227,7 +213,7 @@ export async function POST(request: NextRequest) {
         if (isTuyaConfigured()) {
           const deviceIds = mockLocks.map(l => l.id); // In prod, fetch from Tuya
           const result = await programWorkerCodeToAllLocks(deviceIds, worker.name, worker.code);
-          return NextResponse.json({ success: true, worker: worker.name, code: worker.code, ...result });
+          return NextResponse.json({ ...result, success: true, worker: worker.name, code: worker.code });
         }
         return NextResponse.json({ success: true, worker: worker.name, code: worker.code, message: 'Worker code registered (mock mode)' });
       }

@@ -18,47 +18,11 @@ interface InventoryItem {
   reorderPoint: number; unitCost: number; location: string; sku: string; lastRestocked: string;
 }
 
-const PROPERTIES = [
-  'Central Warehouse', 'Desert Rose Villa', 'Permian Sunset', 'Basin View Loft',
-  'Wildcatter Suite', 'Oil Patch Palace', 'Derrick Heights', 'Pump Jack Place',
-  'Midland Manor', 'West Texas Haven', 'Roughneck Retreat', 'Pumpjack Patio',
-  'Lone Star Lodge', 'Tumbleweed Terrace', 'Cactus Creek Cottage', 'Mesquite Meadows',
-  'Prairie Wind Place', 'Sandstorm Suite', 'Rig Runner Ranch', 'Oilfield Oasis',
-  'Panhandle Paradise', 'Dusty Trail Duplex', 'Horizon Heights',
-];
+// Properties loaded from API — add via the inventory form or properties page
+const PROPERTIES: string[] = ['Central Warehouse'];
 
-const INITIAL_ITEMS: InventoryItem[] = [
-  { id: 'INV001', name: 'Queen Bed Sheet Set (White)', category: 'Linens', quantity: 48, reorderPoint: 20, unitCost: 3500, location: 'Central Warehouse', sku: 'LIN-QSS-WHT', lastRestocked: '2026-03-10' },
-  { id: 'INV002', name: 'King Bed Sheet Set (White)', category: 'Linens', quantity: 32, reorderPoint: 15, unitCost: 4200, location: 'Central Warehouse', sku: 'LIN-KSS-WHT', lastRestocked: '2026-03-10' },
-  { id: 'INV003', name: 'Bath Towel Set (4-Pack)', category: 'Linens', quantity: 65, reorderPoint: 30, unitCost: 2800, location: 'Central Warehouse', sku: 'LIN-BTS-4PK', lastRestocked: '2026-03-08' },
-  { id: 'INV004', name: 'Hand Towel Set (6-Pack)', category: 'Linens', quantity: 40, reorderPoint: 25, unitCost: 1800, location: 'Central Warehouse', sku: 'LIN-HTS-6PK', lastRestocked: '2026-03-08' },
-  { id: 'INV005', name: 'Pillow (Standard)', category: 'Linens', quantity: 18, reorderPoint: 20, unitCost: 1500, location: 'Central Warehouse', sku: 'LIN-PLW-STD', lastRestocked: '2026-02-28' },
-  { id: 'INV006', name: 'Duvet Cover (Queen)', category: 'Linens', quantity: 12, reorderPoint: 10, unitCost: 5500, location: 'Central Warehouse', sku: 'LIN-DCV-QN', lastRestocked: '2026-02-15' },
-  { id: 'INV007', name: 'Shampoo (Travel Size, 50-ct)', category: 'Toiletries', quantity: 8, reorderPoint: 10, unitCost: 2500, location: 'Central Warehouse', sku: 'TOI-SHP-50', lastRestocked: '2026-03-05' },
-  { id: 'INV008', name: 'Conditioner (Travel Size, 50-ct)', category: 'Toiletries', quantity: 6, reorderPoint: 10, unitCost: 2500, location: 'Central Warehouse', sku: 'TOI-CND-50', lastRestocked: '2026-03-05' },
-  { id: 'INV009', name: 'Body Wash (Travel Size, 50-ct)', category: 'Toiletries', quantity: 9, reorderPoint: 10, unitCost: 2200, location: 'Central Warehouse', sku: 'TOI-BWS-50', lastRestocked: '2026-03-05' },
-  { id: 'INV010', name: 'Hand Soap Dispenser Refill (1 gal)', category: 'Toiletries', quantity: 15, reorderPoint: 8, unitCost: 1800, location: 'Central Warehouse', sku: 'TOI-HSR-1G', lastRestocked: '2026-03-12' },
-  { id: 'INV011', name: 'Toilet Paper (96-roll case)', category: 'Toiletries', quantity: 4, reorderPoint: 5, unitCost: 6500, location: 'Central Warehouse', sku: 'TOI-TP-96', lastRestocked: '2026-03-01' },
-  { id: 'INV012', name: 'Facial Tissue Boxes (36-ct)', category: 'Toiletries', quantity: 7, reorderPoint: 6, unitCost: 3200, location: 'Central Warehouse', sku: 'TOI-FTB-36', lastRestocked: '2026-03-01' },
-  { id: 'INV013', name: 'All-Purpose Cleaner (1 gal)', category: 'Cleaning Supplies', quantity: 22, reorderPoint: 10, unitCost: 1200, location: 'Central Warehouse', sku: 'CLN-APC-1G', lastRestocked: '2026-03-14' },
-  { id: 'INV014', name: 'Glass Cleaner (32 oz)', category: 'Cleaning Supplies', quantity: 18, reorderPoint: 10, unitCost: 450, location: 'Central Warehouse', sku: 'CLN-GLC-32', lastRestocked: '2026-03-14' },
-  { id: 'INV015', name: 'Disinfectant Spray (12-pack)', category: 'Cleaning Supplies', quantity: 5, reorderPoint: 6, unitCost: 4800, location: 'Central Warehouse', sku: 'CLN-DSP-12', lastRestocked: '2026-03-07' },
-  { id: 'INV016', name: 'Trash Bags (200-ct, 13 gal)', category: 'Cleaning Supplies', quantity: 11, reorderPoint: 5, unitCost: 2800, location: 'Central Warehouse', sku: 'CLN-TRB-200', lastRestocked: '2026-03-10' },
-  { id: 'INV017', name: 'Laundry Detergent (HE, 150 oz)', category: 'Cleaning Supplies', quantity: 14, reorderPoint: 6, unitCost: 2200, location: 'Central Warehouse', sku: 'CLN-LDT-150', lastRestocked: '2026-03-10' },
-  { id: 'INV018', name: 'Microfiber Cloth Pack (24-ct)', category: 'Cleaning Supplies', quantity: 3, reorderPoint: 5, unitCost: 1800, location: 'Central Warehouse', sku: 'CLN-MFC-24', lastRestocked: '2026-02-20' },
-  { id: 'INV019', name: 'Coffee Pods (K-Cup, 80-ct)', category: 'Kitchen', quantity: 25, reorderPoint: 15, unitCost: 3800, location: 'Central Warehouse', sku: 'KIT-KCU-80', lastRestocked: '2026-03-12' },
-  { id: 'INV020', name: 'Paper Towel Rolls (12-pack)', category: 'Kitchen', quantity: 19, reorderPoint: 10, unitCost: 1600, location: 'Central Warehouse', sku: 'KIT-PTR-12', lastRestocked: '2026-03-12' },
-  { id: 'INV021', name: 'Dish Soap (32 oz)', category: 'Kitchen', quantity: 30, reorderPoint: 12, unitCost: 350, location: 'Central Warehouse', sku: 'KIT-DSP-32', lastRestocked: '2026-03-14' },
-  { id: 'INV022', name: 'Dishwasher Pods (45-ct)', category: 'Kitchen', quantity: 16, reorderPoint: 8, unitCost: 1800, location: 'Central Warehouse', sku: 'KIT-DWP-45', lastRestocked: '2026-03-08' },
-  { id: 'INV023', name: 'Sugar Packets (200-ct)', category: 'Kitchen', quantity: 10, reorderPoint: 5, unitCost: 900, location: 'Central Warehouse', sku: 'KIT-SGP-200', lastRestocked: '2026-03-01' },
-  { id: 'INV024', name: 'Creamer Cups (100-ct)', category: 'Kitchen', quantity: 8, reorderPoint: 5, unitCost: 1200, location: 'Central Warehouse', sku: 'KIT-CRM-100', lastRestocked: '2026-03-01' },
-  { id: 'INV025', name: 'HVAC Filters (20x25x1, 6-pack)', category: 'Maintenance', quantity: 4, reorderPoint: 6, unitCost: 4500, location: 'Central Warehouse', sku: 'MNT-HVF-6PK', lastRestocked: '2026-02-15' },
-  { id: 'INV026', name: 'Light Bulbs LED (A19, 12-pack)', category: 'Maintenance', quantity: 10, reorderPoint: 5, unitCost: 2400, location: 'Central Warehouse', sku: 'MNT-LBL-12', lastRestocked: '2026-03-05' },
-  { id: 'INV027', name: 'Smoke Detector Batteries (9V, 8-pk)', category: 'Maintenance', quantity: 3, reorderPoint: 4, unitCost: 1600, location: 'Central Warehouse', sku: 'MNT-SMB-8', lastRestocked: '2026-01-20' },
-  { id: 'INV028', name: 'Plumbing Repair Kit', category: 'Maintenance', quantity: 6, reorderPoint: 3, unitCost: 3200, location: 'Central Warehouse', sku: 'MNT-PRK-01', lastRestocked: '2026-02-28' },
-  { id: 'INV029', name: 'Touch-Up Paint (White, Qt)', category: 'Maintenance', quantity: 8, reorderPoint: 4, unitCost: 1800, location: 'Central Warehouse', sku: 'MNT-TUP-WQ', lastRestocked: '2026-02-28' },
-  { id: 'INV030', name: 'Door Lock Batteries (AA, 48-pk)', category: 'Maintenance', quantity: 5, reorderPoint: 3, unitCost: 2200, location: 'Central Warehouse', sku: 'MNT-DLB-48', lastRestocked: '2026-03-10' },
-];
+// Inventory items loaded from database — add items via the form
+const INITIAL_ITEMS: InventoryItem[] = [];
 
 const CATEGORIES: Category[] = ['Linens', 'Toiletries', 'Cleaning Supplies', 'Kitchen', 'Maintenance'];
 const categoryColor = (cat: Category) => { switch (cat) { case 'Linens': return 'bg-blue-100 text-blue-700'; case 'Toiletries': return 'bg-pink-100 text-pink-700'; case 'Cleaning Supplies': return 'bg-green-100 text-green-700'; case 'Kitchen': return 'bg-orange-100 text-orange-700'; case 'Maintenance': return 'bg-purple-100 text-purple-700'; } };

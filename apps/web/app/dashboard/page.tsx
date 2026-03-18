@@ -267,16 +267,12 @@ function CleanerDashboard({ user }: { user: DevUser }) {
     return `${hrs}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   };
 
-  const todayJobs = [
-    { id: '1', title: 'Turnover Clean', property: 'Oasis Pool & Billiards — Castleford', time: '9:00 AM', status: 'in_progress' as const, type: 'turnover' as const },
-    { id: '2', title: 'Deep Clean', property: 'Adobe Compound — Golf Course', time: '12:00 PM', status: 'pending' as const, type: 'deep' as const },
-    { id: '3', title: 'Turnover Clean', property: 'Patio Home — Hot Tub', time: '2:30 PM', status: 'pending' as const, type: 'turnover' as const },
-    { id: '4', title: 'Touch-Up', property: 'Modern Ranch — W. Wall St', time: '4:00 PM', status: 'pending' as const, type: 'touchup' as const },
-  ];
+  // Jobs loaded from dispatch API — no mock data
+  const todayJobs: { id: string; title: string; property: string; time: string; status: 'pending' | 'in_progress' | 'completed'; type: 'turnover' | 'deep' | 'touchup' }[] = [];
 
   const checklist = [
-    { id: '1', task: 'Strip beds & start laundry', done: true },
-    { id: '2', task: 'Clean all bathrooms', done: true },
+    { id: '1', task: 'Strip beds & start laundry', done: false },
+    { id: '2', task: 'Clean all bathrooms', done: false },
     { id: '3', task: 'Vacuum & mop all floors', done: false },
     { id: '4', task: 'Wipe all surfaces & countertops', done: false },
     { id: '5', task: 'Clean kitchen & appliances', done: false },
@@ -314,8 +310,8 @@ function CleanerDashboard({ user }: { user: DevUser }) {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         <StatCard label="Today's Jobs" value={todayJobs.length} icon={ClipboardCheck} color="text-emerald-600" bgColor="bg-emerald-100" />
         <StatCard label="Completed" value={todayJobs.filter(j => (j.status as string) === 'completed').length} icon={CheckCircle} color="text-blue-600" bgColor="bg-blue-100" />
-        <StatCard label="Properties" value={5} icon={Home} color="text-[#500000]" bgColor="bg-[#500000]/10" />
-        <StatCard label="This Week" value={12} icon={Calendar} color="text-purple-600" bgColor="bg-purple-100" />
+        <StatCard label="Properties" value={0} icon={Home} color="text-[#500000]" bgColor="bg-[#500000]/10" />
+        <StatCard label="This Week" value={0} icon={Calendar} color="text-purple-600" bgColor="bg-purple-100" />
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
@@ -324,7 +320,13 @@ function CleanerDashboard({ user }: { user: DevUser }) {
           <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
             <Calendar className="w-5 h-5 text-emerald-600" /> Today&apos;s Schedule
           </h2>
-          {todayJobs.map((job) => (
+          {todayJobs.length === 0 ? (
+            <div className="bg-white rounded-xl p-8 border border-gray-100 shadow-sm text-center">
+              <Sparkles className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500 font-medium">No cleaning jobs scheduled today</p>
+              <p className="text-gray-400 text-sm mt-1">Jobs will appear here when assigned via Dispatch</p>
+            </div>
+          ) : todayJobs.map((job) => (
             <JobCard
               key={job.id}
               title={job.title}
@@ -402,14 +404,8 @@ function CleanerDashboard({ user }: { user: DevUser }) {
 function PoolDashboard({ user }: { user: DevUser }) {
   const [rangeTab, setRangeTab] = useState<'pool' | 'hottub'>('pool');
 
-  const todayRoute = [
-    { id: '1', property: 'Oasis Pool & Billiards — Castleford', time: '8:00 AM', status: 'completed' as const, waterType: 'pool' as const, ph: 7.4, chlorine: 2.1, temp: null },
-    { id: '2', property: 'Adobe Compound — Golf Course', time: '9:30 AM', status: 'in_progress' as const, waterType: 'pool_hottub' as const, ph: null, chlorine: null, temp: null },
-    { id: '3', property: 'Executive Retreat — N. A St', time: '11:00 AM', status: 'pending' as const, waterType: 'pool' as const, ph: null, chlorine: null, temp: null },
-    { id: '4', property: 'Patio Home — Garfield', time: '12:30 PM', status: 'pending' as const, waterType: 'hottub' as const, ph: null, chlorine: null, temp: null },
-    { id: '5', property: 'Modern Ranch — W. Wall St', time: '2:00 PM', status: 'pending' as const, waterType: 'hottub' as const, ph: null, chlorine: null, temp: null },
-    { id: '6', property: 'Desert View — Midkiff Rd', time: '3:30 PM', status: 'pending' as const, waterType: 'pool_hottub' as const, ph: null, chlorine: null, temp: null },
-  ];
+  // Pool route loaded from dispatch API — no mock data
+  const todayRoute: { id: string; property: string; time: string; status: 'pending' | 'in_progress' | 'completed'; waterType: 'pool' | 'hottub' | 'pool_hottub'; ph: number | null; chlorine: number | null; temp: number | null }[] = [];
 
   const waterTypeLabel = (t: string) => {
     if (t === 'pool_hottub') return 'Pool + Hot Tub';
@@ -440,6 +436,13 @@ function PoolDashboard({ user }: { user: DevUser }) {
           <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
             <Waves className="w-5 h-5 text-cyan-600" /> Today&apos;s Route
           </h2>
+          {todayRoute.length === 0 ? (
+            <div className="bg-white rounded-xl p-8 border border-gray-100 shadow-sm text-center">
+              <Waves className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500 font-medium">No pool stops scheduled today</p>
+              <p className="text-gray-400 text-sm mt-1">Stops will appear here when assigned via Dispatch</p>
+            </div>
+          ) : null}
           {todayRoute.map((stop, i) => (
             <motion.div
               key={stop.id}
@@ -614,13 +617,8 @@ function PoolDashboard({ user }: { user: DevUser }) {
 // ═══════════════════════════════════════════════════════════════
 
 function MaintenanceDashboard({ user }: { user: DevUser }) {
-  const workOrders = [
-    { id: '1', title: 'HVAC not cooling — Unit 2', property: 'Adobe Compound — Golf Course', time: 'Today', status: 'urgent' as const, priority: 'urgent' as const },
-    { id: '2', title: 'Leaking faucet — Master bath', property: 'Patio Home — Hot Tub', time: 'Today', status: 'in_progress' as const, priority: 'high' as const },
-    { id: '3', title: 'Replace smoke detector batteries', property: 'Oasis Pool & Billiards', time: 'Tomorrow', status: 'pending' as const, priority: 'normal' as const },
-    { id: '4', title: 'Garage door sensor alignment', property: 'Modern Ranch — W. Wall St', time: 'Tomorrow', status: 'pending' as const, priority: 'normal' as const },
-    { id: '5', title: 'Touch up paint — Guest bedroom', property: 'Executive Retreat — N. A St', time: 'This week', status: 'pending' as const, priority: 'low' as const },
-  ];
+  // Work orders loaded from dispatch API — no mock data
+  const workOrders: { id: string; title: string; property: string; time: string; status: 'pending' | 'in_progress' | 'completed' | 'urgent'; priority: 'low' | 'normal' | 'high' | 'urgent' }[] = [];
 
   return (
     <DashboardShell user={user} accentColor="text-white" accentBg="bg-orange-500" icon={Wrench} subtitle="Maintenance Technician">
@@ -628,7 +626,7 @@ function MaintenanceDashboard({ user }: { user: DevUser }) {
         <StatCard label="Open Orders" value={workOrders.filter(w => (w.status as string) !== 'completed').length} icon={Wrench} color="text-orange-600" bgColor="bg-orange-100" />
         <StatCard label="Urgent" value={workOrders.filter(w => w.priority === 'urgent').length} icon={AlertOctagon} color="text-red-600" bgColor="bg-red-100" />
         <StatCard label="In Progress" value={workOrders.filter(w => w.status === 'in_progress').length} icon={PlayCircle} color="text-blue-600" bgColor="bg-blue-100" />
-        <StatCard label="Completed Today" value={2} icon={CheckCircle} color="text-emerald-600" bgColor="bg-emerald-100" />
+        <StatCard label="Completed Today" value={0} icon={CheckCircle} color="text-emerald-600" bgColor="bg-emerald-100" />
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
@@ -636,7 +634,13 @@ function MaintenanceDashboard({ user }: { user: DevUser }) {
           <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
             <Hammer className="w-5 h-5 text-orange-600" /> Work Orders
           </h2>
-          {workOrders.map((wo) => (
+          {workOrders.length === 0 ? (
+            <div className="bg-white rounded-xl p-8 border border-gray-100 shadow-sm text-center">
+              <Wrench className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500 font-medium">No work orders assigned</p>
+              <p className="text-gray-400 text-sm mt-1">Work orders will appear here when created via Dispatch</p>
+            </div>
+          ) : workOrders.map((wo) => (
             <JobCard
               key={wo.id}
               title={wo.title}
@@ -656,22 +660,8 @@ function MaintenanceDashboard({ user }: { user: DevUser }) {
             <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
               <Package className="w-5 h-5 text-orange-600" /> Parts in Truck
             </h3>
-            <div className="space-y-2 text-sm">
-              {[
-                { part: 'HVAC Filters (various)', qty: 6 },
-                { part: 'Smoke Detectors', qty: 4 },
-                { part: 'Faucet Repair Kits', qty: 3 },
-                { part: 'Light Bulbs (LED)', qty: 12 },
-                { part: 'Caulk Tubes', qty: 5 },
-                { part: 'Door Hardware Kit', qty: 2 },
-              ].map(item => (
-                <div key={item.part} className="flex justify-between items-center py-1">
-                  <span className="text-gray-600">{item.part}</span>
-                  <span className={`font-medium ${item.qty <= 2 ? 'text-red-600' : 'text-gray-900'}`}>
-                    {item.qty} {item.qty <= 2 && '⚠️'}
-                  </span>
-                </div>
-              ))}
+            <div className="text-sm text-gray-400 text-center py-4">
+              No parts inventory tracked yet. Add items via Inventory page.
             </div>
           </div>
 
@@ -706,34 +696,18 @@ function MaintenanceDashboard({ user }: { user: DevUser }) {
 // ═══════════════════════════════════════════════════════════════
 
 function YardDashboard({ user }: { user: DevUser }) {
-  const schedule = [
-    { id: '1', title: 'Full Mow & Edge', property: 'Oasis Pool & Billiards — Castleford', time: '7:30 AM', status: 'completed' as const },
-    { id: '2', title: 'Full Mow & Edge', property: 'Adobe Compound — Golf Course', time: '9:00 AM', status: 'in_progress' as const },
-    { id: '3', title: 'Trim Hedges & Blow', property: 'Patio Home — Hot Tub', time: '10:30 AM', status: 'pending' as const },
-    { id: '4', title: 'Full Mow & Edge', property: 'Modern Ranch — W. Wall St', time: '12:00 PM', status: 'pending' as const },
-    { id: '5', title: 'Tree Trimming', property: 'Executive Retreat — N. A St', time: '2:00 PM', status: 'pending' as const },
-  ];
+  // Yard schedule loaded from dispatch API — no mock data
+  const schedule: { id: string; title: string; property: string; time: string; status: 'pending' | 'in_progress' | 'completed' }[] = [];
 
   return (
     <DashboardShell user={user} accentColor="text-white" accentBg="bg-green-600" icon={TreePine} subtitle="Yard Crew">
-      {/* Weather Alert */}
-      <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mb-6 bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center gap-3"
-      >
-        <ThermometerSun className="w-6 h-6 text-amber-600 shrink-0" />
-        <div>
-          <p className="font-medium text-amber-800 text-sm">High Heat Advisory — 98°F today</p>
-          <p className="text-xs text-amber-600">Take water breaks every 30 min. Avoid heavy work 12-3 PM.</p>
-        </div>
-      </motion.div>
+      {/* Weather alerts will display here when weather API is connected */}
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         <StatCard label="Today's Properties" value={schedule.length} icon={TreePine} color="text-green-600" bgColor="bg-green-100" />
         <StatCard label="Completed" value={schedule.filter(s => s.status === 'completed').length} icon={CheckCircle} color="text-emerald-600" bgColor="bg-emerald-100" />
-        <StatCard label="Seasonal Tasks" value={3} icon={Leaf} color="text-orange-600" bgColor="bg-orange-100" />
-        <StatCard label="Equipment OK" value="5/5" icon={Scissors} color="text-gray-600" bgColor="bg-gray-100" />
+        <StatCard label="Seasonal Tasks" value={0} icon={Leaf} color="text-orange-600" bgColor="bg-orange-100" />
+        <StatCard label="Equipment OK" value="—" icon={Scissors} color="text-gray-600" bgColor="bg-gray-100" />
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
@@ -741,7 +715,13 @@ function YardDashboard({ user }: { user: DevUser }) {
           <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
             <Leaf className="w-5 h-5 text-green-600" /> Today&apos;s Route
           </h2>
-          {schedule.map((job) => (
+          {schedule.length === 0 ? (
+            <div className="bg-white rounded-xl p-8 border border-gray-100 shadow-sm text-center">
+              <TreePine className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500 font-medium">No yard work scheduled today</p>
+              <p className="text-gray-400 text-sm mt-1">Jobs will appear here when assigned via Dispatch</p>
+            </div>
+          ) : schedule.map((job) => (
             <JobCard
               key={job.id}
               title={job.title}
@@ -760,23 +740,8 @@ function YardDashboard({ user }: { user: DevUser }) {
             <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
               <Scissors className="w-5 h-5 text-green-600" /> Equipment Check
             </h3>
-            <div className="space-y-2">
-              {[
-                { item: 'Zero-Turn Mower', status: 'ok' },
-                { item: 'String Trimmer', status: 'ok' },
-                { item: 'Hedge Trimmer', status: 'ok' },
-                { item: 'Backpack Blower', status: 'ok' },
-                { item: 'Chainsaw', status: 'needs_fuel' },
-              ].map(eq => (
-                <div key={eq.item} className="flex justify-between items-center py-1">
-                  <span className="text-sm text-gray-600">{eq.item}</span>
-                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                    eq.status === 'ok' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
-                  }`}>
-                    {eq.status === 'ok' ? 'Ready' : 'Needs Fuel'}
-                  </span>
-                </div>
-              ))}
+            <div className="text-sm text-gray-400 text-center py-4">
+              No equipment tracked yet. Add items via Inventory page.
             </div>
           </div>
 
@@ -990,9 +955,9 @@ function AdminDashboard({ user }: { user: DevUser }) {
     <DashboardShell user={user} accentColor="text-white" accentBg="bg-purple-500" icon={Activity} subtitle="Admin Panel">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         <StatCard label="Properties" value={propertyKnowledge.length} icon={Home} color="text-[#500000]" bgColor="bg-[#500000]/10" />
-        <StatCard label="Active Workers" value={8} icon={Activity} color="text-purple-600" bgColor="bg-purple-100" />
-        <StatCard label="Open Tasks" value={14} icon={ClipboardCheck} color="text-amber-600" bgColor="bg-amber-100" />
-        <StatCard label="Messages" value={3} icon={MessageSquare} color="text-blue-600" bgColor="bg-blue-100" />
+        <StatCard label="Active Workers" value={0} icon={Activity} color="text-purple-600" bgColor="bg-purple-100" />
+        <StatCard label="Open Tasks" value={0} icon={ClipboardCheck} color="text-amber-600" bgColor="bg-amber-100" />
+        <StatCard label="Messages" value={0} icon={MessageSquare} color="text-blue-600" bgColor="bg-blue-100" />
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">
