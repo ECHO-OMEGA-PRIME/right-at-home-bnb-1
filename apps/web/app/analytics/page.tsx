@@ -35,6 +35,7 @@ import {
   AreaChart,
 } from 'recharts';
 import { cn } from '@/lib/utils';
+import DashboardShell from '@/components/layout/DashboardShell';
 
 interface RevenueData {
   month: string;
@@ -233,6 +234,7 @@ export default function AnalyticsPage() {
   }
 
   return (
+    <DashboardShell>
     <div className="min-h-screen bg-[#0a0505]">
       {/* Header */}
       <div className="border-b border-white/10 bg-[#1a0a0a]/80 backdrop-blur-sm sticky top-0 z-20">
@@ -461,5 +463,6 @@ export default function AnalyticsPage() {
         </div>
       </div>
     </div>
+    </DashboardShell>
   );
 }

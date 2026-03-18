@@ -28,6 +28,7 @@ import {
   Building2, Sparkles, Check, ExternalLink, Edit, Trash2
 } from 'lucide-react';
 import { useGuests, Guest } from '@/lib/api';
+import DashboardShell from '@/components/layout/DashboardShell';
 
 type ViewMode = 'all' | 'vip' | 'recent' | 'birthday';
 type SortOption = 'name' | 'recent' | 'spending' | 'stays' | 'rating';
@@ -310,6 +311,7 @@ export default function GuestsPage() {
   }
 
   return (
+    <DashboardShell>
     <div className="min-h-screen bg-[#F5F5F0]">
       {/* Header */}
       <header className="bg-white border-b border-[#2D2D2D]/10 sticky top-0 z-40">
@@ -567,6 +569,7 @@ export default function GuestsPage() {
         )}
       </AnimatePresence>
     </div>
+    </DashboardShell>
   );
 }
 

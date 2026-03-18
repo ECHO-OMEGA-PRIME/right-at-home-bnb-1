@@ -9,6 +9,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast, { Toaster } from 'react-hot-toast';
+import DashboardShell from '@/components/layout/DashboardShell';
 import {
   MessageSquare, Send, Check, X, Clock, Sparkles, Mail,
   Phone, Bell, Filter, Search, Edit, Eye, RefreshCw,
@@ -715,6 +716,7 @@ export default function MessagesPage() {
   ];
 
   return (
+    <DashboardShell>
     <div className="min-h-screen bg-[#F5F5F0]">
       <Toaster position="top-center" />
 
@@ -1047,5 +1049,6 @@ export default function MessagesPage() {
         )}
       </AnimatePresence>
     </div>
+    </DashboardShell>
   );
 }

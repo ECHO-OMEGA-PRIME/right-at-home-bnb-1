@@ -21,6 +21,7 @@ import {
   registerVRBOProperty,
   disconnectVRBOProperty,
 } from '@/lib/vrbo-integration';
+import DashboardShell from '@/components/layout/DashboardShell';
 
 // Status badge colors
 const STATUS_COLORS: Record<string, string> = {
@@ -142,6 +143,7 @@ export default function VRBOManagementPage() {
   }
 
   return (
+    <DashboardShell>
     <div className="min-h-screen bg-[#F5F5F0] p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
@@ -477,6 +479,7 @@ export default function VRBOManagementPage() {
         )}
       </div>
     </div>
+    </DashboardShell>
   );
 }
 

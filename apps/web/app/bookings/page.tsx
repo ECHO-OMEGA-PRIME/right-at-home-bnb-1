@@ -23,6 +23,7 @@ import {
   Loader2, Plus, ExternalLink, Settings, Filter,
   Moon, Sun
 } from 'lucide-react';
+import DashboardShell from '@/components/layout/DashboardShell';
 import AddFeedModal from '@/components/bookings/AddFeedModal';
 import ConflictsModal from '@/components/bookings/ConflictsModal';
 import {
@@ -796,6 +797,7 @@ export default function BookingsPage() {
   }, [events]);
 
   return (
+    <DashboardShell>
     <div className="min-h-screen bg-[#F5F5F0]">
       {/* Header */}
       <header className="bg-white border-b border-[#2D2D2D]/10 px-6 py-4">
@@ -922,5 +924,6 @@ export default function BookingsPage() {
         )}
       />
     </div>
+    </DashboardShell>
   );
 }

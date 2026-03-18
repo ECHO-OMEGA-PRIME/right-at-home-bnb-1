@@ -16,6 +16,7 @@ import {
   Moon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import DashboardShell from '@/components/layout/DashboardShell';
 
 interface CalendarBooking {
   id: string;
@@ -218,6 +219,7 @@ export default function CalendarPage() {
   }, [bookings, selectedProperties, properties.length, daysInMonth]);
 
   return (
+    <DashboardShell>
     <div className="min-h-screen bg-[#0a0505]">
       {/* Header */}
       <div className="border-b border-white/10 bg-[#1a0a0a]/80 backdrop-blur-sm sticky top-0 z-20">
@@ -508,5 +510,6 @@ export default function CalendarPage() {
         </div>
       </div>
     </div>
+    </DashboardShell>
   );
 }

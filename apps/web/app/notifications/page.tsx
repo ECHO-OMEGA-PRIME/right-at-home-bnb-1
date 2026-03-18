@@ -14,6 +14,7 @@ import {
   serviceProviders,
   getServiceProvider
 } from '@/lib/cleaning-system';
+import DashboardShell from '@/components/layout/DashboardShell';
 
 // Mock notifications - empty for production
 const mockNotifications: OwnerNotification[] = [];
@@ -85,6 +86,7 @@ export default function NotificationsPage() {
   };
 
   return (
+    <DashboardShell>
     <div className="min-h-screen bg-[#F5F5F0]">
       {/* Header */}
       <div className="bg-[#500000] text-white px-6 py-6">
@@ -471,5 +473,6 @@ export default function NotificationsPage() {
         </div>
       </div>
     </div>
+    </DashboardShell>
   );
 }

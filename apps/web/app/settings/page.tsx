@@ -21,6 +21,7 @@ import {
   RefreshCw, AlertCircle, Info, HelpCircle, Wifi, X, Check, QrCode,
   Fingerprint, ShieldCheck, ShieldAlert, UserPlus, Crown, Star
 } from 'lucide-react';
+import DashboardShell from '@/components/layout/DashboardShell';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -997,6 +998,7 @@ export default function SettingsPage() {
   }
 
   return (
+    <DashboardShell>
     <div className="min-h-screen bg-[#F5F5F0]">
       <Toaster position="top-right" />
 
@@ -2102,5 +2104,6 @@ export default function SettingsPage() {
         <kbd className="px-2 py-1 bg-white rounded shadow">S</kbd> to save
       </div>
     </div>
+    </DashboardShell>
   );
 }

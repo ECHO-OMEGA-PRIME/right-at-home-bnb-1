@@ -16,6 +16,7 @@ import {
   Zap, BatteryLow, BatteryWarning, MessageSquare
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import DashboardShell from '@/components/layout/DashboardShell';
 
 // Types
 interface SmartLock {
@@ -195,6 +196,7 @@ export default function LocksPage() {
   };
 
   return (
+    <DashboardShell>
     <div className="min-h-screen bg-[#F5F5F0]">
       {/* Header */}
       <header className="bg-white border-b border-[#2D2D2D]/10 sticky top-0 z-40">
@@ -361,6 +363,7 @@ export default function LocksPage() {
         )}
       </AnimatePresence>
     </div>
+    </DashboardShell>
   );
 }
 
