@@ -59,169 +59,7 @@ const ACCOUNTS = [
   'Platform Fees',
 ];
 
-const mockEntries: JournalEntry[] = [
-  {
-    id: '1',
-    date: '2026-03-15',
-    entryNumber: 'JE-2026-0312',
-    description: 'Airbnb payout - 14 properties (Mar 1-15)',
-    lines: [
-      { account: 'Cash - Operating', debit: 4231500, credit: 0 },
-      { account: 'Platform Fees', debit: 423150, credit: 0 },
-      { account: 'Rental Revenue', debit: 0, credit: 4654650 },
-    ],
-    status: 'posted',
-    createdBy: 'System',
-    type: 'revenue',
-  },
-  {
-    id: '2',
-    date: '2026-03-14',
-    entryNumber: 'JE-2026-0311',
-    description: 'Midland Electric - 22 units March billing',
-    lines: [
-      { account: 'Utilities Expense', debit: 486200, credit: 0 },
-      { account: 'Cash - Operating', debit: 0, credit: 486200 },
-    ],
-    status: 'posted',
-    createdBy: 'Bobby M.',
-    type: 'expense',
-  },
-  {
-    id: '3',
-    date: '2026-03-13',
-    entryNumber: 'JE-2026-0310',
-    description: 'VRBO payout - 8 properties (Mar 1-14)',
-    lines: [
-      { account: 'Cash - Operating', debit: 2187400, credit: 0 },
-      { account: 'Platform Fees', debit: 218740, credit: 0 },
-      { account: 'Rental Revenue', debit: 0, credit: 2406140 },
-    ],
-    status: 'posted',
-    createdBy: 'System',
-    type: 'revenue',
-  },
-  {
-    id: '4',
-    date: '2026-03-12',
-    entryNumber: 'JE-2026-0309',
-    description: 'ABC Cleaning Services - deep cleans x6 turnovers',
-    lines: [
-      { account: 'Cleaning Expense', debit: 189000, credit: 0 },
-      { account: 'Accounts Payable', debit: 0, credit: 189000 },
-    ],
-    status: 'pending',
-    createdBy: 'Bobby M.',
-    type: 'expense',
-  },
-  {
-    id: '5',
-    date: '2026-03-11',
-    entryNumber: 'JE-2026-0308',
-    description: 'Home Depot - maintenance supplies (filters, bulbs, hardware)',
-    lines: [
-      { account: 'Supplies Expense', debit: 43425, credit: 0 },
-      { account: 'Maintenance & Repairs', debit: 30000, credit: 0 },
-      { account: 'Credit Card - Business', debit: 0, credit: 73425 },
-    ],
-    status: 'posted',
-    createdBy: 'Bobby M.',
-    type: 'expense',
-  },
-  {
-    id: '6',
-    date: '2026-03-10',
-    entryNumber: 'JE-2026-0307',
-    description: 'Booking.com payout - 5 properties (Mar 1-10)',
-    lines: [
-      { account: 'Cash - Operating', debit: 1542800, credit: 0 },
-      { account: 'Platform Fees', debit: 231420, credit: 0 },
-      { account: 'Rental Revenue', debit: 0, credit: 1774220 },
-    ],
-    status: 'posted',
-    createdBy: 'System',
-    type: 'revenue',
-  },
-  {
-    id: '7',
-    date: '2026-03-09',
-    entryNumber: 'JE-2026-0306',
-    description: 'State Farm - property insurance Q1 installment',
-    lines: [
-      { account: 'Insurance Expense', debit: 345600, credit: 0 },
-      { account: 'Cash - Operating', debit: 0, credit: 345600 },
-    ],
-    status: 'posted',
-    createdBy: 'Bobby M.',
-    type: 'expense',
-  },
-  {
-    id: '8',
-    date: '2026-03-08',
-    entryNumber: 'JE-2026-0305',
-    description: 'Guest damage deposit refund - Unit 7 (J. Rodriguez)',
-    lines: [
-      { account: 'Security Deposits', debit: 50000, credit: 0 },
-      { account: 'Cash - Operating', debit: 0, credit: 50000 },
-    ],
-    status: 'draft',
-    createdBy: 'Bobby M.',
-    type: 'adjustment',
-  },
-  {
-    id: '9',
-    date: '2026-03-07',
-    entryNumber: 'JE-2026-0304',
-    description: 'Midland County - property tax payment (22 parcels)',
-    lines: [
-      { account: 'Property Tax Expense', debit: 1876500, credit: 0 },
-      { account: 'Cash - Reserves', debit: 0, credit: 1876500 },
-    ],
-    status: 'posted',
-    createdBy: 'Bobby M.',
-    type: 'expense',
-  },
-  {
-    id: '10',
-    date: '2026-03-06',
-    entryNumber: 'JE-2026-0303',
-    description: 'Transfer from operating to reserves',
-    lines: [
-      { account: 'Cash - Reserves', debit: 500000, credit: 0 },
-      { account: 'Cash - Operating', debit: 0, credit: 500000 },
-    ],
-    status: 'posted',
-    createdBy: 'Bobby M.',
-    type: 'transfer',
-  },
-  {
-    id: '11',
-    date: '2026-03-05',
-    entryNumber: 'JE-2026-0302',
-    description: 'Mortgage payments - 18 financed properties',
-    lines: [
-      { account: 'Mortgage Interest', debit: 2145000, credit: 0 },
-      { account: 'Cash - Operating', debit: 0, credit: 2145000 },
-    ],
-    status: 'posted',
-    createdBy: 'System',
-    type: 'expense',
-  },
-  {
-    id: '12',
-    date: '2026-03-04',
-    entryNumber: 'JE-2026-0301',
-    description: 'Direct booking - Williams family, Unit 12 (7 nights)',
-    lines: [
-      { account: 'Accounts Receivable', debit: 245000, credit: 0 },
-      { account: 'Rental Revenue', debit: 0, credit: 220500 },
-      { account: 'Cleaning Revenue', debit: 0, credit: 24500 },
-    ],
-    status: 'posted',
-    createdBy: 'Bobby M.',
-    type: 'revenue',
-  },
-];
+const mockEntries: JournalEntry[] = [];
 
 const statusColors: Record<string, string> = {
   posted: 'bg-emerald-100 text-emerald-700',
@@ -468,7 +306,9 @@ export default function TransactionsPage() {
         {/* Pagination */}
         <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100">
           <p className="text-xs text-gray-500">
-            Showing {((currentPage - 1) * perPage) + 1}-{Math.min(currentPage * perPage, filteredEntries.length)} of {filteredEntries.length}
+            {filteredEntries.length > 0
+              ? `Showing ${((currentPage - 1) * perPage) + 1}-${Math.min(currentPage * perPage, filteredEntries.length)} of ${filteredEntries.length}`
+              : 'No entries'}
           </p>
           <div className="flex items-center gap-1">
             <button
@@ -493,7 +333,7 @@ export default function TransactionsPage() {
             ))}
             <button
               onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-              disabled={currentPage === totalPages}
+              disabled={currentPage >= totalPages || totalPages === 0}
               className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               <ChevronRight className="w-4 h-4" />

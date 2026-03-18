@@ -221,19 +221,8 @@ function useConflicts() {
           setConflicts(await response.json());
         }
       } catch {
-        // Demo conflicts
-        setConflicts([
-          {
-            property_id: 'prop-1',
-            booking1_platform: 'airbnb',
-            booking1_start: new Date().toISOString(),
-            booking1_end: addDays(new Date(), 3).toISOString(),
-            booking2_platform: 'vrbo',
-            booking2_start: addDays(new Date(), 2).toISOString(),
-            booking2_end: addDays(new Date(), 5).toISOString(),
-            overlap_days: 1,
-          },
-        ]);
+        // No demo conflicts - return empty array
+        setConflicts([]);
       }
     }
     fetch();
@@ -246,51 +235,9 @@ function useConflicts() {
 // SAMPLE DATA GENERATOR
 // ============================================================================
 
-function generateSampleEvents(month: number, year: number): CalendarEvent[] {
-  const events: CalendarEvent[] = [];
-  const properties = [
-    { id: 'prop-1', name: '2501 Stanolind Ave' },
-    { id: 'prop-2', name: '3109 Princeton Ave' },
-    { id: 'prop-3', name: '4205 Monty Dr' },
-    { id: 'prop-4', name: '2710 Gulf Ave' },
-  ];
-
-  const firstNames = ['John', 'Sarah', 'Mike', 'Emily', 'David', 'Lisa', 'James', 'Emma'];
-  const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Davis', 'Miller'];
-  const platforms: Array<'airbnb' | 'vrbo' | 'direct'> = ['airbnb', 'vrbo', 'direct'];
-
-  // Generate 8-12 bookings spread across the month
-  const numBookings = 8 + Math.floor(Math.random() * 5);
-  const startDate = new Date(year, month - 1, 1);
-
-  for (let i = 0; i < numBookings; i++) {
-    const property = properties[Math.floor(Math.random() * properties.length)];
-    const platform = platforms[Math.floor(Math.random() * platforms.length)];
-    const guestName = `${firstNames[Math.floor(Math.random() * firstNames.length)]} ${lastNames[Math.floor(Math.random() * lastNames.length)]}`;
-
-    const dayOffset = Math.floor(Math.random() * 25);
-    const checkIn = addDays(startDate, dayOffset);
-    const nights = 2 + Math.floor(Math.random() * 5);
-    const checkOut = addDays(checkIn, nights);
-    const pricePerNight = 150 + Math.floor(Math.random() * 150);
-
-    events.push({
-      id: `booking-${i}`,
-      title: guestName,
-      start: checkIn.toISOString(),
-      end: checkOut.toISOString(),
-      platform,
-      guestName,
-      guestCount: 1 + Math.floor(Math.random() * 4),
-      confirmationCode: `HM${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
-      totalPrice: pricePerNight * nights,
-      color: PLATFORM_COLORS[platform],
-      propertyId: property.id,
-      propertyName: property.name,
-    });
-  }
-
-  return events;
+function generateSampleEvents(_month: number, _year: number): CalendarEvent[] {
+  // No mock data - return empty array; real data comes from the API
+  return [];
 }
 
 // ============================================================================

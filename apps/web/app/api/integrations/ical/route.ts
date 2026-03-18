@@ -27,51 +27,8 @@ interface Booking {
  * for development / demo purposes it returns mock data.
  */
 function getBookingsForProperty(propertyId: string): Booking[] {
-  // -----------------------------------------------------------------------
-  // Mock bookings for development -- replace with a real DB query in prod.
-  // -----------------------------------------------------------------------
-  const mockBookings: Record<string, Booking[]> = {
-    prop_midland_main: [
-      {
-        id: 'bk_001',
-        propertyId: 'prop_midland_main',
-        guestName: 'John Smith',
-        checkIn: '2026-04-10',
-        checkOut: '2026-04-14',
-        status: 'confirmed',
-        source: 'vrbo',
-      },
-      {
-        id: 'bk_002',
-        propertyId: 'prop_midland_main',
-        guestName: 'Sarah Johnson',
-        checkIn: '2026-04-20',
-        checkOut: '2026-04-25',
-        status: 'confirmed',
-        source: 'direct',
-      },
-      {
-        id: 'bk_003',
-        propertyId: 'prop_midland_main',
-        guestName: 'Mike Davis',
-        checkIn: '2026-05-01',
-        checkOut: '2026-05-05',
-        status: 'pending',
-        source: 'airbnb',
-      },
-    ],
-    prop_midland_guest: [
-      {
-        id: 'bk_004',
-        propertyId: 'prop_midland_guest',
-        guestName: 'Emily Chen',
-        checkIn: '2026-04-15',
-        checkOut: '2026-04-18',
-        status: 'confirmed',
-        source: 'vrbo',
-      },
-    ],
-  };
+  // Empty mock store - replace with a real DB query in production.
+  const mockBookings: Record<string, Booking[]> = {};
 
   return mockBookings[propertyId] ?? [];
 }

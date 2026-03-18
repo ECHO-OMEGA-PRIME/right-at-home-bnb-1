@@ -136,14 +136,7 @@ interface Scene {
 // MOCK DATA
 // ============================================================================
 
-const PROPERTIES = [
-  { id: 'prop-1', name: 'Sunset Villa' },
-  { id: 'prop-2', name: 'Oak Street Cottage' },
-  { id: 'prop-3', name: 'Desert Rose' },
-  { id: 'prop-4', name: 'Permian Suite' },
-  { id: 'prop-5', name: 'Downtown Loft' },
-  { id: 'prop-6', name: 'Garden View' },
-];
+const PROPERTIES: { id: string; name: string }[] = [];
 
 const CODE_TYPE_CONFIG = {
   guest: { label: 'Guest', icon: User, color: 'bg-blue-500', textColor: 'text-blue-600', bgLight: 'bg-blue-50' },
@@ -153,124 +146,19 @@ const CODE_TYPE_CONFIG = {
   emergency: { label: 'Emergency', icon: AlertTriangle, color: 'bg-red-500', textColor: 'text-red-600', bgLight: 'bg-red-50' },
 };
 
-const MOCK_CODES: LockCode[] = [
-  {
-    id: 'code-1', propertyId: 'ALL', propertyName: 'All Properties', code: '159753', type: 'owner',
-    name: 'Steven Palma', createdAt: new Date('2024-01-01'), expiresAt: null, isActive: true, usageCount: 47,
-    lastUsed: new Date(Date.now() - 2 * 60 * 60 * 1000),
-  },
-  {
-    id: 'code-2', propertyId: 'ALL', propertyName: 'All Properties', code: '246810', type: 'cleaner',
-    name: 'Maria Rodriguez', createdAt: new Date('2024-06-15'), expiresAt: null, isActive: true, usageCount: 312,
-    lastUsed: new Date(Date.now() - 4 * 60 * 60 * 1000),
-  },
-  {
-    id: 'code-3', propertyId: 'ALL', propertyName: 'All Properties', code: '135792', type: 'cleaner',
-    name: 'Ana Garcia', createdAt: new Date('2024-08-20'), expiresAt: null, isActive: true, usageCount: 156,
-    lastUsed: new Date(Date.now() - 6 * 60 * 60 * 1000),
-  },
-  {
-    id: 'code-4', propertyId: 'ALL', propertyName: 'All Properties', code: '864209', type: 'maintenance',
-    name: 'Carlos Martinez', createdAt: new Date('2024-03-10'), expiresAt: null, isActive: true, usageCount: 89,
-    lastUsed: new Date(Date.now() - 48 * 60 * 60 * 1000),
-  },
-  {
-    id: 'code-5', propertyId: 'ALL', propertyName: 'All Properties', code: '911911', type: 'emergency',
-    name: 'Emergency Access', createdAt: new Date('2024-01-01'), expiresAt: null, isActive: true, usageCount: 0,
-  },
-  {
-    id: 'code-6', propertyId: 'prop-1', propertyName: 'Sunset Villa', code: '482736', type: 'guest',
-    name: 'Thompson Family', createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-    expiresAt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), isActive: true, usageCount: 4,
-    lastUsed: new Date(Date.now() - 8 * 60 * 60 * 1000), guestName: 'John Thompson', bookingId: 'BK-2024-001',
-  },
-];
+const MOCK_CODES: LockCode[] = [];
 
-const MOCK_LOGS: EntryLog[] = [
-  { id: 'log-1', propertyId: 'prop-1', propertyName: 'Sunset Villa', codeName: 'Thompson Family', codeType: 'guest', timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), action: 'unlock', notified: true },
-  { id: 'log-2', propertyId: 'prop-3', propertyName: 'Desert Rose', codeName: 'Maria Rodriguez', codeType: 'cleaner', timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000), action: 'unlock', notified: true },
-  { id: 'log-3', propertyId: 'prop-3', propertyName: 'Desert Rose', codeName: 'Maria Rodriguez', codeType: 'cleaner', timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000), action: 'lock', notified: true },
-  { id: 'log-4', propertyId: 'prop-2', propertyName: 'Oak Street Cottage', codeName: 'Steven Palma', codeType: 'owner', timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000), action: 'unlock', notified: false },
-  { id: 'log-5', propertyId: 'prop-4', propertyName: 'Permian Suite', codeName: 'Ana Garcia', codeType: 'cleaner', timestamp: new Date(Date.now() - 8 * 60 * 60 * 1000), action: 'unlock', notified: true },
-];
+const MOCK_LOGS: EntryLog[] = [];
 
-const MOCK_THERMOSTATS: ThermostatDevice[] = PROPERTIES.map((prop, idx) => ({
-  id: `thermo-${prop.id}`,
-  propertyId: prop.id,
-  propertyName: prop.name,
-  name: 'Nest Thermostat',
-  type: 'thermostat' as const,
-  brand: 'Google Nest',
-  model: 'Learning Thermostat 3rd Gen',
-  status: idx === 2 ? 'warning' : 'online',
-  lastActivity: new Date(Date.now() - Math.random() * 60 * 60 * 1000),
-  features: ['learning', 'scheduling', 'remote', 'eco'],
-  currentTemp: 68 + Math.floor(Math.random() * 8),
-  targetTemp: 72,
-  humidity: 35 + Math.floor(Math.random() * 20),
-  mode: ['heat', 'cool', 'auto'][Math.floor(Math.random() * 3)] as any,
-  fanMode: 'auto',
-  schedule: [
-    { id: 'sch-1', name: 'Morning', time: '07:00', temp: 72, days: [1,2,3,4,5], isActive: true },
-    { id: 'sch-2', name: 'Night', time: '22:00', temp: 68, days: [0,1,2,3,4,5,6], isActive: true },
-  ],
-}));
+const MOCK_THERMOSTATS: ThermostatDevice[] = [];
 
-const MOCK_CAMERAS: CameraDevice[] = [
-  {
-    id: 'cam-1', propertyId: 'prop-1', propertyName: 'Sunset Villa', name: 'Front Door Camera',
-    type: 'camera', brand: 'Ring', model: 'Video Doorbell Pro 2', status: 'online',
-    lastActivity: new Date(Date.now() - 5 * 60 * 1000), features: ['motion', 'two-way-audio', 'night-vision'],
-    isRecording: true, hasMotion: false, streamUrl: '', thumbnailUrl: '/api/placeholder/320/180',
-    nightVision: false, resolution: '1080p', storage: { used: 45, total: 100 },
-  },
-  {
-    id: 'cam-2', propertyId: 'prop-1', propertyName: 'Sunset Villa', name: 'Backyard Camera',
-    type: 'camera', brand: 'Ring', model: 'Spotlight Cam Pro', status: 'online',
-    lastActivity: new Date(Date.now() - 15 * 60 * 1000), features: ['motion', 'spotlight', 'siren'],
-    isRecording: true, hasMotion: false, streamUrl: '', thumbnailUrl: '/api/placeholder/320/180',
-    nightVision: true, resolution: '1080p', storage: { used: 62, total: 100 },
-  },
-  {
-    id: 'cam-3', propertyId: 'prop-2', propertyName: 'Oak Street Cottage', name: 'Front Porch',
-    type: 'camera', brand: 'Nest', model: 'Doorbell (Wired)', status: 'online',
-    lastActivity: new Date(Date.now() - 2 * 60 * 1000), features: ['motion', 'package-detection'],
-    isRecording: true, hasMotion: true, lastMotion: new Date(Date.now() - 2 * 60 * 1000),
-    streamUrl: '', thumbnailUrl: '/api/placeholder/320/180', nightVision: true, resolution: '1080p',
-    storage: { used: 78, total: 100 },
-  },
-  {
-    id: 'cam-4', propertyId: 'prop-3', propertyName: 'Desert Rose', name: 'Driveway Cam',
-    type: 'camera', brand: 'Wyze', model: 'Cam v3 Pro', status: 'offline',
-    lastActivity: new Date(Date.now() - 24 * 60 * 60 * 1000), features: ['motion', 'color-night'],
-    isRecording: false, hasMotion: false, streamUrl: '', thumbnailUrl: '/api/placeholder/320/180',
-    nightVision: true, resolution: '1080p', storage: { used: 0, total: 32 },
-  },
-];
+const MOCK_CAMERAS: CameraDevice[] = [];
 
-const MOCK_LIGHTS: LightDevice[] = [
-  { id: 'light-1', propertyId: 'prop-1', propertyName: 'Sunset Villa', name: 'Living Room', type: 'light', brand: 'Philips Hue', model: 'A19 Color', status: 'online', lastActivity: new Date(), features: ['color', 'dimming'], isOn: true, brightness: 80, color: '#FFE4C4', supportsColor: true, supportsDimming: true },
-  { id: 'light-2', propertyId: 'prop-1', propertyName: 'Sunset Villa', name: 'Porch Light', type: 'light', brand: 'Philips Hue', model: 'White Outdoor', status: 'online', lastActivity: new Date(), features: ['dimming', 'scheduling'], isOn: false, brightness: 0, supportsColor: false, supportsDimming: true },
-  { id: 'light-3', propertyId: 'prop-2', propertyName: 'Oak Street Cottage', name: 'Kitchen', type: 'light', brand: 'LIFX', model: 'A60 Color', status: 'online', lastActivity: new Date(), features: ['color', 'dimming'], isOn: true, brightness: 100, color: '#FFFFFF', supportsColor: true, supportsDimming: true },
-  { id: 'light-4', propertyId: 'prop-3', propertyName: 'Desert Rose', name: 'Bedroom', type: 'light', brand: 'Wyze', model: 'Bulb Color', status: 'online', battery: 100, lastActivity: new Date(), features: ['color', 'dimming'], isOn: false, brightness: 0, supportsColor: true, supportsDimming: true },
-];
+const MOCK_LIGHTS: LightDevice[] = [];
 
-const MOCK_SENSORS: SensorDevice[] = [
-  { id: 'sensor-1', propertyId: 'prop-1', propertyName: 'Sunset Villa', name: 'Front Door', type: 'sensor', sensorType: 'door', brand: 'Ring', model: 'Alarm Contact Sensor', status: 'online', battery: 85, lastActivity: new Date(), features: ['tamper-detection'], triggered: false },
-  { id: 'sensor-2', propertyId: 'prop-1', propertyName: 'Sunset Villa', name: 'Kitchen Water', type: 'sensor', sensorType: 'water', brand: 'Honeywell', model: 'Lyric Wi-Fi', status: 'online', battery: 72, lastActivity: new Date(), features: ['temp-humidity'], triggered: false },
-  { id: 'sensor-3', propertyId: 'prop-1', propertyName: 'Sunset Villa', name: 'Smoke Detector', type: 'sensor', sensorType: 'smoke', brand: 'Nest', model: 'Protect 2nd Gen', status: 'online', lastActivity: new Date(), features: ['co-detection', 'voice-alerts'], triggered: false },
-  { id: 'sensor-4', propertyId: 'prop-2', propertyName: 'Oak Street Cottage', name: 'Motion - Hallway', type: 'sensor', sensorType: 'motion', brand: 'Ring', model: 'Motion Detector', status: 'online', battery: 45, lastActivity: new Date(), features: ['pet-immune'], triggered: true, lastTriggered: new Date(Date.now() - 10 * 60 * 1000) },
-  { id: 'sensor-5', propertyId: 'prop-3', propertyName: 'Desert Rose', name: 'Water Heater', type: 'sensor', sensorType: 'water', brand: 'Flo', model: 'Smart Water Monitor', status: 'warning', lastActivity: new Date(), features: ['auto-shutoff'], triggered: false, value: 2.3, unit: 'gpm' },
-];
+const MOCK_SENSORS: SensorDevice[] = [];
 
-const MOCK_SCENES: Scene[] = [
-  { id: 'scene-1', name: 'Guest Welcome', icon: '🏠', description: 'Prepare property for guest arrival', devices: [], isActive: false, triggerType: 'event' },
-  { id: 'scene-2', name: 'Away Mode', icon: '🚗', description: 'Energy saving when property is empty', devices: [], isActive: true, triggerType: 'manual' },
-  { id: 'scene-3', name: 'Night Mode', icon: '🌙', description: 'Dim lights, lock doors, lower thermostat', devices: [], isActive: false, triggerType: 'schedule', schedule: { time: '22:00', days: [0,1,2,3,4,5,6] } },
-  { id: 'scene-4', name: 'Good Morning', icon: '☀️', description: 'Raise lights, adjust temperature', devices: [], isActive: false, triggerType: 'schedule', schedule: { time: '07:00', days: [0,1,2,3,4,5,6] } },
-  { id: 'scene-5', name: 'Movie Night', icon: '🎬', description: 'Dim lights to 20%, close blinds', devices: [], isActive: false, triggerType: 'manual' },
-  { id: 'scene-6', name: 'Cleaning Mode', icon: '🧹', description: 'Max lights, thermostat off, unlock', devices: [], isActive: false, triggerType: 'event' },
-];
+const MOCK_SCENES: Scene[] = [];
 
 // ============================================================================
 // UTILITY FUNCTIONS

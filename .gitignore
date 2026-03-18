@@ -98,3 +98,5 @@ ehthumbs.db
 Desktop.ini
 .vercel
 .env*.local
+
+.vercel

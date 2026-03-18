@@ -1,78 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// ── Mock invoices ────────────────────────────────────────────────────────
-const invoices: any[] = [
-  {
-    id: 'INV-001',
-    booking_id: 'BK-001',
-    guest_id: 'GUEST-001',
-    guest_name: 'Sarah Johnson',
-    guest_email: 'sarah@example.com',
-    property_name: 'Sunset Retreat',
-    status: 'paid',
-    issued_date: '2026-03-10',
-    due_date: '2026-03-20',
-    paid_date: '2026-03-10',
-    lines: [
-      { description: 'Nightly Rate (3 nights @ $175.00)', quantity: 3, unit_price_cents: 17500, total_cents: 52500 },
-      { description: 'Cleaning Fee', quantity: 1, unit_price_cents: 12500, total_cents: 12500 },
-    ],
-    subtotal_cents: 65000,
-    tax_cents: 5363,
-    total_cents: 70363,
-    paid_cents: 70363,
-    notes: null,
-    created_at: '2026-03-10T14:30:00Z',
-    updated_at: '2026-03-10T15:00:00Z',
-  },
-  {
-    id: 'INV-002',
-    booking_id: 'BK-002',
-    guest_id: 'GUEST-002',
-    guest_name: 'Mike Chen',
-    guest_email: 'mike.chen@example.com',
-    property_name: 'Oilfield Oasis',
-    status: 'sent',
-    issued_date: '2026-03-12',
-    due_date: '2026-03-22',
-    paid_date: null,
-    lines: [
-      { description: 'Nightly Rate (3 nights @ $225.00)', quantity: 3, unit_price_cents: 22500, total_cents: 67500 },
-      { description: 'Cleaning Fee', quantity: 1, unit_price_cents: 15000, total_cents: 15000 },
-    ],
-    subtotal_cents: 82500,
-    tax_cents: 6806,
-    total_cents: 89306,
-    paid_cents: 0,
-    notes: 'VRBO booking — charge via platform',
-    created_at: '2026-03-12T09:15:00Z',
-    updated_at: '2026-03-12T09:15:00Z',
-  },
-  {
-    id: 'INV-003',
-    booking_id: 'BK-003',
-    guest_id: 'GUEST-003',
-    guest_name: 'Emily Davis',
-    guest_email: 'emily.d@example.com',
-    property_name: 'Sunset Retreat',
-    status: 'paid',
-    issued_date: '2026-03-01',
-    due_date: '2026-03-10',
-    paid_date: '2026-03-02',
-    lines: [
-      { description: 'Nightly Rate (4 nights @ $175.00)', quantity: 4, unit_price_cents: 17500, total_cents: 70000 },
-      { description: 'Cleaning Fee', quantity: 1, unit_price_cents: 12500, total_cents: 12500 },
-      { description: 'Pet Fee', quantity: 1, unit_price_cents: 5000, total_cents: 5000 },
-    ],
-    subtotal_cents: 87500,
-    tax_cents: 7219,
-    total_cents: 94719,
-    paid_cents: 94719,
-    notes: null,
-    created_at: '2026-03-01T18:00:00Z',
-    updated_at: '2026-03-02T10:00:00Z',
-  },
-];
+// ── Invoices store (empty - populated via API in production) ──────────────
+const invoices: any[] = [];
 
 const TAX_RATE = 0.0825;
 
@@ -112,16 +41,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'booking_id is required' }, { status: 400 });
     }
 
-    // Mock booking lookup — in production query DB
+    // Booking data from request body — in production query DB
     const mockBooking = {
       id: body.booking_id,
-      guest_id: body.guest_id || 'GUEST-NEW',
-      guest_name: body.guest_name || 'New Guest',
-      guest_email: body.guest_email || 'guest@example.com',
-      property_name: body.property_name || 'Property',
-      nights: body.nights || 3,
-      nightly_rate_cents: body.nightly_rate_cents || 17500,
-      cleaning_fee_cents: body.cleaning_fee_cents || 12500,
+      guest_id: body.guest_id || '',
+      guest_name: body.guest_name || '',
+      guest_email: body.guest_email || '',
+      property_name: body.property_name || '',
+      nights: body.nights || 0,
+      nightly_rate_cents: body.nightly_rate_cents || 0,
+      cleaning_fee_cents: body.cleaning_fee_cents || 0,
       pet_fee_cents: body.pet_fee_cents || 0,
     };
 

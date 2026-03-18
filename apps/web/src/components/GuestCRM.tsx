@@ -24,72 +24,7 @@ interface Guest {
   sentiment: 'positive' | 'neutral' | 'negative';
 }
 
-const mockGuests: Guest[] = [
-  {
-    id: 1,
-    name: "Sarah Mitchell",
-    email: "sarah@email.com",
-    phone: "(555) 010-1234",
-    platform: "airbnb",
-    firstStay: "2024-03-15",
-    lastStay: "2024-12-10",
-    totalStays: 4,
-    avgRating: 4.9,
-    totalSpent: 4800,
-    tags: ["VIP", "Wine Lover", "Repeat Guest", "Late Checkout"],
-    notes: "Prefers Castleford Estate. Loves the wine selection.",
-    vip: true,
-    sentiment: "positive"
-  },
-  {
-    id: 2,
-    name: "John Davis",
-    email: "john.davis@oilco.com",
-    phone: "(555) 010-5678",
-    platform: "vrbo",
-    firstStay: "2024-06-20",
-    lastStay: "2024-11-05",
-    totalStays: 2,
-    avgRating: 4.7,
-    totalSpent: 2400,
-    tags: ["Business", "Repeat Guest", "Oil Industry"],
-    notes: "Executive at Permian Basin Energy. Quiet, respectful.",
-    vip: false,
-    sentiment: "positive"
-  },
-  {
-    id: 3,
-    name: "Emily Chen",
-    email: "emily.chen@gmail.com",
-    phone: "(555) 010-9012",
-    platform: "airbnb",
-    firstStay: "2024-08-01",
-    lastStay: "2024-08-05",
-    totalStays: 1,
-    avgRating: 5.0,
-    totalSpent: 850,
-    tags: ["First Timer", "Family"],
-    notes: "Traveling with 2 kids. Very neat.",
-    vip: false,
-    sentiment: "positive"
-  },
-  {
-    id: 4,
-    name: "Robert Thompson",
-    email: "rthompson@email.com",
-    phone: "(555) 010-3456",
-    platform: "direct",
-    firstStay: "2024-02-10",
-    lastStay: "2024-10-15",
-    totalStays: 6,
-    avgRating: 4.5,
-    totalSpent: 7200,
-    tags: ["VIP", "Repeat Guest", "Monthly Stays"],
-    notes: "Contractor working in Midland. Reliable long-term guest.",
-    vip: true,
-    sentiment: "neutral"
-  },
-];
+const mockGuests: Guest[] = [];
 
 const GuestCard = ({ guest, onSelect }: { guest: Guest; onSelect: (g: Guest) => void }) => (
   <div 
@@ -297,7 +232,7 @@ export default function GuestCRM() {
     total: guests.length,
     vip: guests.filter(g => g.vip).length,
     repeat: guests.filter(g => g.totalStays >= 2).length,
-    avgRating: (guests.reduce((sum, g) => sum + g.avgRating, 0) / guests.length).toFixed(2),
+    avgRating: (guests.length > 0 ? guests.reduce((sum, g) => sum + g.avgRating, 0) / guests.length : 0).toFixed(2),
     totalRevenue: guests.reduce((sum, g) => sum + g.totalSpent, 0)
   };
 

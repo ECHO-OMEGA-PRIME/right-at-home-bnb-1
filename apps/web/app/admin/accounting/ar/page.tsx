@@ -37,128 +37,7 @@ interface Invoice {
   platform: 'Airbnb' | 'VRBO' | 'Booking.com' | 'Direct';
 }
 
-const mockInvoices: Invoice[] = [
-  {
-    id: '1',
-    invoiceNumber: 'INV-2026-0089',
-    guest: 'James Patterson',
-    guestEmail: 'j.patterson@gmail.com',
-    property: '1405 Cuthbert Ave',
-    propertyUnit: 3,
-    description: '5-night stay + cleaning fee',
-    amount: 187500,
-    paidAmount: 0,
-    issueDate: '2026-03-10',
-    dueDate: '2026-03-25',
-    status: 'current',
-    platform: 'Direct',
-  },
-  {
-    id: '2',
-    invoiceNumber: 'INV-2026-0088',
-    guest: 'Maria Santos',
-    guestEmail: 'msantos@outlook.com',
-    property: '2211 W Louisiana Ave',
-    propertyUnit: 7,
-    description: '7-night stay + pet fee + cleaning',
-    amount: 245000,
-    paidAmount: 122500,
-    issueDate: '2026-03-05',
-    dueDate: '2026-03-20',
-    status: 'current',
-    platform: 'Direct',
-  },
-  {
-    id: '3',
-    invoiceNumber: 'INV-2026-0085',
-    guest: 'Robert Chen',
-    guestEmail: 'rchen88@yahoo.com',
-    property: '903 N Garfield St',
-    propertyUnit: 12,
-    description: '14-night extended stay',
-    amount: 420000,
-    paidAmount: 0,
-    issueDate: '2026-02-15',
-    dueDate: '2026-03-01',
-    status: 'overdue-30',
-    platform: 'Direct',
-  },
-  {
-    id: '4',
-    invoiceNumber: 'INV-2026-0082',
-    guest: 'Sarah Williams',
-    guestEmail: 'swilliams@proton.me',
-    property: '1802 Humble Ave',
-    propertyUnit: 15,
-    description: 'Property damage - broken window',
-    amount: 85000,
-    paidAmount: 0,
-    issueDate: '2026-02-10',
-    dueDate: '2026-02-25',
-    status: 'overdue-30',
-    platform: 'Airbnb',
-  },
-  {
-    id: '5',
-    invoiceNumber: 'INV-2026-0078',
-    guest: 'David & Karen Mitchell',
-    guestEmail: 'mitchells@gmail.com',
-    property: '510 E Pine Ave',
-    propertyUnit: 9,
-    description: '10-night stay - corporate booking',
-    amount: 375000,
-    paidAmount: 187500,
-    issueDate: '2026-01-28',
-    dueDate: '2026-02-12',
-    status: 'overdue-30',
-    platform: 'Direct',
-  },
-  {
-    id: '6',
-    invoiceNumber: 'INV-2026-0071',
-    guest: 'Oilfield Services LLC',
-    guestEmail: 'accounts@oilfieldsvcs.com',
-    property: '1220 N Big Spring St',
-    propertyUnit: 18,
-    description: 'Monthly crew housing - January',
-    amount: 680000,
-    paidAmount: 0,
-    issueDate: '2026-01-05',
-    dueDate: '2026-01-20',
-    status: 'overdue-60',
-    platform: 'Direct',
-  },
-  {
-    id: '7',
-    invoiceNumber: 'INV-2026-0068',
-    guest: 'Tom Baker',
-    guestEmail: 'tbaker@hotmail.com',
-    property: '405 W Shandon Ave',
-    propertyUnit: 5,
-    description: 'Extended stay deposit balance + late fees',
-    amount: 125000,
-    paidAmount: 50000,
-    issueDate: '2025-12-20',
-    dueDate: '2026-01-05',
-    status: 'overdue-60',
-    platform: 'VRBO',
-  },
-  {
-    id: '8',
-    invoiceNumber: 'INV-2025-0312',
-    guest: 'Lisa Hernandez',
-    guestEmail: 'lhernandez@live.com',
-    property: '701 W Storey Ave',
-    propertyUnit: 21,
-    description: 'Guest damage - stained carpets + furniture',
-    amount: 215000,
-    paidAmount: 0,
-    issueDate: '2025-11-15',
-    dueDate: '2025-12-01',
-    status: 'overdue-90',
-    platform: 'Booking.com',
-  },
-];
+const mockInvoices: Invoice[] = [];
 
 const statusConfig: Record<string, { label: string; color: string; bgColor: string }> = {
   paid: { label: 'Paid', color: 'text-emerald-700', bgColor: 'bg-emerald-100' },
@@ -210,10 +89,10 @@ export default function AccountsReceivablePage() {
     return Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)));
   };
 
-  const avgDaysOutstanding = Math.round(
-    mockInvoices.filter((i) => i.status !== 'paid').reduce((s, i) => s + daysOverdue(i.dueDate), 0) /
-    mockInvoices.filter((i) => i.status !== 'paid').length
-  );
+  const unpaidInvoices = mockInvoices.filter((i) => i.status !== 'paid');
+  const avgDaysOutstanding = unpaidInvoices.length > 0
+    ? Math.round(unpaidInvoices.reduce((s, i) => s + daysOverdue(i.dueDate), 0) / unpaidInvoices.length)
+    : 0;
 
   function openPaymentModal(invoice: Invoice) {
     setSelectedInvoice(invoice);

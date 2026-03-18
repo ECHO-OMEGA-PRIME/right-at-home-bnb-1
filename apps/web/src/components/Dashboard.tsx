@@ -152,21 +152,11 @@ export default function Dashboard() {
     lowInventory: 2
   };
 
-  const properties = [
-    { id: 1, name: "Castleford Estate", address: "123 Oak Lane, Midland", bedrooms: 4, bathrooms: 3, monthlyRevenue: 6200 },
-    { id: 2, name: "Petroleum Plaza Suite", address: "456 Main St, Midland", bedrooms: 2, bathrooms: 2, monthlyRevenue: 4100 },
-    { id: 3, name: "Basin View Cottage", address: "789 Basin Blvd, Midland", bedrooms: 3, bathrooms: 2, monthlyRevenue: 5300 },
-  ];
+  const properties: any[] = [];
 
-  const activeJobs = [
-    { id: 1, property_name: "Castleford Estate", cleaner_name: "Maria Garcia", status: "in_progress", photos: ["1.jpg", "2.jpg"] },
-    { id: 2, property_name: "Basin View Cottage", cleaner_name: "Rosa Martinez", status: "scheduled", photos: [] },
-  ];
+  const activeJobs: any[] = [];
 
-  const pendingMessages = [
-    { id: 1, guest_name: "Sarah Mitchell", subject: "Welcome to Right at Home!", status: "pending_approval" },
-    { id: 2, guest_name: "John Davis", subject: "Check-in Day Details", status: "pending_approval" },
-  ];
+  const pendingMessages: any[] = [];
 
   const navItems = [
     { id: 'overview', label: 'Overview', icon: Home },

@@ -15,69 +15,8 @@ import {
   getServiceProvider
 } from '@/lib/cleaning-system';
 
-// Mock notifications for demo
-const mockNotifications: OwnerNotification[] = [
-  {
-    id: 'notif-1',
-    type: 'service_request',
-    title: '🌿 Yard Work Needed',
-    message: 'Grass is overgrown, needs mowing. Weeds in flower beds.\n\nProperty: 1234 Castleford Dr',
-    propertyId: 'prop-castleford',
-    propertyAddress: '1234 Castleford Dr',
-    reportId: 'clean-001',
-    serviceRequestId: 'svc-001',
-    photoUrls: [
-      'https://images.unsplash.com/photo-1558904541-efa843a96f01?w=400',
-      'https://images.unsplash.com/photo-1592417817098-8fd3d9eb14a5?w=400'
-    ],
-    serviceType: 'yard',
-    urgency: 'medium',
-    createdAt: new Date(Date.now() - 3600000),
-  },
-  {
-    id: 'notif-2',
-    type: 'service_request',
-    title: '🔧 Handyman Needed',
-    message: 'Bathroom door handle is loose and coming off. Master bedroom closet door off track.\n\nProperty: 5678 Shandon Blvd',
-    propertyId: 'prop-shandon',
-    propertyAddress: '5678 Shandon Blvd',
-    reportId: 'clean-002',
-    serviceRequestId: 'svc-002',
-    photoUrls: [
-      'https://images.unsplash.com/photo-1585704032915-c3400ca199e7?w=400'
-    ],
-    serviceType: 'handyman',
-    urgency: 'high',
-    createdAt: new Date(Date.now() - 7200000),
-  },
-  {
-    id: 'notif-3',
-    type: 'service_request',
-    title: '🚨 URGENT: HVAC Issue',
-    message: 'AC not cooling. Temperature inside was 85°F when cleaning crew arrived.\n\nProperty: 910 Garfield Ave',
-    propertyId: 'prop-garfield',
-    propertyAddress: '910 Garfield Ave',
-    reportId: 'clean-003',
-    serviceType: 'hvac',
-    urgency: 'urgent',
-    photoUrls: [],
-    createdAt: new Date(Date.now() - 1800000),
-  },
-  {
-    id: 'notif-4',
-    type: 'guest_left_items',
-    title: '📦 Guest Left Items Behind',
-    message: 'Phone charger and sunglasses left in master bedroom nightstand drawer.\n\nProperty: 2468 Michigan St',
-    propertyId: 'prop-michigan',
-    propertyAddress: '2468 Michigan St',
-    reportId: 'clean-004',
-    urgency: 'medium',
-    photoUrls: [
-      'https://images.unsplash.com/photo-1572569511254-d8f925fe2cbb?w=400'
-    ],
-    createdAt: new Date(Date.now() - 10800000),
-  }
-];
+// Mock notifications - empty for production
+const mockNotifications: OwnerNotification[] = [];
 
 const urgencyColors = {
   low: 'bg-gray-100 text-gray-600',
