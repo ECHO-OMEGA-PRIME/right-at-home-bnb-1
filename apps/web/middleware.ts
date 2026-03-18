@@ -109,13 +109,8 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const response = NextResponse.next();
 
-  // ── Dev-login: block in production unless ALLOW_DEV_LOGIN is set ──
+  // ── Dev-login: allow through (password-protected on the page itself) ──
   if (pathname === "/dev-login" || pathname.startsWith("/dev-login/")) {
-    const isProduction = process.env.NODE_ENV === "production";
-    const devAllowed = process.env.ALLOW_DEV_LOGIN === "true";
-    if (isProduction && !devAllowed) {
-      return NextResponse.redirect(new URL("/login", request.url));
-    }
     return response;
   }
 

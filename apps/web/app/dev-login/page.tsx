@@ -129,6 +129,13 @@ export default function DevLoginPage() {
     setIsLoading(true);
     const devUser = DEV_USERS[index];
 
+    // Clear ALL stale dev auth data before setting new values
+    localStorage.removeItem('dev_user');
+    localStorage.removeItem('user_role');
+    localStorage.removeItem('worker_type');
+    localStorage.removeItem('dev_mode');
+    document.cookie = 'rah-auth-token=; path=/; max-age=0';
+
     const mockUser = {
       uid: `dev_${devUser.role}_${devUser.workerType || 'general'}_${Date.now()}`,
       email: devUser.email,
