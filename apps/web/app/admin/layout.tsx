@@ -20,6 +20,7 @@ import {
   Calendar,
   Bot,
   Plug,
+  CreditCard,
   Settings,
   ChevronLeft,
   ChevronRight,
@@ -50,6 +51,7 @@ const navItems: NavItem[] = [
   { label: 'Reviews', href: '/admin/reviews', icon: Star },
   { label: 'Planner', href: '/admin/planner', icon: Calendar },
   { label: 'Steven AI', href: '/steven', icon: Bot },
+  { label: 'PayPal', href: '/admin/paypal', icon: CreditCard },
   { label: 'Integrations', href: '/admin/integrations', icon: Plug },
   { label: 'Settings', href: '/settings', icon: Settings },
 ];
