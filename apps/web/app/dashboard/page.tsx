@@ -400,26 +400,45 @@ function CleanerDashboard({ user }: { user: DevUser }) {
 // ═══════════════════════════════════════════════════════════════
 
 function PoolDashboard({ user }: { user: DevUser }) {
+  const [rangeTab, setRangeTab] = useState<'pool' | 'hottub'>('pool');
+
   const todayRoute = [
-    { id: '1', property: 'Oasis Pool & Billiards — Castleford', time: '8:00 AM', status: 'completed' as const, ph: 7.4, chlorine: 2.1 },
-    { id: '2', property: 'Adobe Compound — Golf Course', time: '9:30 AM', status: 'in_progress' as const, ph: null, chlorine: null },
-    { id: '3', property: 'Executive Retreat — N. A St', time: '11:00 AM', status: 'pending' as const, ph: null, chlorine: null },
-    { id: '4', property: 'Hot Tub Villa — Garfield', time: '1:00 PM', status: 'pending' as const, ph: null, chlorine: null },
+    { id: '1', property: 'Oasis Pool & Billiards — Castleford', time: '8:00 AM', status: 'completed' as const, waterType: 'pool' as const, ph: 7.4, chlorine: 2.1, temp: null },
+    { id: '2', property: 'Adobe Compound — Golf Course', time: '9:30 AM', status: 'in_progress' as const, waterType: 'pool_hottub' as const, ph: null, chlorine: null, temp: null },
+    { id: '3', property: 'Executive Retreat — N. A St', time: '11:00 AM', status: 'pending' as const, waterType: 'pool' as const, ph: null, chlorine: null, temp: null },
+    { id: '4', property: 'Patio Home — Garfield', time: '12:30 PM', status: 'pending' as const, waterType: 'hottub' as const, ph: null, chlorine: null, temp: null },
+    { id: '5', property: 'Modern Ranch — W. Wall St', time: '2:00 PM', status: 'pending' as const, waterType: 'hottub' as const, ph: null, chlorine: null, temp: null },
+    { id: '6', property: 'Desert View — Midkiff Rd', time: '3:30 PM', status: 'pending' as const, waterType: 'pool_hottub' as const, ph: null, chlorine: null, temp: null },
   ];
 
+  const waterTypeLabel = (t: string) => {
+    if (t === 'pool_hottub') return 'Pool + Hot Tub';
+    if (t === 'hottub') return 'Hot Tub Only';
+    return 'Pool';
+  };
+
+  const waterTypeIcon = (t: string) => {
+    if (t === 'hottub') return '♨️';
+    if (t === 'pool_hottub') return '🏊‍♀️♨️';
+    return '🏊‍♀️';
+  };
+
+  const poolCount = todayRoute.filter(r => r.waterType === 'pool' || r.waterType === 'pool_hottub').length;
+  const hotTubCount = todayRoute.filter(r => r.waterType === 'hottub' || r.waterType === 'pool_hottub').length;
+
   return (
-    <DashboardShell user={user} accentColor="text-white" accentBg="bg-cyan-500" icon={Waves} subtitle="Pool Technician">
+    <DashboardShell user={user} accentColor="text-white" accentBg="bg-cyan-500" icon={Waves} subtitle="Pool & Hot Tub Technician">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-        <StatCard label="Today's Pools" value={todayRoute.length} icon={Droplets} color="text-cyan-600" bgColor="bg-cyan-100" />
+        <StatCard label="Pools Today" value={poolCount} icon={Droplets} color="text-cyan-600" bgColor="bg-cyan-100" />
+        <StatCard label="Hot Tubs Today" value={hotTubCount} icon={Thermometer} color="text-orange-600" bgColor="bg-orange-100" />
         <StatCard label="Completed" value={todayRoute.filter(r => r.status === 'completed').length} icon={CheckCircle} color="text-emerald-600" bgColor="bg-emerald-100" />
-        <StatCard label="Chemical Tests" value={1} icon={CircleDot} color="text-purple-600" bgColor="bg-purple-100" />
         <StatCard label="Alerts" value={0} icon={AlertCircle} color="text-red-600" bgColor="bg-red-100" />
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-3">
           <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-            <Waves className="w-5 h-5 text-cyan-600" /> Today&apos;s Pool Route
+            <Waves className="w-5 h-5 text-cyan-600" /> Today&apos;s Route
           </h2>
           {todayRoute.map((stop, i) => (
             <motion.div
@@ -439,40 +458,127 @@ function PoolDashboard({ user }: { user: DevUser }) {
                     {i + 1}
                   </div>
                   <div>
-                    <h4 className="font-medium text-sm text-gray-900">{stop.property}</h4>
-                    <p className="text-xs text-gray-500">{stop.time}</p>
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-medium text-sm text-gray-900">{stop.property}</h4>
+                      <span className="text-xs">{waterTypeIcon(stop.waterType)}</span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <p className="text-xs text-gray-500">{stop.time}</p>
+                      <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
+                        stop.waterType === 'hottub' ? 'bg-orange-100 text-orange-700' :
+                        stop.waterType === 'pool_hottub' ? 'bg-purple-100 text-purple-700' :
+                        'bg-cyan-100 text-cyan-700'
+                      }`}>
+                        {waterTypeLabel(stop.waterType)}
+                      </span>
+                    </div>
                   </div>
                 </div>
                 {stop.ph !== null && (
                   <div className="text-right">
-                    <p className="text-xs text-gray-500">pH: <span className={`font-bold ${stop.ph >= 7.2 && stop.ph <= 7.6 ? 'text-emerald-600' : 'text-red-600'}`}>{stop.ph}</span></p>
-                    <p className="text-xs text-gray-500">Cl: <span className={`font-bold ${stop.chlorine! >= 1.0 && stop.chlorine! <= 3.0 ? 'text-emerald-600' : 'text-red-600'}`}>{stop.chlorine} ppm</span></p>
+                    <p className="text-xs text-gray-500">pH: <span className={`font-bold ${stop.ph >= 7.2 && stop.ph <= 7.8 ? 'text-emerald-600' : 'text-red-600'}`}>{stop.ph}</span></p>
+                    <p className="text-xs text-gray-500">Cl: <span className={`font-bold ${stop.chlorine! >= 1.0 && stop.chlorine! <= 5.0 ? 'text-emerald-600' : 'text-red-600'}`}>{stop.chlorine} ppm</span></p>
+                    {stop.temp !== null && (
+                      <p className="text-xs text-gray-500">Temp: <span className="font-bold text-orange-600">{stop.temp}°F</span></p>
+                    )}
                   </div>
                 )}
               </div>
+
+              {/* Hot tub specific checklist inline */}
+              {(stop.waterType === 'hottub' || stop.waterType === 'pool_hottub') && stop.status === 'in_progress' && (
+                <div className="mt-3 pt-3 border-t border-gray-100">
+                  <p className="text-xs font-semibold text-orange-700 mb-2 flex items-center gap-1">
+                    <Thermometer className="w-3 h-3" /> Hot Tub Checklist
+                  </p>
+                  <div className="grid grid-cols-2 gap-1">
+                    {['Check water temp (100-104°F)', 'Test bromine/chlorine', 'Clean filter basket', 'Check jet operation', 'Inspect cover condition', 'Wipe shell waterline'].map(task => (
+                      <label key={task} className="flex items-center gap-1.5 text-[11px] text-gray-600 cursor-pointer">
+                        <input type="checkbox" className="w-3 h-3 rounded border-gray-300 text-orange-500 focus:ring-orange-400" />
+                        {task}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
             </motion.div>
           ))}
         </div>
 
         <div className="space-y-4">
-          {/* Chemical Ranges */}
+          {/* Chemical Ranges — Tabbed Pool vs Hot Tub */}
           <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
             <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
               <Droplets className="w-5 h-5 text-cyan-600" /> Target Ranges
             </h3>
-            <div className="space-y-3 text-sm">
-              {[
-                { label: 'pH Level', range: '7.2 — 7.6', color: 'text-cyan-600' },
-                { label: 'Free Chlorine', range: '1.0 — 3.0 ppm', color: 'text-blue-600' },
-                { label: 'Alkalinity', range: '80 — 120 ppm', color: 'text-purple-600' },
-                { label: 'Cyanuric Acid', range: '30 — 50 ppm', color: 'text-amber-600' },
-                { label: 'Calcium Hardness', range: '200 — 400 ppm', color: 'text-gray-600' },
-              ].map(item => (
-                <div key={item.label} className="flex items-center justify-between">
-                  <span className="text-gray-600">{item.label}</span>
-                  <span className={`font-medium ${item.color}`}>{item.range}</span>
-                </div>
-              ))}
+            <div className="flex gap-1 mb-3">
+              <button
+                onClick={() => setRangeTab('pool')}
+                className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                  rangeTab === 'pool' ? 'bg-cyan-100 text-cyan-700' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
+                }`}
+              >
+                🏊 Pool
+              </button>
+              <button
+                onClick={() => setRangeTab('hottub')}
+                className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                  rangeTab === 'hottub' ? 'bg-orange-100 text-orange-700' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
+                }`}
+              >
+                ♨️ Hot Tub
+              </button>
+            </div>
+            <div className="space-y-2.5 text-sm">
+              {rangeTab === 'pool' ? (
+                <>
+                  {[
+                    { label: 'pH Level', range: '7.2 — 7.6', color: 'text-cyan-600' },
+                    { label: 'Free Chlorine', range: '1.0 — 3.0 ppm', color: 'text-blue-600' },
+                    { label: 'Alkalinity', range: '80 — 120 ppm', color: 'text-purple-600' },
+                    { label: 'Cyanuric Acid', range: '30 — 50 ppm', color: 'text-amber-600' },
+                    { label: 'Calcium Hardness', range: '200 — 400 ppm', color: 'text-gray-600' },
+                  ].map(item => (
+                    <div key={item.label} className="flex items-center justify-between">
+                      <span className="text-gray-600">{item.label}</span>
+                      <span className={`font-medium ${item.color}`}>{item.range}</span>
+                    </div>
+                  ))}
+                </>
+              ) : (
+                <>
+                  {[
+                    { label: 'Water Temp', range: '100 — 104°F', color: 'text-orange-600' },
+                    { label: 'pH Level', range: '7.2 — 7.8', color: 'text-cyan-600' },
+                    { label: 'Bromine', range: '3.0 — 5.0 ppm', color: 'text-pink-600' },
+                    { label: 'Free Chlorine', range: '3.0 — 5.0 ppm', color: 'text-blue-600' },
+                    { label: 'Alkalinity', range: '80 — 120 ppm', color: 'text-purple-600' },
+                    { label: 'Calcium Hardness', range: '150 — 250 ppm', color: 'text-gray-600' },
+                  ].map(item => (
+                    <div key={item.label} className="flex items-center justify-between">
+                      <span className="text-gray-600">{item.label}</span>
+                      <span className={`font-medium ${item.color}`}>{item.range}</span>
+                    </div>
+                  ))}
+                  <div className="mt-2 p-2 bg-orange-50 rounded-lg">
+                    <p className="text-[11px] text-orange-700 font-medium">⚠️ Hot tubs need higher sanitizer levels due to higher temps &amp; smaller volume. Test before &amp; after each guest checkout.</p>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Hot Tub Maintenance Notes */}
+          <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl p-4 text-white">
+            <h3 className="font-semibold mb-2 flex items-center gap-2">
+              <Thermometer className="w-5 h-5" /> Hot Tub Notes
+            </h3>
+            <div className="space-y-2 text-sm text-white/90">
+              <p>• Drain &amp; refill every 3-4 months</p>
+              <p>• Clean filters weekly (rinse) / monthly (soak)</p>
+              <p>• Check cover for tears — West TX sun eats them</p>
+              <p>• Shock after every guest checkout</p>
+              <p>• If water is foamy → drain &amp; refill</p>
             </div>
           </div>
 
@@ -481,9 +587,10 @@ function PoolDashboard({ user }: { user: DevUser }) {
             <h3 className="font-semibold text-gray-900 mb-3">Quick Actions</h3>
             <div className="space-y-2">
               {[
-                { label: 'Log Chemical Reading', icon: FileText, color: 'bg-cyan-500' },
+                { label: 'Log Pool Chemical Reading', icon: FileText, color: 'bg-cyan-500' },
+                { label: 'Log Hot Tub Reading', icon: Thermometer, color: 'bg-orange-500' },
                 { label: 'Report Equipment Issue', icon: AlertTriangle, color: 'bg-red-500' },
-                { label: 'Order Chemicals', icon: Package, color: 'bg-amber-500' },
+                { label: 'Order Chemicals / Filters', icon: Package, color: 'bg-amber-500' },
                 { label: 'Upload Photos', icon: Camera, color: 'bg-blue-500' },
                 { label: 'Message Steven', icon: MessageSquare, color: 'bg-[#500000]' },
               ].map((action) => (
