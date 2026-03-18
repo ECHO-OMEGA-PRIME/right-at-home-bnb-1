@@ -46,9 +46,13 @@ interface EndpointCheck {
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
 
-  // Check for debug authorization (optional - can restrict in production)
+  // Require authorization in production
   const debugKey = request.headers.get('x-debug-key');
   const isAuthorized = debugKey === process.env.DEBUG_SECRET_KEY || process.env.NODE_ENV === 'development';
+
+  if (!isAuthorized) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
   const result: DiagnosticResult = {
     timestamp: new Date().toISOString(),

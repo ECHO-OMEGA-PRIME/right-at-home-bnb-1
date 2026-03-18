@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
 import {
   LayoutDashboard,
   CalendarDays,
@@ -58,8 +59,27 @@ const navItems: NavItem[] = [
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { appUser, loading, isOwner } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Auth guard — only owner/admin can access admin pages
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="w-10 h-10 border-4 border-[#500000] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-gray-500 text-sm">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!appUser || (appUser.role !== 'owner' && appUser.role !== 'admin')) {
+    router.replace('/dashboard');
+    return null;
+  }
 
   const isActive = (href: string) => {
     if (href === '/dashboard') return pathname === '/dashboard';
@@ -177,11 +197,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <div className="hidden sm:block h-8 w-px bg-gray-200 mx-1" />
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-full bg-[#500000] flex items-center justify-center">
-                <span className="text-xs font-bold text-white">BM</span>
+                <span className="text-xs font-bold text-white">
+                  {appUser?.displayName?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'U'}
+                </span>
               </div>
               <div className="hidden sm:block">
-                <p className="text-sm font-medium text-gray-900 leading-tight">Bobby M.</p>
-                <p className="text-xs text-gray-500 leading-tight">Owner</p>
+                <p className="text-sm font-medium text-gray-900 leading-tight">
+                  {appUser?.displayName || 'User'}
+                </p>
+                <p className="text-xs text-gray-500 leading-tight capitalize">
+                  {appUser?.role || 'Admin'}
+                </p>
               </div>
             </div>
             <button className="p-2 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors">

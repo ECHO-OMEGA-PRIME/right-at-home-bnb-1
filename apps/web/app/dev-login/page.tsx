@@ -278,7 +278,9 @@ export default function DevLoginPage() {
                   onKeyDown={(e) => e.key === 'Enter' && handlePasswordLogin()}
                 />
               </div>
-              <p className="text-xs text-white/40 mt-2">Hint: RightAtHome2026!</p>
+              {process.env.NODE_ENV === 'development' && (
+                <p className="text-xs text-white/40 mt-2">Dev mode active</p>
+              )}
             </div>
 
             <div className="flex items-end">
