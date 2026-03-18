@@ -54,8 +54,8 @@ const DEV_USERS: DevUser[] = [
   {
     role: 'worker',
     workerType: 'cleaner',
-    name: 'Maria Rodriguez',
-    email: 'maria@rah-midland.com',
+    name: 'Bree Belleville',
+    email: 'bree@rah-midland.com',
     description: 'Lead cleaner — turnover cleanings, deep cleans, inspections',
     icon: Sparkles,
     color: 'text-emerald-600',

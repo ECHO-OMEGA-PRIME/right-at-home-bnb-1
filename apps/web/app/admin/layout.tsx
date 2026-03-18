@@ -40,6 +40,7 @@ const navItems: NavItem[] = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { label: 'Bookings', href: '/bookings', icon: CalendarDays },
   { label: 'Properties', href: '/properties', icon: Home },
+  { label: 'Workers', href: '/admin/workers', icon: Users },
   { label: 'Guests / CRM', href: '/admin/crm', icon: Users },
   { label: 'Accounting', href: '/admin/accounting', icon: BookOpen },
   { label: 'Payroll', href: '/admin/payroll', icon: DollarSign },
