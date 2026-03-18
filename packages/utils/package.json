@@ -45,7 +45,7 @@
     "vitest": "^1.2.0"
   },
   "peerDependencies": {
-    "@rightathome/types": "^1.0.0"
+    "@rightathome/types": "workspace:*"
   },
   "files": [
     "dist",

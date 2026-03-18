@@ -73,9 +73,9 @@ async function createBooking(reservation: VrboReservation, propertyId: string) {
       guestPhone: reservation.guestPhone ?? null,
       checkIn: reservation.checkIn,
       checkOut: reservation.checkOut,
-      guests: reservation.numberOfGuests,
-      totalPrice: reservation.totalPrice,
-      currency: reservation.currency ?? 'USD',
+      guests: reservation.guestCount,
+      totalPrice: reservation.totalCents,
+      currency: 'USD',
       status: 'confirmed',
     }),
   });
@@ -99,9 +99,9 @@ async function updateBooking(reservation: VrboReservation, propertyId: string) {
       guestPhone: reservation.guestPhone ?? null,
       checkIn: reservation.checkIn,
       checkOut: reservation.checkOut,
-      guests: reservation.numberOfGuests,
-      totalPrice: reservation.totalPrice,
-      currency: reservation.currency ?? 'USD',
+      guests: reservation.guestCount,
+      totalPrice: reservation.totalCents,
+      currency: 'USD',
       status: 'confirmed',
     }),
   });
@@ -291,9 +291,9 @@ async function routeToStevenAI(message: VrboMessage, propertyId: string) {
     body: JSON.stringify({
       source: 'vrbo',
       propertyId,
-      conversationId: message.conversationId,
-      senderName: message.senderName,
-      senderEmail: message.senderEmail ?? null,
+      conversationId: message.threadId,
+      senderName: message.sender,
+      senderEmail: "unknown",
       content: message.content,
       receivedAt: message.timestamp,
     }),
@@ -310,7 +310,7 @@ async function routeToStevenAI(message: VrboMessage, propertyId: string) {
 // ---------------------------------------------------------------------------
 
 async function handleReservationCreated(reservation: VrboReservation) {
-  const propertyId = resolvePropertyId(reservation.propertyId);
+  const propertyId = resolvePropertyId(reservation.listingId);
   const results: Record<string, unknown> = {};
   const errors: string[] = [];
 
@@ -384,7 +384,7 @@ async function handleReservationCreated(reservation: VrboReservation) {
 }
 
 async function handleReservationModified(reservation: VrboReservation) {
-  const propertyId = resolvePropertyId(reservation.propertyId);
+  const propertyId = resolvePropertyId(reservation.listingId);
   const results: Record<string, unknown> = {};
   const errors: string[] = [];
 
@@ -447,7 +447,7 @@ async function handleReservationModified(reservation: VrboReservation) {
 }
 
 async function handleReservationCancelled(reservation: VrboReservation) {
-  const propertyId = resolvePropertyId(reservation.propertyId);
+  const propertyId = resolvePropertyId(reservation.listingId);
   const results: Record<string, unknown> = {};
   const errors: string[] = [];
 
@@ -495,7 +495,7 @@ async function handleReservationCancelled(reservation: VrboReservation) {
 }
 
 async function handleMessageReceived(message: VrboMessage) {
-  const propertyId = resolvePropertyId(message.propertyId);
+  const propertyId = resolvePropertyId(message.reservationId.split('-')[0] || 'unknown');
   const results: Record<string, unknown> = {};
   const errors: string[] = [];
 
@@ -548,7 +548,7 @@ export async function POST(request: NextRequest) {
   // Parse event payload
   let event: VrboWebhookEvent;
   try {
-    event = parseWebhookEvent(rawBody);
+    event = parseWebhookEvent(JSON.parse(rawBody));
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error(`[vrbo-webhook] Failed to parse event: ${msg}`);
@@ -560,14 +560,14 @@ export async function POST(request: NextRequest) {
 
   const actions = getActionsForEvent(event);
   console.log(
-    `[vrbo-webhook] Received event: ${event.eventType} | actions: ${actions.join(', ')}`,
+    `[vrbo-webhook] Received event: ${event.type} | actions: ${Object.entries(actions).filter(([_, v]) => v).map(([k]) => k).join(', ')}`,
   );
 
   // Route to handler based on event type
   let result: Record<string, unknown>;
 
   try {
-    switch (event.eventType) {
+    switch (event.type) {
       case 'reservation.created': {
         const reservation = event.data as VrboReservation;
         result = await handleReservationCreated(reservation);
@@ -593,11 +593,11 @@ export async function POST(request: NextRequest) {
       }
 
       default:
-        console.warn(`[vrbo-webhook] Unhandled event type: ${event.eventType}`);
+        console.warn(`[vrbo-webhook] Unhandled event type: ${event.type}`);
         return NextResponse.json(
           {
             status: 'ignored',
-            eventType: event.eventType,
+            eventType: event.type,
             message: 'Event type not handled',
           },
           { status: 200 },
@@ -605,11 +605,11 @@ export async function POST(request: NextRequest) {
     }
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error(`[vrbo-webhook] Handler error for ${event.eventType}: ${msg}`);
+    console.error(`[vrbo-webhook] Handler error for ${event.type}: ${msg}`);
     return NextResponse.json(
       {
         status: 'error',
-        eventType: event.eventType,
+        eventType: event.type,
         error: msg,
       },
       { status: 500 },
@@ -621,7 +621,7 @@ export async function POST(request: NextRequest) {
   return NextResponse.json(
     {
       status: 'processed',
-      eventType: event.eventType,
+      eventType: event.type,
       actions,
       durationMs,
       ...result,

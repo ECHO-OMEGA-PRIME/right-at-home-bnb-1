@@ -4,7 +4,7 @@
  * All date comparisons use start-of-day normalization.
  */
 
-import prisma from '../../src/lib/prisma';
+import prisma from '../prisma';
 import { addDays, startOfDay, dateRangesOverlap } from '../utils/dates';
 
 export interface AvailabilityResult {

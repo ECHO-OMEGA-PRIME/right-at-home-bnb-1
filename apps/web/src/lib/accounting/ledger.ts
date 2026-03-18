@@ -8,7 +8,7 @@
  * Each entry has lines that must balance (total debits = total credits).
  */
 
-import prisma from '../../src/lib/prisma';
+import prisma from '../prisma';
 import { isValidAccountCode, getAccount } from './chart-of-accounts';
 import { toCents, addCents } from '../utils/money';
 

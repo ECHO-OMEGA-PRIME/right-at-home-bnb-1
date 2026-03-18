@@ -5,7 +5,7 @@
  * and generates profitability reports.
  */
 
-import prisma from '../../src/lib/prisma';
+import prisma from '../prisma';
 import { toCents, formatMoney, addCents, subtractCents } from '../utils/money';
 import { startOfDay, addDays } from '../utils/dates';
 

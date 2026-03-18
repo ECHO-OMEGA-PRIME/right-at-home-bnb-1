@@ -5,7 +5,7 @@
  * All monetary values in integer cents.
  */
 
-import prisma from '../../src/lib/prisma';
+import prisma from '../prisma';
 import { nightsBetween, addDays, startOfDay } from '../utils/dates';
 import { toCents, addCents, multiplyCents, percentOf } from '../utils/money';
 

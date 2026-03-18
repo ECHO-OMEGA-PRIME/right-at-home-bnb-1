@@ -4,7 +4,7 @@
  * tagging, and lifetime value calculations.
  */
 
-import prisma from '../../src/lib/prisma';
+import prisma from '../prisma';
 import { toCents, formatMoney, addCents } from '../utils/money';
 
 // ============================================

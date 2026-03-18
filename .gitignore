@@ -96,3 +96,5 @@ firebase-adminsdk*.json
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+.vercel
+.env*.local

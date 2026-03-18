@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
   const propertyId = params.get('propertyId');
   const mode = params.get('mode') || 'ical';
   try {
-    let results: Record<string, unknown>;
+    let results: unknown;
     if (propertyId) { results = await syncAllChannels(propertyId); }
     else { results = await syncEverything(); }
     return NextResponse.json({ success: true, mode, results, syncedAt: new Date().toISOString() });

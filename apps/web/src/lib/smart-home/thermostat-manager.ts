@@ -7,7 +7,7 @@
  * Uses the Setting model for thermostat state persistence.
  */
 
-import prisma from '../../src/lib/prisma';
+import prisma from '../prisma';
 import { nowCST, startOfDay, addDays } from '../utils/dates';
 
 // ============================================

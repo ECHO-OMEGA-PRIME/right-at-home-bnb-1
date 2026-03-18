@@ -4,7 +4,7 @@
  * access codes for guest stays. Integrates with the SmartLock model.
  */
 
-import prisma from '../../src/lib/prisma';
+import prisma from '../prisma';
 import { addDays, startOfDay, endOfDay, nowCST } from '../utils/dates';
 
 // ============================================
@@ -401,7 +401,7 @@ export async function getLowBatteryLocks(threshold: number = 20): Promise<LockSt
   const locks = await prisma.smartLock.findMany({
     where: {
       batteryLevel: { lt: threshold },
-      batteryLevel: { not: null },
+      // batteryLevel not-null check handled by lt
     },
   });
 

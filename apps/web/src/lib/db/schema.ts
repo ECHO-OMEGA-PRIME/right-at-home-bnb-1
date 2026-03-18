@@ -286,13 +286,13 @@ export const users = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (table) => [
-    uniqueIndex("users_email_idx").on(table.email),
-    index("users_role_idx").on(table.role),
-    index("users_is_active_idx").on(table.isActive),
-    index("users_role_active_idx").on(table.role, table.isActive),
-    index("users_created_at_idx").on(table.createdAt),
-  ]
+  (table) => ({
+    emailIdx: uniqueIndex("users_email_idx").on(table.email),
+    roleIdx: index("users_role_idx").on(table.role),
+    isActiveIdx: index("users_is_active_idx").on(table.isActive),
+    roleActiveIdx: index("users_role_active_idx").on(table.role, table.isActive),
+    createdAtIdx: index("users_created_at_idx").on(table.createdAt),
+  })
 );
 
 export const usersRelations = relations(users, ({ many }) => ({
@@ -360,18 +360,18 @@ export const properties = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (table) => [
-    uniqueIndex("properties_slug_idx").on(table.slug),
-    index("properties_status_idx").on(table.status),
-    index("properties_city_idx").on(table.city),
-    index("properties_status_city_idx").on(table.status, table.city),
-    index("properties_property_type_idx").on(table.propertyType),
-    index("properties_bedrooms_idx").on(table.bedrooms),
-    index("properties_nightly_rate_idx").on(table.nightlyRate),
-    index("properties_airbnb_id_idx").on(table.airbnbId),
-    index("properties_vrbo_id_idx").on(table.vrboId),
-    index("properties_created_at_idx").on(table.createdAt),
-  ]
+  (table) => ({
+    slugIdx: uniqueIndex("properties_slug_idx").on(table.slug),
+    statusIdx: index("properties_status_idx").on(table.status),
+    cityIdx: index("properties_city_idx").on(table.city),
+    statusCityIdx: index("properties_status_city_idx").on(table.status, table.city),
+    propertyTypeIdx: index("properties_property_type_idx").on(table.propertyType),
+    bedroomsIdx: index("properties_bedrooms_idx").on(table.bedrooms),
+    nightlyRateIdx: index("properties_nightly_rate_idx").on(table.nightlyRate),
+    airbnbIdIdx: index("properties_airbnb_id_idx").on(table.airbnbId),
+    vrboIdIdx: index("properties_vrbo_id_idx").on(table.vrboId),
+    createdAtIdx: index("properties_created_at_idx").on(table.createdAt),
+  })
 );
 
 export const propertiesRelations = relations(properties, ({ many, one }) => ({
@@ -405,10 +405,10 @@ export const propertyPhotos = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (table) => [
-    index("property_photos_property_id_idx").on(table.propertyId),
-    index("property_photos_sort_order_idx").on(table.propertyId, table.sortOrder),
-  ]
+  (table) => ({
+    propertyIdIdx: index("property_photos_property_id_idx").on(table.propertyId),
+    sortOrderIdx: index("property_photos_sort_order_idx").on(table.propertyId, table.sortOrder),
+  })
 );
 
 export const propertyPhotosRelations = relations(propertyPhotos, ({ one }) => ({
@@ -463,18 +463,18 @@ export const guests = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (table) => [
-    uniqueIndex("guests_email_idx").on(table.email),
-    index("guests_is_vip_idx").on(table.isVip),
-    index("guests_platform_idx").on(table.platform),
-    index("guests_platform_id_idx").on(table.platform, table.platformId),
-    index("guests_total_stays_idx").on(table.totalStays),
-    index("guests_total_spent_idx").on(table.totalSpent),
-    index("guests_last_stay_idx").on(table.lastStay),
-    index("guests_vip_spent_idx").on(table.isVip, table.totalSpent),
-    index("guests_created_at_idx").on(table.createdAt),
-    index("guests_birthday_idx").on(table.birthday),
-  ]
+  (table) => ({
+    emailIdx: uniqueIndex("guests_email_idx").on(table.email),
+    isVipIdx: index("guests_is_vip_idx").on(table.isVip),
+    platformIdx: index("guests_platform_idx").on(table.platform),
+    platformIdIdx: index("guests_platform_id_idx").on(table.platform, table.platformId),
+    totalStaysIdx: index("guests_total_stays_idx").on(table.totalStays),
+    totalSpentIdx: index("guests_total_spent_idx").on(table.totalSpent),
+    lastStayIdx: index("guests_last_stay_idx").on(table.lastStay),
+    vipSpentIdx: index("guests_vip_spent_idx").on(table.isVip, table.totalSpent),
+    createdAtIdx: index("guests_created_at_idx").on(table.createdAt),
+    birthdayIdx: index("guests_birthday_idx").on(table.birthday),
+  })
 );
 
 export const guestsRelations = relations(guests, ({ many }) => ({
@@ -537,20 +537,20 @@ export const bookings = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (table) => [
-    index("bookings_property_id_idx").on(table.propertyId),
-    index("bookings_guest_id_idx").on(table.guestId),
-    index("bookings_check_in_idx").on(table.checkIn),
-    index("bookings_check_out_idx").on(table.checkOut),
-    index("bookings_status_idx").on(table.status),
-    index("bookings_property_check_in_idx").on(table.propertyId, table.checkIn),
-    index("bookings_property_status_idx").on(table.propertyId, table.status),
-    index("bookings_property_dates_idx").on(table.propertyId, table.checkIn, table.checkOut),
-    index("bookings_platform_status_idx").on(table.platform, table.status),
-    index("bookings_platform_idx").on(table.platform),
-    index("bookings_created_at_idx").on(table.createdAt),
-    index("bookings_confirm_code_idx").on(table.confirmCode),
-  ]
+  (table) => ({
+    propertyIdIdx: index("bookings_property_id_idx").on(table.propertyId),
+    guestIdIdx: index("bookings_guest_id_idx").on(table.guestId),
+    checkInIdx: index("bookings_check_in_idx").on(table.checkIn),
+    checkOutIdx: index("bookings_check_out_idx").on(table.checkOut),
+    statusIdx: index("bookings_status_idx").on(table.status),
+    propertyCheckInIdx: index("bookings_property_check_in_idx").on(table.propertyId, table.checkIn),
+    propertyStatusIdx: index("bookings_property_status_idx").on(table.propertyId, table.status),
+    propertyDatesIdx: index("bookings_property_dates_idx").on(table.propertyId, table.checkIn, table.checkOut),
+    platformStatusIdx: index("bookings_platform_status_idx").on(table.platform, table.status),
+    platformIdx: index("bookings_platform_idx").on(table.platform),
+    createdAtIdx: index("bookings_created_at_idx").on(table.createdAt),
+    confirmCodeIdx: index("bookings_confirm_code_idx").on(table.confirmCode),
+  })
 );
 
 export const bookingsRelations = relations(bookings, ({ one, many }) => ({
@@ -611,14 +611,14 @@ export const bookingPayments = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (table) => [
-    index("booking_payments_booking_id_idx").on(table.bookingId),
-    index("booking_payments_status_idx").on(table.status),
-    index("booking_payments_method_idx").on(table.method),
-    index("booking_payments_paid_at_idx").on(table.paidAt),
-    index("booking_payments_transaction_id_idx").on(table.transactionId),
-    index("booking_payments_created_at_idx").on(table.createdAt),
-  ]
+  (table) => ({
+    bookingIdIdx: index("booking_payments_booking_id_idx").on(table.bookingId),
+    statusIdx: index("booking_payments_status_idx").on(table.status),
+    methodIdx: index("booking_payments_method_idx").on(table.method),
+    paidAtIdx: index("booking_payments_paid_at_idx").on(table.paidAt),
+    transactionIdIdx: index("booking_payments_transaction_id_idx").on(table.transactionId),
+    createdAtIdx: index("booking_payments_created_at_idx").on(table.createdAt),
+  })
 );
 
 export const bookingPaymentsRelations = relations(bookingPayments, ({ one }) => ({
@@ -681,20 +681,20 @@ export const cleaningJobs = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (table) => [
-    uniqueIndex("cleaning_jobs_booking_id_idx").on(table.bookingId),
-    index("cleaning_jobs_property_id_idx").on(table.propertyId),
-    index("cleaning_jobs_cleaner_id_idx").on(table.cleanerId),
-    index("cleaning_jobs_status_idx").on(table.status),
-    index("cleaning_jobs_scheduled_at_idx").on(table.scheduledAt),
-    index("cleaning_jobs_property_schedule_idx").on(table.propertyId, table.scheduledAt),
-    index("cleaning_jobs_cleaner_status_idx").on(table.cleanerId, table.status),
-    index("cleaning_jobs_cleaner_schedule_idx").on(table.cleanerId, table.scheduledAt),
-    index("cleaning_jobs_schedule_status_idx").on(table.scheduledAt, table.status),
-    index("cleaning_jobs_type_status_idx").on(table.jobType, table.status),
-    index("cleaning_jobs_created_at_idx").on(table.createdAt),
-    index("cleaning_jobs_completed_at_idx").on(table.completedAt),
-  ]
+  (table) => ({
+    bookingIdIdx: uniqueIndex("cleaning_jobs_booking_id_idx").on(table.bookingId),
+    propertyIdIdx: index("cleaning_jobs_property_id_idx").on(table.propertyId),
+    cleanerIdIdx: index("cleaning_jobs_cleaner_id_idx").on(table.cleanerId),
+    statusIdx: index("cleaning_jobs_status_idx").on(table.status),
+    scheduledAtIdx: index("cleaning_jobs_scheduled_at_idx").on(table.scheduledAt),
+    propertyScheduleIdx: index("cleaning_jobs_property_schedule_idx").on(table.propertyId, table.scheduledAt),
+    cleanerStatusIdx: index("cleaning_jobs_cleaner_status_idx").on(table.cleanerId, table.status),
+    cleanerScheduleIdx: index("cleaning_jobs_cleaner_schedule_idx").on(table.cleanerId, table.scheduledAt),
+    scheduleStatusIdx: index("cleaning_jobs_schedule_status_idx").on(table.scheduledAt, table.status),
+    typeStatusIdx: index("cleaning_jobs_type_status_idx").on(table.jobType, table.status),
+    createdAtIdx: index("cleaning_jobs_created_at_idx").on(table.createdAt),
+    completedAtIdx: index("cleaning_jobs_completed_at_idx").on(table.completedAt),
+  })
 );
 
 export const cleaningJobsRelations = relations(cleaningJobs, ({ one, many }) => ({
@@ -746,12 +746,12 @@ export const cleaningChecklists = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (table) => [
-    index("cleaning_checklists_job_id_idx").on(table.cleaningJobId),
-    index("cleaning_checklists_status_idx").on(table.status),
-    index("cleaning_checklists_area_idx").on(table.area),
-    index("cleaning_checklists_job_sort_idx").on(table.cleaningJobId, table.sortOrder),
-  ]
+  (table) => ({
+    jobIdIdx: index("cleaning_checklists_job_id_idx").on(table.cleaningJobId),
+    statusIdx: index("cleaning_checklists_status_idx").on(table.status),
+    areaIdx: index("cleaning_checklists_area_idx").on(table.area),
+    jobSortIdx: index("cleaning_checklists_job_sort_idx").on(table.cleaningJobId, table.sortOrder),
+  })
 );
 
 export const cleaningChecklistsRelations = relations(cleaningChecklists, ({ one }) => ({
@@ -798,12 +798,12 @@ export const smartLocks = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (table) => [
-    uniqueIndex("smart_locks_property_id_idx").on(table.propertyId),
-    index("smart_locks_brand_idx").on(table.brand),
-    index("smart_locks_device_id_idx").on(table.deviceId),
-    index("smart_locks_is_online_idx").on(table.isOnline),
-  ]
+  (table) => ({
+    propertyIdIdx: uniqueIndex("smart_locks_property_id_idx").on(table.propertyId),
+    brandIdx: index("smart_locks_brand_idx").on(table.brand),
+    deviceIdIdx: index("smart_locks_device_id_idx").on(table.deviceId),
+    isOnlineIdx: index("smart_locks_is_online_idx").on(table.isOnline),
+  })
 );
 
 export const smartLocksRelations = relations(smartLocks, ({ one }) => ({
@@ -856,18 +856,18 @@ export const messages = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (table) => [
-    index("messages_guest_id_idx").on(table.guestId),
-    index("messages_booking_id_idx").on(table.bookingId),
-    index("messages_status_idx").on(table.status),
-    index("messages_type_idx").on(table.type),
-    index("messages_channel_idx").on(table.channel),
-    index("messages_guest_type_idx").on(table.guestId, table.type),
-    index("messages_status_scheduled_idx").on(table.status, table.scheduledFor),
-    index("messages_sent_at_idx").on(table.sentAt),
-    index("messages_created_at_idx").on(table.createdAt),
-    index("messages_sentiment_idx").on(table.sentiment),
-  ]
+  (table) => ({
+    guestIdIdx: index("messages_guest_id_idx").on(table.guestId),
+    bookingIdIdx: index("messages_booking_id_idx").on(table.bookingId),
+    statusIdx: index("messages_status_idx").on(table.status),
+    typeIdx: index("messages_type_idx").on(table.type),
+    channelIdx: index("messages_channel_idx").on(table.channel),
+    guestTypeIdx: index("messages_guest_type_idx").on(table.guestId, table.type),
+    statusScheduledIdx: index("messages_status_scheduled_idx").on(table.status, table.scheduledFor),
+    sentAtIdx: index("messages_sent_at_idx").on(table.sentAt),
+    createdAtIdx: index("messages_created_at_idx").on(table.createdAt),
+    sentimentIdx: index("messages_sentiment_idx").on(table.sentiment),
+  })
 );
 
 export const messagesRelations = relations(messages, ({ one }) => ({
@@ -941,18 +941,18 @@ export const reviews = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (table) => [
-    uniqueIndex("reviews_booking_id_idx").on(table.bookingId),
-    index("reviews_guest_id_idx").on(table.guestId),
-    index("reviews_property_id_idx").on(table.propertyId),
-    index("reviews_overall_rating_idx").on(table.overallRating),
-    index("reviews_source_idx").on(table.source),
-    index("reviews_is_public_idx").on(table.isPublic),
-    index("reviews_is_featured_idx").on(table.isFeatured),
-    index("reviews_property_rating_idx").on(table.propertyId, table.overallRating),
-    index("reviews_created_at_idx").on(table.createdAt),
-    index("reviews_sentiment_idx").on(table.sentiment),
-  ]
+  (table) => ({
+    bookingIdIdx: uniqueIndex("reviews_booking_id_idx").on(table.bookingId),
+    guestIdIdx: index("reviews_guest_id_idx").on(table.guestId),
+    propertyIdIdx: index("reviews_property_id_idx").on(table.propertyId),
+    overallRatingIdx: index("reviews_overall_rating_idx").on(table.overallRating),
+    sourceIdx: index("reviews_source_idx").on(table.source),
+    isPublicIdx: index("reviews_is_public_idx").on(table.isPublic),
+    isFeaturedIdx: index("reviews_is_featured_idx").on(table.isFeatured),
+    propertyRatingIdx: index("reviews_property_rating_idx").on(table.propertyId, table.overallRating),
+    createdAtIdx: index("reviews_created_at_idx").on(table.createdAt),
+    sentimentIdx: index("reviews_sentiment_idx").on(table.sentiment),
+  })
 );
 
 export const reviewsRelations = relations(reviews, ({ one }) => ({
@@ -1020,17 +1020,17 @@ export const invoices = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (table) => [
-    uniqueIndex("invoices_invoice_number_idx").on(table.invoiceNumber),
-    index("invoices_booking_id_idx").on(table.bookingId),
-    index("invoices_guest_id_idx").on(table.guestId),
-    index("invoices_property_id_idx").on(table.propertyId),
-    index("invoices_status_idx").on(table.status),
-    index("invoices_issue_date_idx").on(table.issueDate),
-    index("invoices_due_date_idx").on(table.dueDate),
-    index("invoices_status_due_date_idx").on(table.status, table.dueDate),
-    index("invoices_created_at_idx").on(table.createdAt),
-  ]
+  (table) => ({
+    invoiceNumberIdx: uniqueIndex("invoices_invoice_number_idx").on(table.invoiceNumber),
+    bookingIdIdx: index("invoices_booking_id_idx").on(table.bookingId),
+    guestIdIdx: index("invoices_guest_id_idx").on(table.guestId),
+    propertyIdIdx: index("invoices_property_id_idx").on(table.propertyId),
+    statusIdx: index("invoices_status_idx").on(table.status),
+    issueDateIdx: index("invoices_issue_date_idx").on(table.issueDate),
+    dueDateIdx: index("invoices_due_date_idx").on(table.dueDate),
+    statusDueDateIdx: index("invoices_status_due_date_idx").on(table.status, table.dueDate),
+    createdAtIdx: index("invoices_created_at_idx").on(table.createdAt),
+  })
 );
 
 export const invoicesRelations = relations(invoices, ({ one, many }) => ({
@@ -1082,11 +1082,11 @@ export const invoiceLineItems = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (table) => [
-    index("invoice_line_items_invoice_id_idx").on(table.invoiceId),
-    index("invoice_line_items_category_idx").on(table.category),
-    index("invoice_line_items_invoice_sort_idx").on(table.invoiceId, table.sortOrder),
-  ]
+  (table) => ({
+    invoiceIdIdx: index("invoice_line_items_invoice_id_idx").on(table.invoiceId),
+    categoryIdx: index("invoice_line_items_category_idx").on(table.category),
+    invoiceSortIdx: index("invoice_line_items_invoice_sort_idx").on(table.invoiceId, table.sortOrder),
+  })
 );
 
 export const invoiceLineItemsRelations = relations(invoiceLineItems, ({ one }) => ({
@@ -1141,20 +1141,20 @@ export const expenses = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (table) => [
-    index("expenses_property_id_idx").on(table.propertyId),
-    index("expenses_created_by_id_idx").on(table.createdById),
-    index("expenses_category_idx").on(table.category),
-    index("expenses_date_idx").on(table.date),
-    index("expenses_property_date_idx").on(table.propertyId, table.date),
-    index("expenses_property_category_idx").on(table.propertyId, table.category),
-    index("expenses_category_date_idx").on(table.category, table.date),
-    index("expenses_status_idx").on(table.status),
-    index("expenses_is_tax_deductible_idx").on(table.isTaxDeductible),
-    index("expenses_tax_category_idx").on(table.isTaxDeductible, table.taxCategory),
-    index("expenses_vendor_idx").on(table.vendor),
-    index("expenses_created_at_idx").on(table.createdAt),
-  ]
+  (table) => ({
+    propertyIdIdx: index("expenses_property_id_idx").on(table.propertyId),
+    createdByIdIdx: index("expenses_created_by_id_idx").on(table.createdById),
+    categoryIdx: index("expenses_category_idx").on(table.category),
+    dateIdx: index("expenses_date_idx").on(table.date),
+    propertyDateIdx: index("expenses_property_date_idx").on(table.propertyId, table.date),
+    propertyCategoryIdx: index("expenses_property_category_idx").on(table.propertyId, table.category),
+    categoryDateIdx: index("expenses_category_date_idx").on(table.category, table.date),
+    statusIdx: index("expenses_status_idx").on(table.status),
+    isTaxDeductibleIdx: index("expenses_is_tax_deductible_idx").on(table.isTaxDeductible),
+    taxCategoryIdx: index("expenses_tax_category_idx").on(table.isTaxDeductible, table.taxCategory),
+    vendorIdx: index("expenses_vendor_idx").on(table.vendor),
+    createdAtIdx: index("expenses_created_at_idx").on(table.createdAt),
+  })
 );
 
 export const expensesRelations = relations(expenses, ({ one }) => ({
@@ -1222,16 +1222,16 @@ export const employees = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (table) => [
-    uniqueIndex("employees_email_idx").on(table.email),
-    index("employees_user_id_idx").on(table.userId),
-    index("employees_status_idx").on(table.status),
-    index("employees_employee_type_idx").on(table.employeeType),
-    index("employees_department_idx").on(table.department),
-    index("employees_hire_date_idx").on(table.hireDate),
-    index("employees_status_type_idx").on(table.status, table.employeeType),
-    index("employees_created_at_idx").on(table.createdAt),
-  ]
+  (table) => ({
+    emailIdx: uniqueIndex("employees_email_idx").on(table.email),
+    userIdIdx: index("employees_user_id_idx").on(table.userId),
+    statusIdx: index("employees_status_idx").on(table.status),
+    employeeTypeIdx: index("employees_employee_type_idx").on(table.employeeType),
+    departmentIdx: index("employees_department_idx").on(table.department),
+    hireDateIdx: index("employees_hire_date_idx").on(table.hireDate),
+    statusTypeIdx: index("employees_status_type_idx").on(table.status, table.employeeType),
+    createdAtIdx: index("employees_created_at_idx").on(table.createdAt),
+  })
 );
 
 export const employeesRelations = relations(employees, ({ one, many }) => ({
@@ -1277,13 +1277,13 @@ export const payPeriods = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (table) => [
-    index("pay_periods_start_date_idx").on(table.startDate),
-    index("pay_periods_end_date_idx").on(table.endDate),
-    index("pay_periods_pay_date_idx").on(table.payDate),
-    index("pay_periods_status_idx").on(table.status),
-    index("pay_periods_dates_idx").on(table.startDate, table.endDate),
-  ]
+  (table) => ({
+    startDateIdx: index("pay_periods_start_date_idx").on(table.startDate),
+    endDateIdx: index("pay_periods_end_date_idx").on(table.endDate),
+    payDateIdx: index("pay_periods_pay_date_idx").on(table.payDate),
+    statusIdx: index("pay_periods_status_idx").on(table.status),
+    datesIdx: index("pay_periods_dates_idx").on(table.startDate, table.endDate),
+  })
 );
 
 export const payPeriodsRelations = relations(payPeriods, ({ many }) => ({
@@ -1342,14 +1342,14 @@ export const paychecks = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (table) => [
-    index("paychecks_employee_id_idx").on(table.employeeId),
-    index("paychecks_pay_period_id_idx").on(table.payPeriodId),
-    index("paychecks_status_idx").on(table.status),
-    index("paychecks_employee_period_idx").on(table.employeeId, table.payPeriodId),
-    index("paychecks_paid_at_idx").on(table.paidAt),
-    index("paychecks_created_at_idx").on(table.createdAt),
-  ]
+  (table) => ({
+    employeeIdIdx: index("paychecks_employee_id_idx").on(table.employeeId),
+    payPeriodIdIdx: index("paychecks_pay_period_id_idx").on(table.payPeriodId),
+    statusIdx: index("paychecks_status_idx").on(table.status),
+    employeePeriodIdx: index("paychecks_employee_period_idx").on(table.employeeId, table.payPeriodId),
+    paidAtIdx: index("paychecks_paid_at_idx").on(table.paidAt),
+    createdAtIdx: index("paychecks_created_at_idx").on(table.createdAt),
+  })
 );
 
 export const paychecksRelations = relations(paychecks, ({ one, many }) => ({
@@ -1388,10 +1388,10 @@ export const paycheckDeductions = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (table) => [
-    index("paycheck_deductions_paycheck_id_idx").on(table.paycheckId),
-    index("paycheck_deductions_type_idx").on(table.type),
-  ]
+  (table) => ({
+    paycheckIdIdx: index("paycheck_deductions_paycheck_id_idx").on(table.paycheckId),
+    typeIdx: index("paycheck_deductions_type_idx").on(table.type),
+  })
 );
 
 export const paycheckDeductionsRelations = relations(paycheckDeductions, ({ one }) => ({
@@ -1439,14 +1439,14 @@ export const accounts = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (table) => [
-    uniqueIndex("accounts_code_idx").on(table.code),
-    index("accounts_account_type_idx").on(table.accountType),
-    index("accounts_parent_id_idx").on(table.parentId),
-    index("accounts_is_active_idx").on(table.isActive),
-    index("accounts_type_active_idx").on(table.accountType, table.isActive),
-    index("accounts_name_idx").on(table.name),
-  ]
+  (table) => ({
+    codeIdx: uniqueIndex("accounts_code_idx").on(table.code),
+    accountTypeIdx: index("accounts_account_type_idx").on(table.accountType),
+    parentIdIdx: index("accounts_parent_id_idx").on(table.parentId),
+    isActiveIdx: index("accounts_is_active_idx").on(table.isActive),
+    typeActiveIdx: index("accounts_type_active_idx").on(table.accountType, table.isActive),
+    nameIdx: index("accounts_name_idx").on(table.name),
+  })
 );
 
 export const accountsRelations = relations(accounts, ({ one, many }) => ({
@@ -1500,15 +1500,15 @@ export const journalEntries = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (table) => [
-    index("journal_entries_date_idx").on(table.date),
-    index("journal_entries_status_idx").on(table.status),
-    index("journal_entries_source_idx").on(table.sourceType, table.sourceId),
-    index("journal_entries_reference_idx").on(table.reference),
-    index("journal_entries_posted_at_idx").on(table.postedAt),
-    index("journal_entries_created_at_idx").on(table.createdAt),
-    index("journal_entries_date_status_idx").on(table.date, table.status),
-  ]
+  (table) => ({
+    dateIdx: index("journal_entries_date_idx").on(table.date),
+    statusIdx: index("journal_entries_status_idx").on(table.status),
+    sourceIdx: index("journal_entries_source_idx").on(table.sourceType, table.sourceId),
+    referenceIdx: index("journal_entries_reference_idx").on(table.reference),
+    postedAtIdx: index("journal_entries_posted_at_idx").on(table.postedAt),
+    createdAtIdx: index("journal_entries_created_at_idx").on(table.createdAt),
+    dateStatusIdx: index("journal_entries_date_status_idx").on(table.date, table.status),
+  })
 );
 
 export const journalEntriesRelations = relations(journalEntries, ({ many }) => ({
@@ -1548,12 +1548,12 @@ export const journalLines = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (table) => [
-    index("journal_lines_journal_entry_id_idx").on(table.journalEntryId),
-    index("journal_lines_account_id_idx").on(table.accountId),
-    index("journal_lines_property_id_idx").on(table.propertyId),
-    index("journal_lines_entry_sort_idx").on(table.journalEntryId, table.sortOrder),
-  ]
+  (table) => ({
+    journalEntryIdIdx: index("journal_lines_journal_entry_id_idx").on(table.journalEntryId),
+    accountIdIdx: index("journal_lines_account_id_idx").on(table.accountId),
+    propertyIdIdx: index("journal_lines_property_id_idx").on(table.propertyId),
+    entrySortIdx: index("journal_lines_entry_sort_idx").on(table.journalEntryId, table.sortOrder),
+  })
 );
 
 export const journalLinesRelations = relations(journalLines, ({ one }) => ({
@@ -1621,15 +1621,15 @@ export const inventoryItems = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (table) => [
-    index("inventory_items_property_id_idx").on(table.propertyId),
-    index("inventory_items_category_idx").on(table.category),
-    index("inventory_items_sku_idx").on(table.sku),
-    index("inventory_items_is_active_idx").on(table.isActive),
-    index("inventory_items_property_category_idx").on(table.propertyId, table.category),
-    index("inventory_items_low_stock_idx").on(table.quantity, table.minQuantity),
-    index("inventory_items_created_at_idx").on(table.createdAt),
-  ]
+  (table) => ({
+    propertyIdIdx: index("inventory_items_property_id_idx").on(table.propertyId),
+    categoryIdx: index("inventory_items_category_idx").on(table.category),
+    skuIdx: index("inventory_items_sku_idx").on(table.sku),
+    isActiveIdx: index("inventory_items_is_active_idx").on(table.isActive),
+    propertyCategoryIdx: index("inventory_items_property_category_idx").on(table.propertyId, table.category),
+    lowStockIdx: index("inventory_items_low_stock_idx").on(table.quantity, table.minQuantity),
+    createdAtIdx: index("inventory_items_created_at_idx").on(table.createdAt),
+  })
 );
 
 export const inventoryItemsRelations = relations(inventoryItems, ({ one, many }) => ({
@@ -1676,13 +1676,13 @@ export const inventoryMovements = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (table) => [
-    index("inventory_movements_item_id_idx").on(table.inventoryItemId),
-    index("inventory_movements_type_idx").on(table.type),
-    index("inventory_movements_created_at_idx").on(table.createdAt),
-    index("inventory_movements_item_date_idx").on(table.inventoryItemId, table.createdAt),
-    index("inventory_movements_performed_by_idx").on(table.performedBy),
-  ]
+  (table) => ({
+    itemIdIdx: index("inventory_movements_item_id_idx").on(table.inventoryItemId),
+    typeIdx: index("inventory_movements_type_idx").on(table.type),
+    createdAtIdx: index("inventory_movements_created_at_idx").on(table.createdAt),
+    itemDateIdx: index("inventory_movements_item_date_idx").on(table.inventoryItemId, table.createdAt),
+    performedByIdx: index("inventory_movements_performed_by_idx").on(table.performedBy),
+  })
 );
 
 export const inventoryMovementsRelations = relations(inventoryMovements, ({ one }) => ({
@@ -1725,13 +1725,13 @@ export const conciergeQueries = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (table) => [
-    index("concierge_queries_guest_id_idx").on(table.guestId),
-    index("concierge_queries_property_id_idx").on(table.propertyId),
-    index("concierge_queries_category_idx").on(table.category),
-    index("concierge_queries_created_at_idx").on(table.createdAt),
-    index("concierge_queries_guest_date_idx").on(table.guestId, table.createdAt),
-  ]
+  (table) => ({
+    guestIdIdx: index("concierge_queries_guest_id_idx").on(table.guestId),
+    propertyIdIdx: index("concierge_queries_property_id_idx").on(table.propertyId),
+    categoryIdx: index("concierge_queries_category_idx").on(table.category),
+    createdAtIdx: index("concierge_queries_created_at_idx").on(table.createdAt),
+    guestDateIdx: index("concierge_queries_guest_date_idx").on(table.guestId, table.createdAt),
+  })
 );
 
 export const conciergeQueriesRelations = relations(conciergeQueries, ({ one }) => ({
@@ -1780,14 +1780,14 @@ export const notes = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (table) => [
-    index("notes_author_id_idx").on(table.authorId),
-    index("notes_entity_idx").on(table.entityType, table.entityId),
-    index("notes_entity_type_idx").on(table.entityType),
-    index("notes_is_pinned_idx").on(table.isPinned),
-    index("notes_created_at_idx").on(table.createdAt),
-    index("notes_entity_pinned_idx").on(table.entityType, table.entityId, table.isPinned),
-  ]
+  (table) => ({
+    authorIdIdx: index("notes_author_id_idx").on(table.authorId),
+    entityIdx: index("notes_entity_idx").on(table.entityType, table.entityId),
+    entityTypeIdx: index("notes_entity_type_idx").on(table.entityType),
+    isPinnedIdx: index("notes_is_pinned_idx").on(table.isPinned),
+    createdAtIdx: index("notes_created_at_idx").on(table.createdAt),
+    entityPinnedIdx: index("notes_entity_pinned_idx").on(table.entityType, table.entityId, table.isPinned),
+  })
 );
 
 export const notesRelations = relations(notes, ({ one }) => ({
@@ -1814,7 +1814,7 @@ export const settings = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (table) => [uniqueIndex("settings_key_idx").on(table.key)]
+  (table) => ({ keyIdx: uniqueIndex("settings_key_idx").on(table.key) })
 );
 
 // ============================================
@@ -1839,15 +1839,15 @@ export const auditLogs = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (table) => [
-    index("audit_logs_user_id_idx").on(table.userId),
-    index("audit_logs_entity_idx").on(table.entity),
-    index("audit_logs_entity_id_idx").on(table.entity, table.entityId),
-    index("audit_logs_action_idx").on(table.action),
-    index("audit_logs_user_date_idx").on(table.userId, table.createdAt),
-    index("audit_logs_entity_action_idx").on(table.entity, table.action),
-    index("audit_logs_created_at_idx").on(table.createdAt),
-  ]
+  (table) => ({
+    userIdIdx: index("audit_logs_user_id_idx").on(table.userId),
+    entityIdx: index("audit_logs_entity_idx").on(table.entity),
+    entityIdIdx: index("audit_logs_entity_id_idx").on(table.entity, table.entityId),
+    actionIdx: index("audit_logs_action_idx").on(table.action),
+    userDateIdx: index("audit_logs_user_date_idx").on(table.userId, table.createdAt),
+    entityActionIdx: index("audit_logs_entity_action_idx").on(table.entity, table.action),
+    createdAtIdx: index("audit_logs_created_at_idx").on(table.createdAt),
+  })
 );
 
 // ============================================

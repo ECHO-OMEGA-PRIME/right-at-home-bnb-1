@@ -3,7 +3,7 @@
  * Generates P&L, Balance Sheet, and Cash Flow reports from journal entry data.
  */
 
-import prisma from '../../src/lib/prisma';
+import prisma from '../prisma';
 import { getAccount, getAccountsByType, CHART_OF_ACCOUNTS } from './chart-of-accounts';
 import type { JournalEntryData } from './ledger';
 import { formatMoney } from '../utils/money';

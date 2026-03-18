@@ -5,7 +5,7 @@
  * Auto-assigns based on availability, proximity, and workload.
  */
 
-import prisma from '../../src/lib/prisma';
+import prisma from '../prisma';
 import { nowCST, addDays, startOfDay, formatDateTime } from '../utils/dates';
 import { toCents } from '../utils/money';
 
