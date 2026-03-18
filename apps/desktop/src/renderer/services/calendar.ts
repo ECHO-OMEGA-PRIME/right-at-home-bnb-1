@@ -89,7 +89,7 @@ class CalendarService {
       bookings.forEach((booking) => {
         const property = properties.find((p) => p.id === booking.propertyId);
         events.push({
-          uid: `booking-${booking.id}@rightathomebnb.com`,
+          uid: `booking-${booking.id}@rah-midland.com`,
           summary: `Guest: ${property?.name || 'Unknown Property'}`,
           description: this.generateBookingDescription(booking, property),
           dtstart: parseISO(booking.checkIn),
@@ -109,7 +109,7 @@ class CalendarService {
         const endDate = new Date(startDate.getTime() + job.duration * 60 * 1000);
 
         events.push({
-          uid: `cleaning-${job.id}@rightathomebnb.com`,
+          uid: `cleaning-${job.id}@rah-midland.com`,
           summary: `${this.getCleaningTypeLabel(job.type)}: ${property?.name || 'Unknown Property'}`,
           description: this.generateCleaningDescription(job, property),
           dtstart: startDate,

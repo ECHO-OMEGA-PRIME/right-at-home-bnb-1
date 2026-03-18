@@ -208,7 +208,7 @@ const EMERGENCY_INFO = {
   host: {
     name: 'Steven Palma',
     phone: '(432) 559-1904',
-    email: 'steven@rightathomebnb.com',
+    email: 'steven@rah-midland.com',
   },
   emergency: '911',
   police_non_emergency: '(432) 685-7108',

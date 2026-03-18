@@ -33,7 +33,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://rightathomebnb.com'),
+  metadataBase: new URL('https://rah-midland.com'),
   title: {
     default: 'Right at Home BnB | Premium Vacation Rentals | Midland, TX',
     template: '%s | Right at Home BnB',
@@ -67,7 +67,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'en_US',
-    url: 'https://rightathomebnb.com',
+    url: 'https://rah-midland.com',
     siteName: 'Right at Home BnB',
     title: 'Right at Home BnB | Premium Vacation Rentals | Midland, TX',
     description: 'Experience Texas hospitality at its finest. 22 premium properties in the Permian Basin.',
@@ -96,7 +96,7 @@ export const metadata: Metadata = {
   },
   manifest: '/site.webmanifest',
   alternates: {
-    canonical: 'https://rightathomebnb.com',
+    canonical: 'https://rah-midland.com',
   },
 };
 

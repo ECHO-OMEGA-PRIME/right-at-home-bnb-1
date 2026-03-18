@@ -66,7 +66,7 @@ const store = new Store<StoreSchema>({
     notifications: true,
     theme: 'light',
     lastSync: null,
-    apiUrl: 'https://api.rightathomebnb.com',
+    apiUrl: 'https://api.rah-midland.com',
     autoUpdate: true,
     offlineMode: false,
     backupPath: '',
@@ -495,11 +495,11 @@ function createAppMenu(): void {
       submenu: [
         {
           label: 'Documentation',
-          click: () => shell.openExternal('https://docs.rightathomebnb.com'),
+          click: () => shell.openExternal('https://docs.rah-midland.com'),
         },
         {
           label: 'Support',
-          click: () => shell.openExternal('mailto:support@rightathomebnb.com'),
+          click: () => shell.openExternal('mailto:support@rah-midland.com'),
         },
         { type: 'separator' },
         {

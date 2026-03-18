@@ -28,7 +28,7 @@ const PROPERTIES = [
       "Hot tub hours: 7 AM - 11 PM",
       "Check-in: 3 PM, Check-out: 11 AM"
     ],
-    contact: { phone: "+14329006300", email: "steven@rightathomebnb.com", manager: "Steven Palma" }
+    contact: { phone: "+14329006300", email: "steven@rah-midland.com", manager: "Steven Palma" }
   },
   {
     id: "2634718",
@@ -51,7 +51,7 @@ const PROPERTIES = [
       "Maximum occupancy strictly enforced",
       "Check-in: 3 PM, Check-out: 11 AM"
     ],
-    contact: { phone: "+14329006300", email: "steven@rightathomebnb.com", manager: "Steven Palma" }
+    contact: { phone: "+14329006300", email: "steven@rah-midland.com", manager: "Steven Palma" }
   },
   {
     id: "2643784",
@@ -74,7 +74,7 @@ const PROPERTIES = [
       "Maximum occupancy strictly enforced",
       "Check-in: 3 PM, Check-out: 11 AM"
     ],
-    contact: { phone: "+14329006300", email: "steven@rightathomebnb.com", manager: "Steven Palma" }
+    contact: { phone: "+14329006300", email: "steven@rah-midland.com", manager: "Steven Palma" }
   },
   {
     id: "2643822",
@@ -97,7 +97,7 @@ const PROPERTIES = [
       "Maximum occupancy strictly enforced",
       "Check-in: 3 PM, Check-out: 11 AM"
     ],
-    contact: { phone: "+14329006300", email: "steven@rightathomebnb.com", manager: "Steven Palma" }
+    contact: { phone: "+14329006300", email: "steven@rah-midland.com", manager: "Steven Palma" }
   },
   {
     id: "2643508",
@@ -120,7 +120,7 @@ const PROPERTIES = [
       "Maximum occupancy strictly enforced",
       "Check-in: 3 PM, Check-out: 11 AM"
     ],
-    contact: { phone: "+14329006300", email: "steven@rightathomebnb.com", manager: "Steven Palma" }
+    contact: { phone: "+14329006300", email: "steven@rah-midland.com", manager: "Steven Palma" }
   },
   {
     id: "3355618",
@@ -143,7 +143,7 @@ const PROPERTIES = [
       "Maximum occupancy strictly enforced",
       "Check-in: 3 PM, Check-out: 11 AM"
     ],
-    contact: { phone: "+14329006300", email: "steven@rightathomebnb.com", manager: "Steven Palma" }
+    contact: { phone: "+14329006300", email: "steven@rah-midland.com", manager: "Steven Palma" }
   },
   {
     id: "3477668",
@@ -166,7 +166,7 @@ const PROPERTIES = [
       "Maximum occupancy strictly enforced",
       "Check-in: 3 PM, Check-out: 11 AM"
     ],
-    contact: { phone: "+14329006300", email: "steven@rightathomebnb.com", manager: "Steven Palma" }
+    contact: { phone: "+14329006300", email: "steven@rah-midland.com", manager: "Steven Palma" }
   },
   {
     id: "3559249",
@@ -189,7 +189,7 @@ const PROPERTIES = [
       "Maximum occupancy strictly enforced",
       "Check-in: 3 PM, Check-out: 11 AM"
     ],
-    contact: { phone: "+14329006300", email: "steven@rightathomebnb.com", manager: "Steven Palma" }
+    contact: { phone: "+14329006300", email: "steven@rah-midland.com", manager: "Steven Palma" }
   },
   {
     id: "2636389",
@@ -213,7 +213,7 @@ const PROPERTIES = [
       "Pool hours: 8 AM - 10 PM",
       "Check-in: 3 PM, Check-out: 11 AM"
     ],
-    contact: { phone: "+14329006300", email: "steven@rightathomebnb.com", manager: "Steven Palma" }
+    contact: { phone: "+14329006300", email: "steven@rah-midland.com", manager: "Steven Palma" }
   },
   {
     id: "3005111",
@@ -236,7 +236,7 @@ const PROPERTIES = [
       "Maximum occupancy strictly enforced",
       "Check-in: 3 PM, Check-out: 11 AM"
     ],
-    contact: { phone: "+14329006300", email: "steven@rightathomebnb.com", manager: "Steven Palma" }
+    contact: { phone: "+14329006300", email: "steven@rah-midland.com", manager: "Steven Palma" }
   },
   {
     id: "4179271",
@@ -259,7 +259,7 @@ const PROPERTIES = [
       "Maximum occupancy strictly enforced",
       "Check-in: 3 PM, Check-out: 11 AM"
     ],
-    contact: { phone: "+14329006300", email: "steven@rightathomebnb.com", manager: "Steven Palma" }
+    contact: { phone: "+14329006300", email: "steven@rah-midland.com", manager: "Steven Palma" }
   },
   {
     id: "4056016",
@@ -282,7 +282,7 @@ const PROPERTIES = [
       "Maximum occupancy strictly enforced",
       "Check-in: 3 PM, Check-out: 11 AM"
     ],
-    contact: { phone: "+14329006300", email: "steven@rightathomebnb.com", manager: "Steven Palma" }
+    contact: { phone: "+14329006300", email: "steven@rah-midland.com", manager: "Steven Palma" }
   },
   {
     id: "3724481",
@@ -305,7 +305,7 @@ const PROPERTIES = [
       "Maximum occupancy strictly enforced",
       "Check-in: 3 PM, Check-out: 11 AM"
     ],
-    contact: { phone: "+14329006300", email: "steven@rightathomebnb.com", manager: "Steven Palma" }
+    contact: { phone: "+14329006300", email: "steven@rah-midland.com", manager: "Steven Palma" }
   },
   {
     id: "4437486",
@@ -328,7 +328,7 @@ const PROPERTIES = [
       "Maximum occupancy strictly enforced",
       "Check-in: 3 PM, Check-out: 11 AM"
     ],
-    contact: { phone: "+14329006300", email: "steven@rightathomebnb.com", manager: "Steven Palma" }
+    contact: { phone: "+14329006300", email: "steven@rah-midland.com", manager: "Steven Palma" }
   },
   {
     id: "4471713",
@@ -351,7 +351,7 @@ const PROPERTIES = [
       "Maximum occupancy strictly enforced",
       "Check-in: 3 PM, Check-out: 11 AM"
     ],
-    contact: { phone: "+14329006300", email: "steven@rightathomebnb.com", manager: "Steven Palma" }
+    contact: { phone: "+14329006300", email: "steven@rah-midland.com", manager: "Steven Palma" }
   },
   {
     id: "4581977",
@@ -374,7 +374,7 @@ const PROPERTIES = [
       "Maximum occupancy strictly enforced",
       "Check-in: 3 PM, Check-out: 11 AM"
     ],
-    contact: { phone: "+14329006300", email: "steven@rightathomebnb.com", manager: "Steven Palma" }
+    contact: { phone: "+14329006300", email: "steven@rah-midland.com", manager: "Steven Palma" }
   },
   {
     id: "4135262",
@@ -398,7 +398,7 @@ const PROPERTIES = [
       "Fire pit hours: 7 AM - 11 PM",
       "Check-in: 3 PM, Check-out: 11 AM"
     ],
-    contact: { phone: "+14329006300", email: "steven@rightathomebnb.com", manager: "Steven Palma" }
+    contact: { phone: "+14329006300", email: "steven@rah-midland.com", manager: "Steven Palma" }
   },
   {
     id: "4700881",
@@ -422,7 +422,7 @@ const PROPERTIES = [
       "Outdoor area hours: 7 AM - 11 PM",
       "Check-in: 3 PM, Check-out: 11 AM"
     ],
-    contact: { phone: "+14329006300", email: "steven@rightathomebnb.com", manager: "Steven Palma" }
+    contact: { phone: "+14329006300", email: "steven@rah-midland.com", manager: "Steven Palma" }
   },
   {
     id: "4750070",
@@ -445,7 +445,7 @@ const PROPERTIES = [
       "Maximum occupancy strictly enforced",
       "Check-in: 3 PM, Check-out: 11 AM"
     ],
-    contact: { phone: "+14329006300", email: "steven@rightathomebnb.com", manager: "Steven Palma" }
+    contact: { phone: "+14329006300", email: "steven@rah-midland.com", manager: "Steven Palma" }
   },
   {
     id: "4894280",
@@ -469,7 +469,7 @@ const PROPERTIES = [
       "Music room hours: 9 AM - 10 PM",
       "Check-in: 3 PM, Check-out: 11 AM"
     ],
-    contact: { phone: "+14329006300", email: "steven@rightathomebnb.com", manager: "Steven Palma" }
+    contact: { phone: "+14329006300", email: "steven@rah-midland.com", manager: "Steven Palma" }
   }
 ];
 
@@ -606,7 +606,7 @@ async function handleRequest(request) {
       return new Response(JSON.stringify({
         manager: 'Steven Palma',
         phone: '+14329006300',
-        email: 'steven@rightathomebnb.com',
+        email: 'steven@rah-midland.com',
         website: 'https://rah-midland.com',
         address: 'Midland, Texas',
         hours: 'Available 24/7 for emergencies'

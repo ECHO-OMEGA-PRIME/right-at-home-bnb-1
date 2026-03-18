@@ -984,7 +984,7 @@ class ICalService:
         This allows other platforms to sync from Right at Home BnB.
         """
         cal = Calendar()
-        cal.add("prodid", "-//Right at Home BnB//rightathomebnb.com//")
+        cal.add("prodid", "-//Right at Home BnB//rah-midland.com//")
         cal.add("version", "2.0")
         cal.add("x-wr-calname", f"{property_name} - Bookings")
         cal.add("method", "PUBLISH")
@@ -993,7 +993,7 @@ class ICalService:
 
         for booking in bookings:
             event = Event()
-            event.add("uid", f"{booking.uid}@rightathomebnb.com")
+            event.add("uid", f"{booking.uid}@rah-midland.com")
             event.add("dtstart", booking.check_in)
             event.add("dtend", booking.check_out)
 

@@ -709,7 +709,7 @@ async def get_booking_confirmation(booking_id: str):
     }
 
     # Waiver links
-    base_url = os.getenv("APP_BASE_URL", "https://rightathomebnb.com")
+    base_url = os.getenv("APP_BASE_URL", "https://rah-midland.com")
     waiver_links = {
         "liability_waiver": f"{base_url}/waivers/liability?booking={booking_id}",
         "pet_waiver": f"{base_url}/waivers/pet?booking={booking_id}",
@@ -773,7 +773,7 @@ Thank you for being a great guest!
     contact_info = {
         "owner_name": "Steven Palma",
         "emergency_phone": "(432) 555-0123",
-        "email": "bookings@rightathomebnb.com",
+        "email": "bookings@rah-midland.com",
         "response_time": "Usually within 1 hour during business hours",
     }
 

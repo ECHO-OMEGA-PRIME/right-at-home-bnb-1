@@ -28,7 +28,7 @@ const DEFAULT_CONFIG: MessagingConfig = {
   retryDelayMinutes: 30,
   quietHoursStart: 21,
   quietHoursEnd: 8,
-  emailFromAddress: 'hello@rightathomebnb.com',
+  emailFromAddress: 'hello@rah-midland.com',
   emailFromName: 'Right at Home BnB',
   smsFromNumber: undefined,
 };

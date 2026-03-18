@@ -37,7 +37,7 @@ const defaultSettings: UserSettings = {
   currency: 'USD',
   timezone: 'America/Chicago',
   dateFormat: 'MM/dd/yyyy',
-  apiUrl: 'https://api.rightathomebnb.com',
+  apiUrl: 'https://api.rah-midland.com',
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);

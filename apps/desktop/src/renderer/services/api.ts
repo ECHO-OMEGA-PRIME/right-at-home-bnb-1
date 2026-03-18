@@ -34,7 +34,7 @@ const offlineQueue: QueuedRequest[] = [];
 class ApiService {
   private client: AxiosInstance;
   private isOnline: boolean = navigator.onLine;
-  private baseURL: string = 'https://api.rightathomebnb.com';
+  private baseURL: string = 'https://api.rah-midland.com';
 
   constructor() {
     this.client = axios.create({

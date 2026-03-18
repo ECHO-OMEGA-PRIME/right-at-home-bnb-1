@@ -33,7 +33,7 @@ def seed_users(db):
     users = [
         User(
             id=generate_id(),
-            email="steven@rightathomebnb.com",
+            email="steven@rah-midland.com",
             name="Steven Palma",
             phone="+14325551234",
             role=UserRole.ADMIN,
@@ -41,7 +41,7 @@ def seed_users(db):
         ),
         User(
             id=generate_id(),
-            email="maria@rightathomebnb.com",
+            email="maria@rah-midland.com",
             name="Maria Rodriguez",
             phone="+14325552345",
             role=UserRole.CLEANER,
@@ -49,7 +49,7 @@ def seed_users(db):
         ),
         User(
             id=generate_id(),
-            email="james@rightathomebnb.com",
+            email="james@rah-midland.com",
             name="James Walker",
             phone="+14325553456",
             role=UserRole.CLEANER,
@@ -57,7 +57,7 @@ def seed_users(db):
         ),
         User(
             id=generate_id(),
-            email="sarah@rightathomebnb.com",
+            email="sarah@rah-midland.com",
             name="Sarah Chen",
             phone="+14325554567",
             role=UserRole.CLEANER,
@@ -65,7 +65,7 @@ def seed_users(db):
         ),
         User(
             id=generate_id(),
-            email="carlos@rightathomebnb.com",
+            email="carlos@rah-midland.com",
             name="Carlos Martinez",
             phone="+14325555678",
             role=UserRole.CLEANER,

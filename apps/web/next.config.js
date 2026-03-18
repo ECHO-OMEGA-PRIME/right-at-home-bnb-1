@@ -5,7 +5,7 @@ const nextConfig = {
   images: {
     domains: [
       'localhost',
-      'rightathomebnb.com',
+      'rah-midland.com',
       'rah-midland.com',
       'images.unsplash.com',
       'lh3.googleusercontent.com',

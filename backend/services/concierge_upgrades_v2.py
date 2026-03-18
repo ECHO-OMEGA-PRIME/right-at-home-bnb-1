@@ -416,7 +416,7 @@ Steven, Right At Home BnB"""
         
         # Generate review link if not provided
         if not review_link:
-            review_link = f"https://rightathomebnb.com/review/{property_id}"
+            review_link = f"https://rah-midland.com/review/{property_id}"
         
         message = self.REVIEW_MESSAGE_TEMPLATE.format(
             guest_name=guest_name.split()[0],  # First name only

@@ -8,7 +8,7 @@
 ; ============================================================
 !define PRODUCT_NAME "RightAtHome BnB"
 !define PRODUCT_PUBLISHER "Right At Home Midland"
-!define PRODUCT_WEB_SITE "https://rightathomebnb.com"
+!define PRODUCT_WEB_SITE "https://rah-midland.com"
 
 ; ============================================================
 ; Installer Attributes

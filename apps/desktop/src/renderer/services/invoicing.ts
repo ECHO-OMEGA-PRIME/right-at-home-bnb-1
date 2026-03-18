@@ -59,7 +59,7 @@ class InvoicingService {
     companyName: 'Right at Home BnB',
     companyAddress: 'Midland, TX 79701',
     companyPhone: '(432) 555-0000',
-    companyEmail: 'steven@rightathomebnb.com',
+    companyEmail: 'steven@rah-midland.com',
     taxRate: 0, // Vacation rentals often tax-exempt in TX
     paymentTerms: 7,
     invoicePrefix: 'RAH',

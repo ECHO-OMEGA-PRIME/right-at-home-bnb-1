@@ -45,7 +45,7 @@ export default function TermsOfServicePage() {
               <p className="text-white/80 leading-relaxed">
                 Welcome to Right at Home BnB, operated by Steven Palma (&quot;we,&quot; &quot;us,&quot; &quot;our&quot;). These Terms of
                 Service (&quot;Terms&quot;) govern your use of our vacation rental properties in Midland, Texas, our
-                website (rightathomebnb.com), and all related services.
+                website (rah-midland.com), and all related services.
               </p>
               <p className="text-white/80 leading-relaxed mt-4">
                 By making a reservation, accessing our properties, or using our services, you agree to be

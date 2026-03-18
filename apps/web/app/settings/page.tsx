@@ -136,7 +136,7 @@ const MOCK_PROFILE: UserProfile = {
   id: 'owner-1',
   firstName: 'Steven',
   lastName: 'Palma',
-  email: 'steven@rightathomebnb.com',
+  email: 'steven@rah-midland.com',
   phone: '(432) 559-1904',
   avatarUrl: '',
   businessName: 'Right at Home BnB',
@@ -248,7 +248,7 @@ const MOCK_TEAM: TeamMember[] = [
   {
     id: 'tm-1',
     name: 'Steven Palma',
-    email: 'steven@rightathomebnb.com',
+    email: 'steven@rah-midland.com',
     role: 'owner',
     avatar: 'SP',
     status: 'active',
@@ -258,7 +258,7 @@ const MOCK_TEAM: TeamMember[] = [
   {
     id: 'tm-2',
     name: 'Maria Rodriguez',
-    email: 'maria@rightathomebnb.com',
+    email: 'maria@rah-midland.com',
     role: 'admin',
     avatar: 'MR',
     status: 'active',
@@ -268,7 +268,7 @@ const MOCK_TEAM: TeamMember[] = [
   {
     id: 'tm-3',
     name: 'Carlos Martinez',
-    email: 'carlos@rightathomebnb.com',
+    email: 'carlos@rah-midland.com',
     role: 'manager',
     avatar: 'CM',
     status: 'active',
@@ -278,7 +278,7 @@ const MOCK_TEAM: TeamMember[] = [
   {
     id: 'tm-4',
     name: 'Ana Garcia',
-    email: 'ana@rightathomebnb.com',
+    email: 'ana@rah-midland.com',
     role: 'cleaner',
     avatar: 'AG',
     status: 'active',

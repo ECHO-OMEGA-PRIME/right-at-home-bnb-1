@@ -57,7 +57,7 @@ function generateDoorCode(checkIn: Date): string {
 // Send welcome email to guest
 async function sendWelcomeEmail(booking: any, propertyInfo: any, doorCode: string): Promise<void> {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://rightathomebnb.com';
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://rah-midland.com';
 
     await fetch(`${baseUrl}/api/email/send`, {
       method: 'POST',
@@ -152,7 +152,7 @@ function generateWelcomeEmailHtml(booking: any, property: any, doorCode: string)
     </div>
     <div class="footer">
       <p>Thank you for choosing Right at Home BnB!</p>
-      <p>Midland, Texas | rightathomebnb.com</p>
+      <p>Midland, Texas | rah-midland.com</p>
     </div>
   </div>
 </body>
@@ -163,7 +163,7 @@ function generateWelcomeEmailHtml(booking: any, property: any, doorCode: string)
 // Notify Steven of new booking
 async function notifyOwner(booking: any, property: any): Promise<void> {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://rightathomebnb.com';
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://rah-midland.com';
 
     await fetch(`${baseUrl}/api/email/send`, {
       method: 'POST',

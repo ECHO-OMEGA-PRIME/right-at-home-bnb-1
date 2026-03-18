@@ -40,7 +40,7 @@ const DEV_USERS: DevUser[] = [
   {
     role: 'guest',
     name: 'Guest User',
-    email: 'guest@rightathomebnb.com',
+    email: 'guest@rah-midland.com',
     description: 'Browse properties, make bookings, use AI Concierge',
     icon: User,
     color: 'text-blue-600',
@@ -50,7 +50,7 @@ const DEV_USERS: DevUser[] = [
   {
     role: 'worker',
     name: 'Maria Rodriguez',
-    email: 'maria@rightathomebnb.com',
+    email: 'maria@rah-midland.com',
     description: 'Cleaner with assigned properties and job schedule',
     icon: Sparkles,
     color: 'text-emerald-600',
@@ -60,7 +60,7 @@ const DEV_USERS: DevUser[] = [
   {
     role: 'admin',
     name: 'Admin User',
-    email: 'admin@rightathomebnb.com',
+    email: 'admin@rah-midland.com',
     description: 'Full management access without financial data',
     icon: Shield,
     color: 'text-purple-600',
@@ -70,7 +70,7 @@ const DEV_USERS: DevUser[] = [
   {
     role: 'owner',
     name: 'Steven Palma',
-    email: 'steven@rightathomebnb.com',
+    email: 'steven@rah-midland.com',
     description: 'Property owner with full access including financials',
     icon: Crown,
     color: 'text-amber-600',

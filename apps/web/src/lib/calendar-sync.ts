@@ -543,7 +543,7 @@ export function generateICalExport(
   for (const event of events) {
     const eventLines = [
       'BEGIN:VEVENT',
-      `UID:${event.id}@rightathomebnb.com`,
+      `UID:${event.id}@rah-midland.com`,
       `DTSTAMP:${timestamp}`,
       `DTSTART;VALUE=DATE:${formatICalDate(new Date(event.start))}`,
       `DTEND;VALUE=DATE:${formatICalDate(new Date(event.end))}`,

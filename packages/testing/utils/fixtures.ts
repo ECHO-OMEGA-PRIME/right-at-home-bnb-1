@@ -358,14 +358,14 @@ export const TEST_GUESTS: Partial<Guest>[] = [
 export const TEST_USERS: Partial<User>[] = [
   {
     id: 'user_owner',
-    email: 'steven@rightathomebnb.com',
+    email: 'steven@rah-midland.com',
     name: 'Steven Palma',
     phone: '+14325550001',
     role: 'owner'
   },
   {
     id: 'user_admin',
-    email: 'admin@rightathomebnb.com',
+    email: 'admin@rah-midland.com',
     name: 'Admin User',
     phone: '+14325550002',
     role: 'admin'

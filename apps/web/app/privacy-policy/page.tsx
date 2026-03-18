@@ -45,7 +45,7 @@ export default function PrivacyPolicyPage() {
               <p className="text-white/80 leading-relaxed">
                 Right at Home BnB (&quot;we,&quot; &quot;us,&quot; or &quot;our&quot;) operates vacation rental properties in Midland, Texas,
                 managed by Steven Palma. This Privacy Policy explains how we collect, use, disclose, and safeguard
-                your information when you visit our website (rightathomebnb.com), book our properties through any
+                your information when you visit our website (rah-midland.com), book our properties through any
                 platform (including Airbnb, VRBO, or direct booking), or otherwise interact with our services.
               </p>
               <p className="text-white/80 leading-relaxed mt-4">

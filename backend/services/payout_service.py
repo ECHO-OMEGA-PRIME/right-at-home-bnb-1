@@ -318,11 +318,11 @@ class PayoutService:
         self.smtp_port = int(os.getenv("SMTP_PORT", "587"))
         self.smtp_user = os.getenv("SMTP_USER", "")
         self.smtp_password = os.getenv("SMTP_PASSWORD", "")
-        self.from_email = os.getenv("FROM_EMAIL", "reports@rightathomebnb.com")
+        self.from_email = os.getenv("FROM_EMAIL", "reports@rah-midland.com")
 
         # Owner emails
         self.owner_emails = [
-            os.getenv("OWNER_EMAIL_1", "steven@rightathomebnb.com"),
+            os.getenv("OWNER_EMAIL_1", "steven@rah-midland.com"),
             os.getenv("OWNER_EMAIL_2", "")  # Optional second recipient
         ]
 

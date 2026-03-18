@@ -161,7 +161,7 @@ class AuthService:
         self.token_expiry_hours = 24
 
         # Steven's master credentials
-        self.steven_email = os.getenv("STEVEN_EMAIL", "steven@rightathomebnb.com")
+        self.steven_email = os.getenv("STEVEN_EMAIL", "steven@rah-midland.com")
         self.steven_uid = os.getenv("STEVEN_UID", "steven-palma-owner")
 
     # =========================================================================

@@ -476,7 +476,7 @@ class ICalSyncService:
             iCal string
         """
         cal = Calendar()
-        cal.add("prodid", "-//Right at Home BnB//rightathomebnb.com//")
+        cal.add("prodid", "-//Right at Home BnB//rah-midland.com//")
         cal.add("version", "2.0")
         cal.add("x-wr-calname", f"{property_name} - Bookings")
         cal.add("method", "PUBLISH")
@@ -486,7 +486,7 @@ class ICalSyncService:
 
             # Generate UID from booking ID
             booking_id = booking.get("id", "")
-            uid = f"{booking_id}@rightathomebnb.com"
+            uid = f"{booking_id}@rah-midland.com"
             event.add("uid", uid)
 
             # Set summary

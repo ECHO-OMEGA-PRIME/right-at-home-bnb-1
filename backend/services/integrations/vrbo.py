@@ -126,7 +126,7 @@ class VRBOiCalSync:
         
         for booking in bookings:
             event = Event()
-            event.add('uid', f"rah-{booking['id']}@rightathomebnb.com")
+            event.add('uid', f"rah-{booking['id']}@rah-midland.com")
             event.add('dtstart', booking['check_in'])
             event.add('dtend', booking['check_out'])
             event.add('summary', f"Blocked - {booking.get('guest_name', 'Reserved')}")
@@ -169,7 +169,7 @@ class VRBOiCalSync:
         ical_import_url: str
     ) -> VRBOProperty:
         """Register a property for VRBO sync"""
-        ical_export_url = f"https://api.rightathomebnb.com/ical/{property_id}/vrbo.ics"
+        ical_export_url = f"https://api.rah-midland.com/ical/{property_id}/vrbo.ics"
         
         prop = VRBOProperty(
             property_id=property_id,
