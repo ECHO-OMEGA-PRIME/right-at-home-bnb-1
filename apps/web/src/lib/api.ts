@@ -295,7 +295,9 @@ export const fetchProperties = async (): Promise<Property[]> => {
   if (!response.ok) {
     throw new Error('Failed to fetch properties');
   }
-  return response.json();
+  const data = await response.json();
+  // API returns { properties: [...], total } — extract the array
+  return data.properties ?? data ?? [];
 };
 
 export const fetchProperty = async (id: string): Promise<Property> => {

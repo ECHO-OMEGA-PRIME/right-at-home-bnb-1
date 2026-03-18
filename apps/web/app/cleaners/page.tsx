@@ -73,109 +73,11 @@ const jobTypeConfig = {
   MAINTENANCE: { label: 'Maintenance', color: 'text-red-600', bg: 'bg-red-100' },
 };
 
-// Mock cleaner profiles (would come from API/Firebase)
-const mockCleanerProfiles: CleanerProfile[] = [
-  {
-    id: '1',
-    name: 'Maria Rodriguez',
-    phone: '+1 (432) 555-0101',
-    email: 'maria.r@email.com',
-    address: '123 Main St',
-    city: 'Midland',
-    state: 'TX',
-    zip: '79705',
-    notes: 'Excellent attention to detail. Prefers morning shifts.',
-    stevenNotes: 'Very reliable. Always completes jobs on time.',
-    rating: 4.9,
-    totalJobs: 156,
-    onTimePercentage: 98,
-    avgScore: 95,
-    status: 'active',
-    createdAt: '2024-01-15',
-  },
-  {
-    id: '2',
-    name: 'James Walker',
-    phone: '+1 (432) 555-0102',
-    email: 'james.w@email.com',
-    address: '456 Oak Ave',
-    city: 'Midland',
-    state: 'TX',
-    zip: '79705',
-    notes: 'Good with deep cleans. Has own transportation.',
-    stevenNotes: 'Takes extra time but work is thorough.',
-    rating: 4.7,
-    totalJobs: 89,
-    onTimePercentage: 92,
-    avgScore: 93,
-    status: 'active',
-    createdAt: '2024-03-20',
-  },
-  {
-    id: '3',
-    name: 'Sarah Chen',
-    phone: '+1 (432) 555-0103',
-    email: 'sarah.c@email.com',
-    address: '789 Elm St',
-    city: 'Midland',
-    state: 'TX',
-    zip: '79706',
-    notes: 'Bilingual. Great guest reviews.',
-    stevenNotes: 'Guests love her. Always gets great feedback.',
-    rating: 4.8,
-    totalJobs: 134,
-    onTimePercentage: 96,
-    avgScore: 97,
-    status: 'active',
-    createdAt: '2024-02-10',
-  },
-];
+// Cleaner profiles — loaded from API when connected
+const mockCleanerProfiles: CleanerProfile[] = [];
 
-// Mock AI-detected review notifications
-const mockReviewNotifications: ReviewNotification[] = [
-  {
-    id: 'rev_1',
-    cleanerId: '1',
-    cleanerName: 'Maria Rodriguez',
-    guestName: 'John & Sarah Thompson',
-    propertyName: 'Downtown Loft',
-    reviewDate: '2026-01-17',
-    reviewText: 'The place was absolutely spotless when we arrived! Maria did an incredible job. Every corner was cleaned, fresh linens, and even the kitchen appliances were sparkling. Would definitely recommend!',
-    sentiment: 'positive',
-    sentimentScore: 92,
-    suggestedImpact: 3,
-    aiAnalysis: 'Strong positive sentiment detected. Guest specifically praised cleaning quality, attention to detail, and overall presentation. Keywords: "spotless", "incredible job", "sparkling". Recommend +3 points.',
-    status: 'pending',
-  },
-  {
-    id: 'rev_2',
-    cleanerId: '2',
-    cleanerName: 'James Walker',
-    guestName: 'Mike Davis',
-    propertyName: 'Ranch House',
-    reviewDate: '2026-01-16',
-    reviewText: 'Found some dust under the bed and the bathroom mirror had streaks. The rest was okay but expected better given the cleaning fee.',
-    sentiment: 'negative',
-    sentimentScore: -45,
-    suggestedImpact: -2,
-    aiAnalysis: 'Moderate negative sentiment. Guest mentions specific cleaning issues: dust under bed, streaks on mirror. Disappointment with value for cleaning fee. Recommend -2 points for quality concerns.',
-    status: 'pending',
-  },
-  {
-    id: 'rev_3',
-    cleanerId: '3',
-    cleanerName: 'Sarah Chen',
-    guestName: 'Emily Watson',
-    propertyName: 'Garden Villa',
-    reviewDate: '2026-01-15',
-    reviewText: 'Sarah went above and beyond! Not only was everything clean but she left a lovely welcome note and arranged fresh flowers. The personal touch made our anniversary stay extra special.',
-    sentiment: 'positive',
-    sentimentScore: 98,
-    suggestedImpact: 5,
-    aiAnalysis: 'Exceptional positive sentiment. Guest highlights above-and-beyond service: welcome note, fresh flowers, personal touch. Special occasion (anniversary) made memorable. Recommend +5 points for exceptional service.',
-    status: 'pending',
-  },
-];
+// Review notifications — populated from AI review scanner when connected
+const mockReviewNotifications: ReviewNotification[] = [];
 
 export default function CleanersPage() {
   const { data: cleaners, isLoading: loadingCleaners } = useCleaners();

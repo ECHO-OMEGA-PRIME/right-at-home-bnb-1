@@ -44,18 +44,8 @@ interface PayrollCalculation {
   netPay: number;
 }
 
-const MOCK_EMPLOYEES: Employee[] = [
-  { id: 'E001', name: 'Maria Garcia', role: 'Cleaner', hourlyRate: 1800, regularHours: 40, overtimeHours: 4, ytdGross: 1920000 },
-  { id: 'E002', name: 'James Wilson', role: 'Maintenance', hourlyRate: 2200, regularHours: 40, overtimeHours: 8, ytdGross: 2640000 },
-  { id: 'E003', name: 'Aisha Patel', role: 'Cleaner', hourlyRate: 1800, regularHours: 38, overtimeHours: 0, ytdGross: 1728000 },
-  { id: 'E004', name: 'Robert Chen', role: 'Inspector', hourlyRate: 2500, regularHours: 40, overtimeHours: 2, ytdGross: 3120000 },
-  { id: 'E005', name: 'Sarah Johnson', role: 'Manager', hourlyRate: 3200, regularHours: 40, overtimeHours: 6, ytdGross: 4224000 },
-  { id: 'E006', name: 'Carlos Mendez', role: 'Maintenance', hourlyRate: 2000, regularHours: 40, overtimeHours: 3, ytdGross: 2280000 },
-  { id: 'E007', name: 'Linda Thompson', role: 'Cleaner', hourlyRate: 1700, regularHours: 32, overtimeHours: 0, ytdGross: 1305600 },
-  { id: 'E008', name: 'David Okonkwo', role: 'Cleaner', hourlyRate: 1800, regularHours: 40, overtimeHours: 2, ytdGross: 1872000 },
-  { id: 'E009', name: 'Jennifer Martinez', role: 'Inspector', hourlyRate: 2400, regularHours: 40, overtimeHours: 0, ytdGross: 2880000 },
-  { id: 'E010', name: 'Michael Brown', role: 'Maintenance', hourlyRate: 2100, regularHours: 40, overtimeHours: 5, ytdGross: 2520000 },
-];
+// Employee data — loaded from HR/payroll system when connected
+const MOCK_EMPLOYEES: Employee[] = [];
 
 const SS_RATE = 0.062;
 const SS_CAP_CENTS = 16860000;

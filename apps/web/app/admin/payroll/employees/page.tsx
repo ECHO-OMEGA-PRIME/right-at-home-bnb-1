@@ -25,48 +25,8 @@ interface Employee {
   payHistory: PayHistoryEntry[]; hoursLog: HoursLogEntry[]; certifications: Certification[];
 }
 
-const MOCK_EMPLOYEES: Employee[] = [
-  { id: 'E001', name: 'Maria Garcia', email: 'maria.garcia@rahbnb.com', phone: '(432) 555-0101', role: 'Cleaner', hireDate: '2024-03-15', hourlyRate: 1800, status: 'Active', address: '1421 N Big Spring St, Midland, TX 79701', emergencyContact: 'Pedro Garcia (432) 555-0199',
-    payHistory: [{ date: '2026-03-01', grossPay: 158400, netPay: 125160, hours: 84 }, { date: '2026-02-15', grossPay: 144000, netPay: 113760, hours: 80 }, { date: '2026-02-01', grossPay: 151200, netPay: 119448, hours: 82 }, { date: '2026-01-15', grossPay: 144000, netPay: 113760, hours: 80 }],
-    hoursLog: [{ date: '2026-03-14', hoursWorked: 6, property: 'Desert Rose Villa', taskType: 'Deep Clean' }, { date: '2026-03-13', hoursWorked: 8, property: 'Permian Sunset', taskType: 'Turnover Clean' }, { date: '2026-03-12', hoursWorked: 7, property: 'Basin View Loft', taskType: 'Turnover Clean' }, { date: '2026-03-11', hoursWorked: 8, property: 'Wildcatter Suite', taskType: 'Deep Clean' }],
-    certifications: [{ name: 'Bloodborne Pathogen Training', issueDate: '2025-06-01', expiryDate: '2026-06-01', status: 'Valid' }, { name: 'OSHA Cleaning Safety', issueDate: '2025-01-15', expiryDate: '2027-01-15', status: 'Valid' }] },
-  { id: 'E002', name: 'James Wilson', email: 'james.wilson@rahbnb.com', phone: '(432) 555-0102', role: 'Maintenance', hireDate: '2023-09-01', hourlyRate: 2200, status: 'Active', address: '2305 W Illinois Ave, Midland, TX 79701', emergencyContact: 'Lisa Wilson (432) 555-0298',
-    payHistory: [{ date: '2026-03-01', grossPay: 202400, netPay: 158872, hours: 88 }, { date: '2026-02-15', grossPay: 176000, netPay: 138160, hours: 80 }, { date: '2026-02-01', grossPay: 189200, netPay: 148522, hours: 84 }],
-    hoursLog: [{ date: '2026-03-14', hoursWorked: 8, property: 'Oil Patch Palace', taskType: 'Plumbing Repair' }, { date: '2026-03-13', hoursWorked: 10, property: 'Derrick Heights', taskType: 'HVAC Service' }, { date: '2026-03-12', hoursWorked: 8, property: 'Pump Jack Place', taskType: 'Appliance Repair' }],
-    certifications: [{ name: 'EPA 608 HVAC', issueDate: '2023-11-01', expiryDate: '2028-11-01', status: 'Valid' }, { name: 'Plumbing License', issueDate: '2024-02-01', expiryDate: '2026-02-01', status: 'Expired' }, { name: 'Electrical Safety', issueDate: '2025-05-01', expiryDate: '2026-05-01', status: 'Expiring' }] },
-  { id: 'E003', name: 'Aisha Patel', email: 'aisha.patel@rahbnb.com', phone: '(432) 555-0103', role: 'Cleaner', hireDate: '2024-08-20', hourlyRate: 1800, status: 'Active', address: '510 E Florida Ave, Midland, TX 79701', emergencyContact: 'Ravi Patel (432) 555-0397',
-    payHistory: [{ date: '2026-03-01', grossPay: 136800, netPay: 108072, hours: 76 }, { date: '2026-02-15', grossPay: 144000, netPay: 113760, hours: 80 }],
-    hoursLog: [{ date: '2026-03-14', hoursWorked: 7, property: 'Midland Manor', taskType: 'Turnover Clean' }, { date: '2026-03-13', hoursWorked: 8, property: 'West Texas Haven', taskType: 'Turnover Clean' }],
-    certifications: [{ name: 'Bloodborne Pathogen Training', issueDate: '2025-08-01', expiryDate: '2026-08-01', status: 'Valid' }] },
-  { id: 'E004', name: 'Robert Chen', email: 'robert.chen@rahbnb.com', phone: '(432) 555-0104', role: 'Inspector', hireDate: '2024-01-10', hourlyRate: 2500, status: 'Active', address: '3201 Cuthbert Ave, Midland, TX 79701', emergencyContact: 'Amy Chen (432) 555-0496',
-    payHistory: [{ date: '2026-03-01', grossPay: 207500, netPay: 162890, hours: 82 }, { date: '2026-02-15', grossPay: 200000, netPay: 157000, hours: 80 }],
-    hoursLog: [{ date: '2026-03-14', hoursWorked: 6, property: 'Roughneck Retreat', taskType: 'Quality Inspection' }, { date: '2026-03-13', hoursWorked: 8, property: 'Pumpjack Patio', taskType: 'Quality Inspection' }],
-    certifications: [{ name: 'Property Inspection Cert', issueDate: '2024-03-01', expiryDate: '2027-03-01', status: 'Valid' }, { name: 'Fire Safety Inspector', issueDate: '2025-01-01', expiryDate: '2026-06-01', status: 'Valid' }] },
-  { id: 'E005', name: 'Sarah Johnson', email: 'sarah.johnson@rahbnb.com', phone: '(432) 555-0105', role: 'Manager', hireDate: '2023-01-15', hourlyRate: 3200, status: 'Active', address: '4010 Sinclair Ave, Midland, TX 79707', emergencyContact: 'Tom Johnson (432) 555-0595',
-    payHistory: [{ date: '2026-03-01', grossPay: 313600, netPay: 238336, hours: 86 }, { date: '2026-02-15', grossPay: 256000, netPay: 194560, hours: 80 }],
-    hoursLog: [{ date: '2026-03-14', hoursWorked: 10, property: 'All Properties', taskType: 'Management' }, { date: '2026-03-13', hoursWorked: 9, property: 'All Properties', taskType: 'Staff Oversight' }],
-    certifications: [{ name: 'CPM - Certified Property Manager', issueDate: '2023-06-01', expiryDate: '2026-06-01', status: 'Expiring' }, { name: 'First Aid / CPR', issueDate: '2025-09-01', expiryDate: '2027-09-01', status: 'Valid' }] },
-  { id: 'E006', name: 'Carlos Mendez', email: 'carlos.mendez@rahbnb.com', phone: '(432) 555-0106', role: 'Maintenance', hireDate: '2024-05-01', hourlyRate: 2000, status: 'Active', address: '1815 Garden City Hwy, Midland, TX 79701', emergencyContact: 'Rosa Mendez (432) 555-0694',
-    payHistory: [{ date: '2026-03-01', grossPay: 170000, netPay: 133450, hours: 83 }],
-    hoursLog: [{ date: '2026-03-14', hoursWorked: 8, property: 'Lone Star Lodge', taskType: 'Landscaping' }],
-    certifications: [{ name: 'Pool Maintenance Cert', issueDate: '2025-04-01', expiryDate: '2027-04-01', status: 'Valid' }] },
-  { id: 'E007', name: 'Linda Thompson', email: 'linda.thompson@rahbnb.com', phone: '(432) 555-0107', role: 'Cleaner', hireDate: '2025-02-01', hourlyRate: 1700, status: 'Active', address: '920 N Marienfeld St, Midland, TX 79701', emergencyContact: 'Bill Thompson (432) 555-0793',
-    payHistory: [{ date: '2026-03-01', grossPay: 108800, netPay: 85936, hours: 64 }],
-    hoursLog: [{ date: '2026-03-14', hoursWorked: 6, property: 'Tumbleweed Terrace', taskType: 'Turnover Clean' }],
-    certifications: [] },
-  { id: 'E008', name: 'David Okonkwo', email: 'david.okonkwo@rahbnb.com', phone: '(432) 555-0108', role: 'Cleaner', hireDate: '2024-11-10', hourlyRate: 1800, status: 'Active', address: '2601 W Wall St, Midland, TX 79701', emergencyContact: 'Grace Okonkwo (432) 555-0892',
-    payHistory: [{ date: '2026-03-01', grossPay: 151200, netPay: 119448, hours: 82 }],
-    hoursLog: [{ date: '2026-03-14', hoursWorked: 8, property: 'Cactus Creek Cottage', taskType: 'Deep Clean' }],
-    certifications: [{ name: 'Bloodborne Pathogen Training', issueDate: '2025-11-01', expiryDate: '2026-11-01', status: 'Valid' }] },
-  { id: 'E009', name: 'Jennifer Martinez', email: 'jennifer.martinez@rahbnb.com', phone: '(432) 555-0109', role: 'Inspector', hireDate: '2024-06-15', hourlyRate: 2400, status: 'On Leave', address: '1105 Andrews Hwy, Midland, TX 79701', emergencyContact: 'Mark Martinez (432) 555-0991',
-    payHistory: [{ date: '2026-02-15', grossPay: 192000, netPay: 150720, hours: 80 }],
-    hoursLog: [],
-    certifications: [{ name: 'Property Inspection Cert', issueDate: '2024-09-01', expiryDate: '2027-09-01', status: 'Valid' }] },
-  { id: 'E010', name: 'Michael Brown', email: 'michael.brown@rahbnb.com', phone: '(432) 555-0110', role: 'Maintenance', hireDate: '2023-11-20', hourlyRate: 2100, status: 'Active', address: '3415 Thomason Dr, Midland, TX 79703', emergencyContact: 'Karen Brown (432) 555-1090',
-    payHistory: [{ date: '2026-03-01', grossPay: 189000, netPay: 148365, hours: 85 }, { date: '2026-02-15', grossPay: 168000, netPay: 131880, hours: 80 }],
-    hoursLog: [{ date: '2026-03-14', hoursWorked: 9, property: 'Basin View Loft', taskType: 'Electrical Repair' }, { date: '2026-03-13', hoursWorked: 8, property: 'Desert Rose Villa', taskType: 'General Maintenance' }],
-    certifications: [{ name: 'Electrical Safety', issueDate: '2024-01-01', expiryDate: '2026-01-01', status: 'Expired' }, { name: 'OSHA 10-Hour', issueDate: '2024-06-01', expiryDate: '2029-06-01', status: 'Valid' }] },
-];
+// Employee data — loaded from HR/payroll system when connected
+const MOCK_EMPLOYEES: Employee[] = [];
 
 const ROLES: EmployeeRole[] = ['Cleaner', 'Maintenance', 'Inspector', 'Manager'];
 
@@ -102,7 +62,7 @@ export default function EmployeesPage() {
 
   const activeCount = employees.filter((e) => e.status === 'Active').length;
   const onLeaveCount = employees.filter((e) => e.status === 'On Leave').length;
-  const avgRate = Math.round(employees.reduce((s, e) => s + e.hourlyRate, 0) / employees.length);
+  const avgRate = employees.length > 0 ? Math.round(employees.reduce((s, e) => s + e.hourlyRate, 0) / employees.length) : 0;
 
   function toggleSort(field: typeof sortField) { if (sortField === field) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc')); else { setSortField(field); setSortDir('asc'); } }
   const SortIcon = ({ field }: { field: typeof sortField }) => sortField === field ? (sortDir === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />) : null;

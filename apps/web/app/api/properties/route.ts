@@ -1,71 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// ── In-memory property store ─────────────────────────────────────────────
-const properties: any[] = [
-  {
-    id: 'PROP-001',
-    name: 'Sunset Retreat',
-    address: '1423 W Illinois Ave, Midland, TX 79701',
-    status: 'active',
-    bedrooms: 3,
-    bathrooms: 2,
-    max_guests: 8,
-    pet_allowed: true,
-    pet_fee_cents: 5000,
-    nightly_rate_cents: 17500,
-    cleaning_fee_cents: 12500,
-    description: 'Beautifully renovated 3-bed home with a large backyard, perfect for families and oilfield crews.',
-    amenities: ['wifi', 'washer_dryer', 'kitchen', 'parking', 'yard', 'grill', 'smart_lock'],
-    images: ['/properties/sunset-retreat-1.jpg'],
-    check_in_time: '15:00',
-    check_out_time: '11:00',
-    min_nights: 1,
-    created_at: '2025-06-01T00:00:00Z',
-    updated_at: '2026-02-15T00:00:00Z',
-  },
-  {
-    id: 'PROP-002',
-    name: 'Oilfield Oasis',
-    address: '802 N Marienfeld St, Midland, TX 79701',
-    status: 'active',
-    bedrooms: 4,
-    bathrooms: 2.5,
-    max_guests: 10,
-    pet_allowed: false,
-    pet_fee_cents: 0,
-    nightly_rate_cents: 22500,
-    cleaning_fee_cents: 15000,
-    description: 'Spacious 4-bed house near downtown. Perfect for extended crew stays.',
-    amenities: ['wifi', 'washer_dryer', 'kitchen', 'parking', 'smart_lock', 'workspace'],
-    images: ['/properties/oilfield-oasis-1.jpg'],
-    check_in_time: '15:00',
-    check_out_time: '11:00',
-    min_nights: 2,
-    created_at: '2025-08-15T00:00:00Z',
-    updated_at: '2026-01-20T00:00:00Z',
-  },
-  {
-    id: 'PROP-003',
-    name: 'Permian Basin Pad',
-    address: '515 E Pine Ave, Midland, TX 79701',
-    status: 'maintenance',
-    bedrooms: 2,
-    bathrooms: 1,
-    max_guests: 4,
-    pet_allowed: true,
-    pet_fee_cents: 3500,
-    nightly_rate_cents: 12500,
-    cleaning_fee_cents: 10000,
-    description: 'Cozy 2-bed bungalow. Currently undergoing renovation.',
-    amenities: ['wifi', 'kitchen', 'parking'],
-    images: [],
-    check_in_time: '15:00',
-    check_out_time: '11:00',
-    min_nights: 1,
-    created_at: '2025-11-01T00:00:00Z',
-    updated_at: '2026-03-01T00:00:00Z',
-  },
-];
+// ── In-memory property store (populated from DB/API when connected) ──────
+const properties: any[] = [];
 
 // ── GET /api/properties ──────────────────────────────────────────────────
 export async function GET(request: NextRequest) {
