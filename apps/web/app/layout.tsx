@@ -138,7 +138,7 @@ export default function RootLayout({
             {children}
           </main>
 
-          {/* Floating SENTINEL V2 Chat Widget */}
+          {/* Steven AI Concierge Widget */}
           <SentinelWidget mode="widget" />
         </Providers>
       </body>
