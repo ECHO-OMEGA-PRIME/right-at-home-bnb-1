@@ -20,6 +20,7 @@ import {
 import { useProperties, Property } from '@/lib/api';
 import { PropertyCard, PropertyWithPhotos } from '@/components/PropertyCard';
 import { PropertyGallery, PropertyPhoto } from '@/components/PropertyGallery';
+import { getPhotosForProperty } from '@/lib/property-photos';
 
 type ViewMode = 'grid' | 'list' | 'featured';
 type StatusFilter = 'all' | 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE';
@@ -603,18 +604,16 @@ function QuickViewModal({
   property: PropertyWithPhotos;
   onClose: () => void;
 }) {
-  // Generate mock photos if none exist
+  // Get real photos from manifest if none in API response
   const photos: PropertyPhoto[] = property.photos?.length
     ? property.photos
-    : [
-        {
-          id: '1',
-          url: '/images/property-placeholder.jpg',
-          alt: `${property.name} - Main`,
-          isPrimary: true,
-          category: 'exterior',
-        },
-      ];
+    : getPhotosForProperty(property.id).map((p, i) => ({
+        id: p.filename,
+        url: p.url,
+        alt: p.alt,
+        isPrimary: i === 0,
+        category: p.category as PropertyPhoto['category'],
+      }));
 
   return (
     <motion.div

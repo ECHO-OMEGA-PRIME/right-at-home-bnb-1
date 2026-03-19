@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { Property } from '@/lib/api';
 import { PropertyPhoto, CompactGallery } from './PropertyGallery';
+import { getPhotosForProperty } from '@/lib/property-photos';
 
 // Amenity icons mapping
 const amenityIcons: Record<string, React.ElementType> = {
@@ -96,17 +97,16 @@ export function PropertyCard({
   const TypeIcon = propertyTypeIcons[property.propertyType] || Home;
   const status = statusConfig[property.status];
 
-  // Get display photos or create placeholder
+  // Get display photos — use API photos, fall back to photo manifest
   const photos: PropertyPhoto[] = property.photos?.length
     ? property.photos
-    : [
-        {
-          id: 'placeholder',
-          url: `/properties/${property.id}/hero.jpg`,
-          alt: property.name,
-          isPrimary: true,
-        },
-      ];
+    : getPhotosForProperty(property.id).map((p, i) => ({
+        id: p.filename,
+        url: p.url,
+        alt: p.alt,
+        isPrimary: i === 0,
+        category: p.category as PropertyPhoto['category'],
+      }));
 
   // Priority amenities to show (max 4)
   const priorityAmenities = ['wifi', 'pool', 'hot tub', 'parking', 'kitchen', 'tv'];
@@ -374,19 +374,22 @@ function CompactPropertyCard({
         <div className="flex items-center gap-4">
           {/* Thumbnail */}
           <div className="w-20 h-20 rounded-xl overflow-hidden flex-shrink-0 relative">
-            {property.photos?.[0] ? (
-              <Image
-                src={property.photos[0].url}
-                alt={property.name}
-                fill
-                className="object-cover"
-                sizes="80px"
-              />
-            ) : (
-              <div className="w-full h-full bg-gradient-to-br from-[#500000]/10 to-[#722F37]/10 flex items-center justify-center">
-                <TypeIcon className="w-8 h-8 text-[#500000]/30" />
-              </div>
-            )}
+            {(() => {
+              const thumbUrl = property.photos?.[0]?.url || getPhotosForProperty(property.id)[0]?.url;
+              return thumbUrl ? (
+                <Image
+                  src={thumbUrl}
+                  alt={property.name}
+                  fill
+                  className="object-cover"
+                  sizes="80px"
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-[#500000]/10 to-[#722F37]/10 flex items-center justify-center">
+                  <TypeIcon className="w-8 h-8 text-[#500000]/30" />
+                </div>
+              );
+            })()}
           </div>
 
           {/* Content */}
