@@ -19,6 +19,7 @@
 
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAdminFinance } from '@/lib/api';
 import {
   DollarSign, TrendingUp, TrendingDown, BarChart3, PieChart,
   Calendar, Download, Filter, ArrowUpRight, ArrowDownRight,
@@ -97,37 +98,7 @@ interface WeeklyPayout {
 type SortField = 'propertyName' | 'grossRevenue' | 'expenses' | 'netProfit' | 'occupancyPercent' | 'profitMarginPercent';
 type SortDirection = 'asc' | 'desc';
 
-// ============================================
-// MOCK DATA
-// ============================================
-
-// Properties loaded from database — no mock data
-const MOCK_PROPERTIES: Property[] = [];
-
-// Property financials loaded from database — no generated mock data
-const generatePropertyFinancials = (): PropertyFinancials[] => {
-  return [];
-};
-
-// Monthly trend data loaded from database
-const generateMonthlyData = (): MonthlyData[] => {
-  return [];
-};
-
-// Expense breakdown loaded from database
-const generateExpenseBreakdown = (_totalExpenses: number): ExpenseCategory[] => {
-  return [];
-};
-
-// Booking gaps loaded from calendar sync
-const generateBookingGaps = (): BookingGap[] => {
-  return [];
-};
-
-// Weekly payout report loaded from database
-const generateWeeklyPayouts = (): WeeklyPayout[] => {
-  return [];
-};
+// Data loaded from API via useAdminFinance hook
 
 // ============================================
 // CHART COLORS
@@ -231,41 +202,24 @@ export default function AdminFinanceDashboard() {
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [showAllProperties, setShowAllProperties] = useState(false);
   const [selectedGap, setSelectedGap] = useState<string | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
 
-  // Data
-  const propertyFinancials = useMemo(() => generatePropertyFinancials(), []);
-  const monthlyData = useMemo(() => generateMonthlyData(), []);
-  const bookingGaps = useMemo(() => generateBookingGaps(), []);
-  const weeklyPayouts = useMemo(() => generateWeeklyPayouts(), []);
+  // API Data
+  const { data: apiData, isLoading, refetch, isRefetching } = useAdminFinance(dateRange);
 
-  // Calculate totals
-  const totals = useMemo(() => {
-    const totalRevenue = propertyFinancials.reduce((sum, p) => sum + p.grossRevenue, 0);
-    const totalExpenses = propertyFinancials.reduce((sum, p) => sum + p.expenses, 0);
-    const netProfit = totalRevenue - totalExpenses;
-    const avgOccupancy = Math.round(propertyFinancials.reduce((sum, p) => sum + p.occupancyPercent, 0) / propertyFinancials.length);
-    const avgRevPAR = Math.round(propertyFinancials.reduce((sum, p) => sum + p.revPAR, 0) / propertyFinancials.length);
-    const profitMargin = ((netProfit / totalRevenue) * 100).toFixed(1);
+  const propertyFinancials = apiData?.propertyFinancials || [];
+  const monthlyData = apiData?.monthlyData || [];
+  const bookingGaps = apiData?.bookingGaps || [];
+  const weeklyPayouts = apiData?.weeklyPayouts || [];
+  const expenseBreakdown = apiData?.expenseBreakdown || [];
 
-    // YTD multiplier based on selection
-    const multiplier = dateRange === 'mtd' ? 1 : dateRange === 'qtd' ? 3 : 12;
-
-    return {
-      totalRevenue: totalRevenue * multiplier,
-      totalExpenses: totalExpenses * multiplier,
-      netProfit: netProfit * multiplier,
-      avgOccupancy,
-      avgRevPAR,
-      profitMargin,
-    };
-  }, [propertyFinancials, dateRange]);
-
-  // Expense breakdown
-  const expenseBreakdown = useMemo(
-    () => generateExpenseBreakdown(totals.totalExpenses),
-    [totals.totalExpenses]
-  );
+  const totals = apiData?.totals || {
+    totalRevenue: 0,
+    totalExpenses: 0,
+    netProfit: 0,
+    avgOccupancy: 0,
+    avgRevPAR: 0,
+    profitMargin: 0,
+  };
 
   // Sorted properties
   const sortedProperties = useMemo(() => {
@@ -292,9 +246,7 @@ export default function AdminFinanceDashboard() {
 
   // Handle refresh
   const handleRefresh = async () => {
-    setRefreshing(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setRefreshing(false);
+    await refetch();
   };
 
   // Export handlers
@@ -335,6 +287,16 @@ export default function AdminFinanceDashboard() {
     return sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />;
   };
 
+  if (isLoading && !apiData) {
+    return (
+      <DashboardShell>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-2 border-[#500000]/30 border-t-[#500000]" />
+        </div>
+      </DashboardShell>
+    );
+  }
+
   return (
     <DashboardShell>
       <div className="p-6 lg:p-8 max-w-[1800px] mx-auto">
@@ -371,9 +333,9 @@ export default function AdminFinanceDashboard() {
             <button
               onClick={handleRefresh}
               className="p-2.5 bg-white rounded-xl border border-[#2D2D2D]/10 hover:border-[#500000]/30 transition-colors"
-              disabled={refreshing}
+              disabled={isRefetching}
             >
-              <RefreshCw className={`w-5 h-5 text-[#500000] ${refreshing ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-5 h-5 text-[#500000] ${isRefetching ? 'animate-spin' : ''}`} />
             </button>
 
             {/* Export Dropdown */}
@@ -420,7 +382,7 @@ export default function AdminFinanceDashboard() {
             title="Total Expenses"
             value={totals.totalExpenses}
             prefix="$"
-            subValue={`${((totals.totalExpenses / totals.totalRevenue) * 100).toFixed(1)}% of revenue`}
+            subValue={`${totals.totalRevenue > 0 ? ((totals.totalExpenses / totals.totalRevenue) * 100).toFixed(1) : '0.0'}% of revenue`}
             change="+5.2% vs last period"
             changeType="negative"
             icon={TrendingDown}

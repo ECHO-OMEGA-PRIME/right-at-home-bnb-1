@@ -1080,6 +1080,65 @@ export function useOwnerDashboard() {
 }
 
 // ============================================
+// ADMIN FINANCE API
+// ============================================
+
+export interface AdminFinanceResponse {
+  range: string;
+  totals: {
+    totalRevenue: number;
+    totalExpenses: number;
+    netProfit: number;
+    avgOccupancy: number;
+    avgRevPAR: number;
+    profitMargin: number;
+    propertyCount: number;
+    avgRating: number;
+  };
+  propertyFinancials: {
+    propertyId: string;
+    propertyName: string;
+    grossRevenue: number;
+    expenses: number;
+    netProfit: number;
+    occupancyPercent: number;
+    profitMarginPercent: number;
+    totalNights: number;
+    bookedNights: number;
+    avgDailyRate: number;
+    revPAR: number;
+  }[];
+  monthlyData: {
+    month: string;
+    monthLabel: string;
+    revenue: number;
+    expenses: number;
+    netProfit: number;
+  }[];
+  expenseBreakdown: {
+    category: string;
+    amount: number;
+    percentage: number;
+    taxCategory: string;
+  }[];
+  bookingGaps: any[];
+  weeklyPayouts: any[];
+}
+
+async function fetchAdminFinance(range: string): Promise<AdminFinanceResponse> {
+  const { data } = await api.get(`/admin/finance?range=${range}`);
+  return data;
+}
+
+export function useAdminFinance(range: string) {
+  return useQuery({
+    queryKey: ['adminFinance', range],
+    queryFn: () => fetchAdminFinance(range),
+    refetchInterval: 60000,
+  });
+}
+
+// ============================================
 // GUEST DETAIL API
 // ============================================
 
