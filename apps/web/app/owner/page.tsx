@@ -13,7 +13,7 @@
  * @owner Right at Home BnB - Midland, TX
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import {
@@ -28,6 +28,7 @@ import {
 } from 'recharts';
 import DashboardShell from '@/components/layout/DashboardShell';
 import { useAuth } from '@/context/AuthContext';
+import { useOwnerDashboard } from '@/lib/api';
 import toast from 'react-hot-toast';
 
 // Brand Colors
@@ -63,8 +64,8 @@ interface DashboardData {
   occupancy_change_percent: number;
 }
 
-// Mock data generator - returns empty/default data; real data comes from the API
-const generateMockData = (): DashboardData => ({
+// Default empty data (shown while loading)
+const EMPTY_DATA: DashboardData = {
   owner_id: '',
   owner_name: '',
   properties_count: 0,
@@ -83,44 +84,24 @@ const generateMockData = (): DashboardData => ({
   pending_maintenance: [],
   revenue_change_percent: 0,
   occupancy_change_percent: 0,
-});
-
-// Revenue chart data - empty; populated from API in production
-const generateRevenueChartData = () => {
-  return [] as { month: string; revenue: number; expenses: number; net: number }[];
 };
-
-// Expense breakdown data - empty; populated from API in production
-const generateExpenseBreakdown = () => [] as { name: string; value: number; color: string }[];
 
 export default function OwnerDashboardPage() {
   const { appUser, isOwner } = useAuth();
-  const [loading, setLoading] = useState(true);
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [revenueData] = useState(generateRevenueChartData);
-  const [expenseData] = useState(generateExpenseBreakdown);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const { data: apiData, isLoading: loading, refetch, isRefetching } = useOwnerDashboard();
 
-  useEffect(() => {
-    // Simulate API call
-    const fetchData = async () => {
-      setLoading(true);
-      await new Promise(resolve => setTimeout(resolve, 500));
-      setData(generateMockData());
-      setLoading(false);
-    };
-    fetchData();
-  }, []);
+  const data: DashboardData = apiData || EMPTY_DATA;
+  const revenueData: { month: string; revenue: number; expenses: number; net: number }[] = apiData?.revenue_chart || [];
+  const expenseData: { name: string; value: number; color: string }[] = apiData?.expense_breakdown || [];
 
   const handleRefresh = async () => {
-    setIsRefreshing(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setData(generateMockData());
-    setIsRefreshing(false);
+    await refetch();
     toast.success('Dashboard refreshed');
   };
 
-  if (loading || !data) {
+  const isRefreshing = isRefetching;
+
+  if (loading && !apiData) {
     return (
       <DashboardShell>
         <div className="flex items-center justify-center min-h-screen">

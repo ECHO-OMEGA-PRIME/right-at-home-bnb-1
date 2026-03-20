@@ -509,6 +509,70 @@ export const fetchPropertyPnL = async (propertyId: string) => {
   return data;
 };
 
+// PayPal Integration
+export interface PayPalStats {
+  total_invoices: number;
+  total_paid: number;
+  total_pending: number;
+  total_revenue: number;
+  total_surcharges: number;
+  avg_invoice: number;
+}
+
+export interface PayPalTransaction {
+  id: number;
+  invoice_id: number;
+  paypal_transaction_id: string;
+  amount: number;
+  method: string;
+  status: string;
+  payer_email: string;
+  notes: string;
+  created_at: string;
+}
+
+export interface Payment {
+  id: number;
+  invoice_id: number;
+  paypal_transaction_id: string;
+  amount: number;
+  method: string;
+  status: string;
+  payer_email: string;
+  notes: string;
+  created_at: string;
+}
+
+export const fetchPayPalStats = async (): Promise<PayPalStats> => {
+  const { data } = await api.get('/paypal/stats');
+  return data;
+};
+
+export const fetchPayPalTransactions = async (limit = 50, offset = 0): Promise<{ transactions: PayPalTransaction[]; total: number }> => {
+  const { data } = await api.get(`/paypal/transactions?limit=${limit}&offset=${offset}`);
+  return data;
+};
+
+export const fetchPayments = async (limit = 50, offset = 0): Promise<{ payments: Payment[]; total: number }> => {
+  const { data } = await api.get(`/payments?limit=${limit}&offset=${offset}`);
+  return data;
+};
+
+export const createPayPalInvoice = async (invoiceId: number): Promise<{ paypal_invoice_id: string; status: string }> => {
+  const { data } = await api.post(`/invoices/${invoiceId}/paypal`);
+  return data;
+};
+
+export const createPaymentLink = async (invoiceId: number, sendSms = false): Promise<{ payment_link: string }> => {
+  const { data } = await api.post(`/invoices/${invoiceId}/payment-link`, { send_sms: sendSms });
+  return data;
+};
+
+export const recordPayment = async (payment: { invoice_id: number; amount: number; method?: string; payer_email?: string; notes?: string }): Promise<Payment> => {
+  const { data } = await api.post('/payments', payment);
+  return data;
+};
+
 // Concierge - Uses local Next.js API route
 export interface ConciergeQueryParams {
   query: string;
@@ -832,6 +896,333 @@ export const useFinancialSummary = () => {
   return useQuery({
     queryKey: ['financialSummary'],
     queryFn: fetchFinancialSummary,
+  });
+};
+
+// PayPal
+export const usePayPalStats = () => {
+  return useQuery({
+    queryKey: ['paypalStats'],
+    queryFn: fetchPayPalStats,
+    refetchInterval: 60000,
+  });
+};
+
+export const usePayPalTransactions = (limit = 50, offset = 0) => {
+  return useQuery({
+    queryKey: ['paypalTransactions', limit, offset],
+    queryFn: () => fetchPayPalTransactions(limit, offset),
+  });
+};
+
+export const usePayments = (limit = 50, offset = 0) => {
+  return useQuery({
+    queryKey: ['payments', limit, offset],
+    queryFn: () => fetchPayments(limit, offset),
+  });
+};
+
+export const useCreatePayPalInvoice = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (invoiceId: number) => createPayPalInvoice(invoiceId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['paypalStats'] });
+      queryClient.invalidateQueries({ queryKey: ['paypalTransactions'] });
+      toast.success('PayPal invoice created and sent!');
+    },
+    onError: () => {
+      toast.error('Failed to create PayPal invoice');
+    },
+  });
+};
+
+export const useCreatePaymentLink = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ invoiceId, sendSms }: { invoiceId: number; sendSms?: boolean }) =>
+      createPaymentLink(invoiceId, sendSms),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['paypalStats'] });
+      toast.success('Payment link created!');
+    },
+    onError: () => {
+      toast.error('Failed to create payment link');
+    },
+  });
+};
+
+export const useRecordPayment = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: recordPayment,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['payments'] });
+      queryClient.invalidateQueries({ queryKey: ['paypalStats'] });
+      toast.success('Payment recorded!');
+    },
+    onError: () => {
+      toast.error('Failed to record payment');
+    },
+  });
+};
+
+// ============================================
+// ANALYTICS API
+// ============================================
+
+export interface AnalyticsResponse {
+  totals: {
+    totalRevenue: number;
+    revenueChange: number;
+    totalBookings: number;
+    bookingsChange: number;
+    avgOccupancy: number;
+    occupancyChange: number;
+    avgNightlyRate: number;
+    rateChange: number;
+    totalExpenses: number;
+    expensesChange: number;
+    avgRating: string;
+    reviewCount: number;
+  };
+  monthly: { month: string; revenue: number; bookings: number; occupancy: number }[];
+  platforms: { name: string; value: number; color: string }[];
+  properties: {
+    id: string;
+    name: string;
+    revenue: number;
+    bookings: number;
+    occupancy: number;
+    avgNightlyRate: number;
+    avgRating: string;
+  }[];
+}
+
+async function fetchAnalytics(range: string): Promise<AnalyticsResponse> {
+  const { data } = await api.get(`/analytics?range=${range}`);
+  return data;
+}
+
+export function useAnalytics(range: string) {
+  return useQuery({
+    queryKey: ['analytics', range],
+    queryFn: () => fetchAnalytics(range),
+    refetchInterval: 60000,
+  });
+}
+
+// ============================================
+// OWNER DASHBOARD API
+// ============================================
+
+export interface OwnerDashboardResponse {
+  owner_id: string;
+  owner_name: string;
+  properties_count: number;
+  total_properties: {
+    id: number;
+    name: string;
+    address: string;
+    bedrooms: number;
+    bathrooms: number;
+    max_guests: number;
+    nightly_rate: number;
+    status: string;
+    current_booking: { guest: string; check_out: string } | null;
+  }[];
+  monthly_earnings: number;
+  monthly_expenses: number;
+  monthly_net_payout: number;
+  ytd_revenue: number;
+  ytd_expenses: number;
+  ytd_net_payout: number;
+  avg_occupancy_rate: number;
+  avg_nightly_rate: number;
+  avg_guest_rating: number;
+  upcoming_bookings: {
+    id: number;
+    guest_name: string;
+    guest_email: string;
+    room_name: string;
+    check_in: string;
+    check_out: string;
+    total: number;
+    status: string;
+    notes: string;
+  }[];
+  recent_expenses: {
+    id: number;
+    category: string;
+    description: string;
+    amount: number;
+    date: string;
+    vendor: string;
+  }[];
+  pending_maintenance: any[];
+  revenue_change_percent: number;
+  occupancy_change_percent: number;
+  revenue_chart: { month: string; revenue: number; expenses: number; net: number }[];
+  expense_breakdown: { name: string; value: number; color: string }[];
+}
+
+async function fetchOwnerDashboard(): Promise<OwnerDashboardResponse> {
+  const { data } = await api.get('/owner/dashboard');
+  return data;
+}
+
+export function useOwnerDashboard() {
+  return useQuery({
+    queryKey: ['ownerDashboard'],
+    queryFn: fetchOwnerDashboard,
+    refetchInterval: 60000,
+  });
+}
+
+// ============================================
+// GUEST DETAIL API
+// ============================================
+
+export interface StayEntry {
+  id: string;
+  propertyId: string;
+  propertyName: string;
+  checkIn: string;
+  checkOut: string;
+  amount: number;
+  rating?: number;
+  review?: string;
+}
+
+export interface CommunicationEntry {
+  id: string;
+  type: 'email' | 'sms' | 'call' | 'message';
+  direction: 'inbound' | 'outbound';
+  subject: string;
+  preview: string;
+  timestamp: string;
+  sentiment?: 'POSITIVE' | 'NEUTRAL' | 'NEGATIVE';
+}
+
+export function useGuestStays(guestId: number | string | undefined) {
+  return useQuery<StayEntry[]>({
+    queryKey: ['guestStays', guestId],
+    queryFn: async () => {
+      const { data } = await api.get(`/guests/${guestId}/stays`);
+      return data;
+    },
+    enabled: !!guestId,
+  });
+}
+
+export function useGuestCommunications(guestId: number | string | undefined) {
+  return useQuery<CommunicationEntry[]>({
+    queryKey: ['guestCommunications', guestId],
+    queryFn: async () => {
+      const { data } = await api.get(`/guests/${guestId}/communications`);
+      return data;
+    },
+    enabled: !!guestId,
+  });
+}
+
+// ============================================
+// NOTIFICATIONS API
+// ============================================
+
+export interface Notification {
+  id: number;
+  type: string;       // 'booking' | 'payment' | 'lock' | 'cleaning' | 'maintenance' | 'message' | 'system'
+  title: string;
+  message: string;
+  severity: string;   // 'info' | 'warning' | 'success' | 'error'
+  read: number;
+  action_url: string | null;
+  metadata: string;   // JSON string
+  created_at: string;
+}
+
+export interface NotificationListResponse {
+  notifications: Notification[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export const fetchNotifications = async (params?: { type?: string; unread?: boolean; limit?: number; offset?: number }): Promise<NotificationListResponse> => {
+  const searchParams = new URLSearchParams();
+  if (params?.type) searchParams.set('type', params.type);
+  if (params?.unread) searchParams.set('unread', 'true');
+  if (params?.limit) searchParams.set('limit', String(params.limit));
+  if (params?.offset) searchParams.set('offset', String(params.offset));
+  const { data } = await api.get(`/notifications?${searchParams.toString()}`);
+  return data;
+};
+
+export const fetchUnreadCount = async (): Promise<{ unread: number }> => {
+  const { data } = await api.get('/notifications/unread-count');
+  return data;
+};
+
+export const markNotificationRead = async (id: number): Promise<void> => {
+  await api.post(`/notifications/${id}/read`);
+};
+
+export const markAllNotificationsRead = async (): Promise<void> => {
+  await api.post('/notifications/read-all');
+};
+
+export const deleteNotification = async (id: number): Promise<void> => {
+  await api.delete(`/notifications/${id}`);
+};
+
+export const useNotifications = (params?: { type?: string; unread?: boolean }) => {
+  return useQuery({
+    queryKey: ['notifications', params],
+    queryFn: () => fetchNotifications(params),
+    refetchInterval: 30000, // Poll every 30s
+  });
+};
+
+export const useUnreadCount = () => {
+  return useQuery({
+    queryKey: ['unreadCount'],
+    queryFn: fetchUnreadCount,
+    refetchInterval: 15000, // Poll every 15s
+  });
+};
+
+export const useMarkRead = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: markNotificationRead,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['unreadCount'] });
+    },
+  });
+};
+
+export const useMarkAllRead = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: markAllNotificationsRead,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['unreadCount'] });
+      toast.success('All notifications marked as read');
+    },
+  });
+};
+
+export const useDeleteNotification = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: deleteNotification,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['unreadCount'] });
+    },
   });
 };
 
