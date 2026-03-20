@@ -1556,6 +1556,88 @@ export const useCompleteCleaningJob = () => {
 };
 
 // ============================================
+// ADMIN REVIEWS
+// ============================================
+
+export interface AdminReview {
+  id: string;
+  guestName: string;
+  property: string;
+  platform: string;
+  rating: number;
+  title: string;
+  content: string;
+  date: string;
+  status: 'needs_response' | 'responded' | 'flagged';
+  response?: string;
+  respondedAt?: string;
+  stayDates: string;
+  sentiment: 'positive' | 'neutral' | 'negative';
+  nightlyRate: number;
+}
+
+export interface AdminReviewsResponse {
+  reviews: AdminReview[];
+}
+
+async function fetchAdminReviews(): Promise<AdminReviewsResponse> {
+  const { data } = await api.get('/admin/reviews');
+  return data;
+}
+
+export function useAdminReviews() {
+  return useQuery({
+    queryKey: ['adminReviews'],
+    queryFn: fetchAdminReviews,
+    refetchInterval: 60000,
+  });
+}
+
+export function useRespondToReview() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, response }: { id: string; response: string }) => {
+      const { data } = await api.post(`/reviews/${id}/respond`, { response });
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminReviews'] });
+      toast.success('Response sent');
+    },
+    onError: () => {
+      toast.error('Failed to send response');
+    },
+  });
+}
+
+export function useCreateReview() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (review: {
+      guest_name: string;
+      rating: number;
+      text: string;
+      source: string;
+      title?: string;
+      property?: string;
+      stay_dates?: string;
+      sentiment?: string;
+      nightly_rate?: number;
+    }) => {
+      const { data } = await api.post('/reviews', review);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminReviews'] });
+      toast.success('Review added');
+    },
+    onError: () => {
+      toast.error('Failed to add review');
+    },
+  });
+}
+
+// ============================================
 // QUERY CLIENT CONFIGURATION
 // ============================================
 
