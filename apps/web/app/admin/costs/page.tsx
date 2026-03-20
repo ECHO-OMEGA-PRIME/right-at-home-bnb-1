@@ -23,7 +23,9 @@ import {
   ChevronUp,
   BarChart3,
   AlertTriangle,
+  Loader2,
 } from 'lucide-react';
+import { useAdminCosts, useCreateExpense, CostExpense, PropertyProfit } from '@/lib/api';
 
 function formatMoney(cents: number): string {
   const dollars = cents / 100;
@@ -41,27 +43,6 @@ type ExpenseCategory =
   | 'Property Tax'
   | 'Internet/Cable'
   | 'Landscaping';
-
-interface Expense {
-  id: string;
-  date: string;
-  category: ExpenseCategory;
-  description: string;
-  amountCents: number;
-  property: string;
-  vendor: string;
-  recurring: boolean;
-}
-
-interface PropertyProfit {
-  name: string;
-  address: string;
-  revenueCents: number;
-  expensesCents: number;
-  nightsAvailable: number;
-  nightsBooked: number;
-  avgNightlyRateCents: number;
-}
 
 const CATEGORY_COLORS: Record<ExpenseCategory, string> = {
   Utilities: '#ef4444',
@@ -89,15 +70,7 @@ const CATEGORY_ICONS: Record<ExpenseCategory, typeof DollarSign> = {
   Landscaping: Droplets,
 };
 
-// Properties loaded from database
-const PROPERTIES: string[] = [
-];
-
-// Expenses loaded from database — add via the expense form
-const MOCK_EXPENSES: Expense[] = [];
-
-// Property profits loaded from database — no mock data
-const PROPERTY_PROFITS: PropertyProfit[] = [];
+// Data loaded from API via useAdminCosts hook
 
 function SvgPieChart({ data }: { data: { label: string; value: number; color: string }[] }) {
   const total = data.reduce((s, d) => s + d.value, 0);
@@ -131,7 +104,13 @@ function SvgPieChart({ data }: { data: { label: string; value: number; color: st
 }
 
 export default function CostsPage() {
-  const [expenses, setExpenses] = useState<Expense[]>(MOCK_EXPENSES);
+  const { data: apiData, isLoading, error, refetch } = useAdminCosts();
+  const createExpense = useCreateExpense();
+
+  const expenses: CostExpense[] = apiData?.expenses || [];
+  const PROPERTIES: string[] = apiData?.properties || [];
+  const PROPERTY_PROFITS: PropertyProfit[] = apiData?.propertyProfits || [];
+
   const [filterCategory, setFilterCategory] = useState<ExpenseCategory | 'All'>('All');
   const [filterProperty, setFilterProperty] = useState<string>('All');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -139,12 +118,13 @@ export default function CostsPage() {
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [showProfitTable, setShowProfitTable] = useState(false);
 
+  const today = new Date().toISOString().split('T')[0];
   const [newExpense, setNewExpense] = useState({
-    date: '2026-03-17',
+    date: today,
     category: 'Maintenance' as ExpenseCategory,
     description: '',
     amountCents: 0,
-    property: PROPERTIES[0] || '',
+    property: '',
     vendor: '',
     recurring: false,
   });
@@ -175,7 +155,8 @@ export default function CostsPage() {
   const totalExpensesCents = expenses.reduce((s, e) => s + e.amountCents, 0);
   const recurringCents = expenses.filter(e => e.recurring).reduce((s, e) => s + e.amountCents, 0);
   const oneTimeCents = totalExpensesCents - recurringCents;
-  const avgPerProperty = Math.round(totalExpensesCents / 22);
+  const propCount = PROPERTIES.length || 1;
+  const avgPerProperty = Math.round(totalExpensesCents / propCount);
 
   const totalPortfolioRevenue = PROPERTY_PROFITS.reduce((s, p) => s + p.revenueCents, 0);
   const totalPortfolioExpenses = PROPERTY_PROFITS.reduce((s, p) => s + p.expensesCents, 0);
@@ -189,10 +170,17 @@ export default function CostsPage() {
 
   function handleAddExpense() {
     if (!newExpense.description || newExpense.amountCents <= 0) return;
-    const id = `EXP-${String(expenses.length + 1).padStart(3, '0')}`;
-    setExpenses(prev => [{ ...newExpense, id }, ...prev]);
+    createExpense.mutate({
+      category: newExpense.category,
+      description: newExpense.description,
+      amount: newExpense.amountCents / 100,
+      date: newExpense.date,
+      vendor: newExpense.vendor,
+      property: newExpense.property,
+      recurring: newExpense.recurring,
+    });
     setShowAddModal(false);
-    setNewExpense({ date: '2026-03-17', category: 'Maintenance', description: '', amountCents: 0, property: PROPERTIES[0], vendor: '', recurring: false });
+    setNewExpense({ date: today, category: 'Maintenance', description: '', amountCents: 0, property: '', vendor: '', recurring: false });
   }
 
   const SortIcon = ({ field }: { field: string }) => {
@@ -200,12 +188,30 @@ export default function CostsPage() {
     return sortDir === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />;
   };
 
+  if (isLoading) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="w-8 h-8 animate-spin text-[#500000]" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6 flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <AlertTriangle className="w-12 h-12 text-red-400" />
+        <p className="text-gray-600">Failed to load cost data</p>
+        <button onClick={() => refetch()} className="px-4 py-2 bg-[#500000] text-white rounded-lg text-sm">Retry</button>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Cost Tracker</h1>
-          <p className="text-sm text-gray-500">March 2026 expense overview across 22 properties</p>
+          <p className="text-sm text-gray-500">{apiData?.month || 'Current month'} expense overview across {PROPERTIES.length} properties</p>
         </div>
         <div className="flex gap-2">
           <button onClick={() => setShowProfitTable(p => !p)} className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm font-medium">
@@ -365,7 +371,7 @@ export default function CostsPage() {
       {showProfitTable && (
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-            <h2 className="text-lg font-semibold text-gray-900">Property Profitability - March 2026</h2>
+            <h2 className="text-lg font-semibold text-gray-900">Property Profitability - {apiData?.month || 'Current Month'}</h2>
             <p className="text-xs text-gray-500 mt-1">
               Portfolio NOI: <span className="font-bold text-emerald-600">{formatMoney(portfolioNOI)}</span> | Margin: {portfolioMargin}% | Total Revenue: {formatMoney(totalPortfolioRevenue)}
             </p>

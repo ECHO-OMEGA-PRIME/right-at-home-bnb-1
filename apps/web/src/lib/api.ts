@@ -1139,6 +1139,77 @@ export function useAdminFinance(range: string) {
 }
 
 // ============================================
+// ADMIN COSTS API
+// ============================================
+
+export interface CostExpense {
+  id: string;
+  date: string;
+  category: string;
+  description: string;
+  amountCents: number;
+  property: string;
+  vendor: string;
+  recurring: boolean;
+}
+
+export interface PropertyProfit {
+  name: string;
+  address: string;
+  revenueCents: number;
+  expensesCents: number;
+  nightsAvailable: number;
+  nightsBooked: number;
+  avgNightlyRateCents: number;
+}
+
+export interface AdminCostsResponse {
+  month: string;
+  expenses: CostExpense[];
+  properties: string[];
+  propertyProfits: PropertyProfit[];
+}
+
+async function fetchAdminCosts(month?: string): Promise<AdminCostsResponse> {
+  const params = month ? `?month=${month}` : '';
+  const { data } = await api.get(`/admin/costs${params}`);
+  return data;
+}
+
+export function useAdminCosts(month?: string) {
+  return useQuery({
+    queryKey: ['adminCosts', month],
+    queryFn: () => fetchAdminCosts(month),
+    refetchInterval: 60000,
+  });
+}
+
+export function useCreateExpense() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (expense: {
+      category: string;
+      description: string;
+      amount: number;
+      date: string;
+      vendor: string;
+      property: string;
+      recurring: boolean;
+    }) => {
+      const { data } = await api.post('/expenses', expense);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminCosts'] });
+      toast.success('Expense added');
+    },
+    onError: () => {
+      toast.error('Failed to add expense');
+    },
+  });
+}
+
+// ============================================
 // GUEST DETAIL API
 // ============================================
 
