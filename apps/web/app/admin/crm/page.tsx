@@ -5,35 +5,16 @@ import Link from 'next/link';
 import {
   Users, Search, ChevronRight, Star, Mail, Phone, DollarSign,
   TrendingUp, ArrowUpRight, Send, UserPlus, X, FileText,
-  Award, StickyNote
+  Award, StickyNote, Loader2, AlertTriangle
 } from 'lucide-react';
+import { useCRMGuests, useUpdateGuestNotes, useCreateCRMGuest, type CRMGuest } from '@/lib/api';
 
 function formatMoney(cents: number): string {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100);
 }
 
 type VipTier = 'bronze' | 'silver' | 'gold' | 'platinum';
-
-interface Guest {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  totalStays: number;
-  totalSpent: number;
-  vipTier: VipTier;
-  lastVisit: string;
-  avgRating: number;
-  source: 'airbnb' | 'vrbo' | 'direct' | 'google' | 'referral';
-  notes: string;
-}
-
-function getVipTier(stays: number): VipTier {
-  if (stays >= 10) return 'platinum';
-  if (stays >= 6) return 'gold';
-  if (stays >= 3) return 'silver';
-  return 'bronze';
-}
+type Guest = CRMGuest;
 
 const tierStyles: Record<VipTier, { bg: string; text: string; label: string; border: string }> = {
   bronze: { bg: 'bg-orange-50', text: 'text-orange-700', label: 'Bronze', border: 'border-orange-200' },
@@ -42,7 +23,7 @@ const tierStyles: Record<VipTier, { bg: string; text: string; label: string; bor
   platinum: { bg: 'bg-purple-50', text: 'text-purple-700', label: 'Platinum', border: 'border-purple-300' },
 };
 
-const sourceLabels: Record<Guest['source'], string> = {
+const sourceLabels: Record<string, string> = {
   airbnb: 'Airbnb',
   vrbo: 'VRBO',
   direct: 'Direct',
@@ -50,24 +31,29 @@ const sourceLabels: Record<Guest['source'], string> = {
   referral: 'Referral',
 };
 
-// Guest data loaded from API — no hardcoded mock data
-const guests: Guest[] = [];
-
 type SortField = 'name' | 'totalStays' | 'totalSpent' | 'lastVisit';
 type SortDir = 'asc' | 'desc';
 
 export default function GuestCRM() {
+  const { data: apiData, isLoading, error, refetch } = useCRMGuests();
+  const notesMutation = useUpdateGuestNotes();
+  const createGuestMutation = useCreateCRMGuest();
+
   const [searchQuery, setSearchQuery] = useState('');
   const [filterTier, setFilterTier] = useState<VipTier | 'all'>('all');
-  const [filterPlatform, setFilterPlatform] = useState<Guest['source'] | 'all'>('all');
+  const [filterPlatform, setFilterPlatform] = useState<string>('all');
   const [sortField, setSortField] = useState<SortField>('lastVisit');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [showNoteModal, setShowNoteModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
   const [selectedGuest, setSelectedGuest] = useState<Guest | null>(null);
   const [emailSubject, setEmailSubject] = useState('');
   const [emailBody, setEmailBody] = useState('');
   const [noteText, setNoteText] = useState('');
+  const [newGuest, setNewGuest] = useState({ name: '', email: '', phone: '', source: 'direct' });
+
+  const guests: Guest[] = apiData?.guests || [];
 
   const filtered = useMemo(() => {
     let result = guests
@@ -94,11 +80,11 @@ export default function GuestCRM() {
     });
 
     return result;
-  }, [searchQuery, filterTier, filterPlatform, sortField, sortDir]);
+  }, [guests, searchQuery, filterTier, filterPlatform, sortField, sortDir]);
 
   const totalRevenue = guests.reduce((s, g) => s + g.totalSpent, 0);
-  const avgLTV = Math.round(totalRevenue / guests.length);
-  const repeatRate = ((guests.filter((g) => g.totalStays > 1).length / guests.length) * 100).toFixed(0);
+  const avgLTV = guests.length > 0 ? Math.round(totalRevenue / guests.length) : 0;
+  const repeatRate = guests.length > 0 ? ((guests.filter((g) => g.totalStays > 1).length / guests.length) * 100).toFixed(0) : '0';
   const platinumCount = guests.filter((g) => g.vipTier === 'platinum').length;
 
   const tierCounts = {
@@ -131,6 +117,45 @@ export default function GuestCRM() {
     setShowNoteModal(true);
   };
 
+  const handleSaveNote = () => {
+    if (!selectedGuest || !noteText.trim()) return;
+    const updated = selectedGuest.notes
+      ? `${selectedGuest.notes}\n---\n${noteText.trim()}`
+      : noteText.trim();
+    notesMutation.mutate(
+      { id: selectedGuest.id, notes: updated },
+      { onSuccess: () => setShowNoteModal(false) }
+    );
+  };
+
+  const handleAddGuest = () => {
+    if (!newGuest.name.trim()) return;
+    createGuestMutation.mutate(newGuest, {
+      onSuccess: () => {
+        setShowAddModal(false);
+        setNewGuest({ name: '', email: '', phone: '', source: 'direct' });
+      },
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-[#500000]" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+        <AlertTriangle className="w-12 h-12 text-red-400" />
+        <p className="text-gray-600">Failed to load guest data</p>
+        <button onClick={() => refetch()} className="px-4 py-2 bg-[#500000] text-white rounded-lg text-sm">Retry</button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -141,7 +166,10 @@ export default function GuestCRM() {
             Manage guest relationships, VIP tiers, and communications
           </p>
         </div>
-        <button className="flex items-center gap-2 bg-[#500000] hover:bg-[#3C1518] text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors">
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="flex items-center gap-2 bg-[#500000] hover:bg-[#3C1518] text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors"
+        >
           <UserPlus className="w-4 h-4" /> Add Guest
         </button>
       </div>
@@ -318,7 +346,7 @@ export default function GuestCRM() {
                     )}
                   </td>
                   <td className="py-3 px-4 text-gray-600">{guest.lastVisit}</td>
-                  <td className="py-3 px-4 text-gray-600 text-xs">{sourceLabels[guest.source]}</td>
+                  <td className="py-3 px-4 text-gray-600 text-xs">{sourceLabels[guest.source] || guest.source}</td>
                   <td className="py-3 px-4">
                     <div className="flex items-center justify-end gap-1">
                       <button
@@ -455,8 +483,84 @@ export default function GuestCRM() {
                 >
                   Cancel
                 </button>
-                <button className="flex items-center gap-2 bg-[#500000] hover:bg-[#3C1518] text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-                  <FileText className="w-4 h-4" /> Save Note
+                <button
+                  onClick={handleSaveNote}
+                  disabled={notesMutation.isPending || !noteText.trim()}
+                  className="flex items-center gap-2 bg-[#500000] hover:bg-[#3C1518] text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                >
+                  {notesMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
+                  Save Note
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Guest Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg">
+            <div className="flex items-center justify-between p-5 border-b border-gray-200">
+              <h3 className="text-lg font-bold text-gray-900">Add Guest</h3>
+              <button onClick={() => setShowAddModal(false)} className="p-1 rounded-lg text-gray-400 hover:bg-gray-100">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                <input
+                  type="text"
+                  value={newGuest.name}
+                  onChange={(e) => setNewGuest({ ...newGuest, name: e.target.value })}
+                  placeholder="Guest name"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#500000]/20 focus:border-[#500000]"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input
+                  type="email"
+                  value={newGuest.email}
+                  onChange={(e) => setNewGuest({ ...newGuest, email: e.target.value })}
+                  placeholder="guest@email.com"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#500000]/20 focus:border-[#500000]"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                <input
+                  type="tel"
+                  value={newGuest.phone}
+                  onChange={(e) => setNewGuest({ ...newGuest, phone: e.target.value })}
+                  placeholder="(555) 123-4567"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#500000]/20 focus:border-[#500000]"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Source</label>
+                <select
+                  value={newGuest.source}
+                  onChange={(e) => setNewGuest({ ...newGuest, source: e.target.value })}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#500000]/20 focus:border-[#500000]"
+                >
+                  {Object.entries(sourceLabels).map(([k, v]) => (
+                    <option key={k} value={k}>{v}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex justify-end gap-3">
+                <button onClick={() => setShowAddModal(false)} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">
+                  Cancel
+                </button>
+                <button
+                  onClick={handleAddGuest}
+                  disabled={createGuestMutation.isPending || !newGuest.name.trim()}
+                  className="flex items-center gap-2 bg-[#500000] hover:bg-[#3C1518] text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                >
+                  {createGuestMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
+                  Add Guest
                 </button>
               </div>
             </div>

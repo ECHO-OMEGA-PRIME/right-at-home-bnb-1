@@ -1638,6 +1638,73 @@ export function useCreateReview() {
 }
 
 // ============================================
+// CRM GUESTS (enriched with booking/review aggregates)
+// ============================================
+
+export interface CRMGuest {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  totalStays: number;
+  totalSpent: number; // cents
+  vipTier: 'bronze' | 'silver' | 'gold' | 'platinum';
+  lastVisit: string;
+  avgRating: number;
+  source: 'airbnb' | 'vrbo' | 'direct' | 'google' | 'referral';
+  notes: string;
+}
+
+export interface CRMGuestsResponse {
+  guests: CRMGuest[];
+}
+
+export function useCRMGuests() {
+  return useQuery({
+    queryKey: ['crmGuests'],
+    queryFn: async (): Promise<CRMGuestsResponse> => {
+      const { data } = await api.get('/admin/crm/guests');
+      return data;
+    },
+    refetchInterval: 60000,
+  });
+}
+
+export function useUpdateGuestNotes() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, notes }: { id: string; notes: string }) => {
+      const { data } = await api.post(`/guests/${id}/notes`, { notes });
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['crmGuests'] });
+      toast.success('Note saved');
+    },
+    onError: () => {
+      toast.error('Failed to save note');
+    },
+  });
+}
+
+export function useCreateCRMGuest() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (guest: { name: string; email?: string; phone?: string; source?: string; notes?: string }) => {
+      const { data } = await api.post('/admin/crm/guests', guest);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['crmGuests'] });
+      toast.success('Guest added');
+    },
+    onError: () => {
+      toast.error('Failed to add guest');
+    },
+  });
+}
+
+// ============================================
 // QUERY CLIENT CONFIGURATION
 // ============================================
 
