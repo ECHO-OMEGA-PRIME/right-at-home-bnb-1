@@ -1705,6 +1705,102 @@ export function useCreateCRMGuest() {
 }
 
 // ============================================
+// PLANNER
+// ============================================
+
+export interface PlannerDayData {
+  date: number;
+  occupancy: number;
+  revenue: number; // cents
+  checkIns: number;
+  checkOuts: number;
+}
+
+export interface PlannerNote {
+  id: string;
+  date: string;
+  title: string;
+  content: string;
+  category: 'maintenance' | 'guest' | 'reminder' | 'idea' | 'financial';
+  pinned: boolean;
+  createdAt: string;
+}
+
+export function usePlannerData(month: number, year: number) {
+  return useQuery({
+    queryKey: ['plannerData', month, year],
+    queryFn: async (): Promise<{ days: PlannerDayData[]; totalUnits: number; month: number; year: number }> => {
+      const { data } = await api.get(`/admin/planner/data?month=${month}&year=${year}`);
+      return data;
+    },
+  });
+}
+
+export function usePlannerNotes(month?: number, year?: number) {
+  return useQuery({
+    queryKey: ['plannerNotes', month, year],
+    queryFn: async (): Promise<{ notes: PlannerNote[] }> => {
+      let url = '/admin/planner/notes';
+      if (month !== undefined && year !== undefined) {
+        url += `?month=${month}&year=${year}`;
+      }
+      const { data } = await api.get(url);
+      return data;
+    },
+  });
+}
+
+export function useCreatePlannerNote() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (note: { date: string; title: string; content?: string; category?: string }) => {
+      const { data } = await api.post('/admin/planner/notes', note);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['plannerNotes'] });
+      toast.success('Note created');
+    },
+    onError: () => {
+      toast.error('Failed to create note');
+    },
+  });
+}
+
+export function useDeletePlannerNote() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data } = await api.delete(`/admin/planner/notes/${id}`);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['plannerNotes'] });
+      toast.success('Note deleted');
+    },
+    onError: () => {
+      toast.error('Failed to delete note');
+    },
+  });
+}
+
+export function useTogglePinNote() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data } = await api.post(`/admin/planner/notes/${id}/pin`);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['plannerNotes'] });
+    },
+    onError: () => {
+      toast.error('Failed to toggle pin');
+    },
+  });
+}
+
+// ============================================
 // QUERY CLIENT CONFIGURATION
 // ============================================
 

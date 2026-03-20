@@ -1,34 +1,27 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Calendar, ChevronLeft, ChevronRight, Building2, TrendingUp,
   Moon, DollarSign, BarChart3, StickyNote, Plus, Search,
-  X, Clock, Star, Edit3, Trash2, Save
+  X, Clock, Star, Edit3, Trash2, Save, Loader2, AlertTriangle
 } from 'lucide-react';
+import {
+  usePlannerData,
+  usePlannerNotes,
+  useCreatePlannerNote,
+  useDeletePlannerNote,
+  useTogglePinNote,
+  type PlannerDayData,
+  type PlannerNote,
+} from '@/lib/api';
 
 const formatMoney = (cents: number) =>
   '$' + (cents / 100).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 
-interface Note {
-  id: string;
-  date: string;
-  title: string;
-  content: string;
-  category: 'maintenance' | 'guest' | 'reminder' | 'idea' | 'financial';
-  pinned: boolean;
-  createdAt: string;
-}
+type NoteCategory = 'maintenance' | 'guest' | 'reminder' | 'idea' | 'financial';
 
-interface DayData {
-  date: number;
-  occupancy: number;
-  revenue: number;
-  checkIns: number;
-  checkOuts: number;
-}
-
-const CATEGORY_STYLES: Record<Note['category'], { bg: string; text: string; label: string }> = {
+const CATEGORY_STYLES: Record<NoteCategory, { bg: string; text: string; label: string }> = {
   maintenance: { bg: 'bg-orange-100', text: 'text-orange-700', label: 'Maintenance' },
   guest: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Guest' },
   reminder: { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'Reminder' },
@@ -39,54 +32,36 @@ const CATEGORY_STYLES: Record<Note['category'], { bg: string; text: string; labe
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-function generateMonthData(year: number, month: number): DayData[] {
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const data: DayData[] = [];
-  for (let d = 1; d <= daysInMonth; d++) {
-    const dow = new Date(year, month, d).getDay();
-    const isWeekend = dow === 5 || dow === 6;
-    const baseOcc = isWeekend ? 85 : 65;
-    const occ = Math.min(100, Math.max(30, baseOcc + Math.floor(Math.random() * 20 - 10)));
-    data.push({
-      date: d,
-      occupancy: occ,
-      revenue: occ * 22 * 15000 / 100,
-      checkIns: Math.floor(Math.random() * 6) + (isWeekend ? 3 : 1),
-      checkOuts: Math.floor(Math.random() * 5) + (dow === 0 ? 4 : 1),
-    });
-  }
-  return data;
-}
-
-const initialNotes: Note[] = [
-  { id: 'N1', date: '2026-03-05', title: 'HVAC service — Sunset Villa', content: 'Annual HVAC inspection and filter change for all units at Sunset Villa. Contractor confirmed for 9am. Budget: $450.', category: 'maintenance', pinned: true, createdAt: '2026-03-01' },
-  { id: 'N2', date: '2026-03-10', title: 'VIP guest — Permian Loft', content: 'Corporate repeat guest John Hargrove checking in. Prefers king bed, extra towels, late checkout. Leave welcome basket.', category: 'guest', pinned: true, createdAt: '2026-03-02' },
-  { id: 'N3', date: '2026-03-15', title: 'Q1 Tax filing reminder', content: 'Occupancy tax (HOT) due to City of Midland. Estimated $12,400. Payroll taxes 941 also due this week.', category: 'reminder', pinned: false, createdAt: '2026-02-28' },
-  { id: 'N4', date: '2026-03-08', title: 'Test dynamic pricing tool', content: 'Evaluate PriceLabs vs Beyond Pricing for automated rate optimization. Free trial starts today.', category: 'idea', pinned: false, createdAt: '2026-03-03' },
-  { id: 'N5', date: '2026-03-20', title: 'Insurance renewal review', content: 'State Farm policy renewal coming up April 1. Review coverage limits, compare with Allstate quote. Current premium: $10,680/yr.', category: 'financial', pinned: false, createdAt: '2026-03-04' },
-  { id: 'N6', date: '2026-03-12', title: 'Pool heater replacement — Basin View', content: 'Pool heater at Basin View failed inspection. Need replacement — estimated $2,800. Get two more quotes.', category: 'maintenance', pinned: false, createdAt: '2026-03-05' },
-  { id: 'N7', date: '2026-03-22', title: 'Spring break pricing strategy', content: 'UT Permian Basin spring break March 16-20. Midland schools March 10-14. Bump rates 25% for these windows. Already seeing bookings increase.', category: 'financial', pinned: true, createdAt: '2026-03-01' },
-  { id: 'N8', date: '2026-03-18', title: 'New linens delivery', content: 'Standard Textile delivering 50 sets of white linens. Need someone at warehouse 8am-12pm to receive.', category: 'reminder', pinned: false, createdAt: '2026-03-06' },
-];
-
 export default function OccupancyPlanner() {
   const today = new Date();
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
   const [selectedDay, setSelectedDay] = useState<number | null>(today.getDate());
-  const [notes, setNotes] = useState<Note[]>(initialNotes);
   const [noteSearch, setNoteSearch] = useState('');
   const [showNewNote, setShowNewNote] = useState(false);
-  const [newNote, setNewNote] = useState({ title: '', content: '', category: 'reminder' as Note['category'] });
+  const [newNote, setNewNote] = useState({ title: '', content: '', category: 'reminder' as NoteCategory });
 
-  const monthData = generateMonthData(currentYear, currentMonth);
+  // Live API hooks
+  const { data: plannerData, isLoading: dataLoading, error: dataError, refetch: refetchData } = usePlannerData(currentMonth, currentYear);
+  const { data: notesData, isLoading: notesLoading, error: notesError, refetch: refetchNotes } = usePlannerNotes(currentMonth, currentYear);
+  const createNoteMutation = useCreatePlannerNote();
+  const deleteNoteMutation = useDeletePlannerNote();
+  const togglePinMutation = useTogglePinNote();
+
+  const monthData: PlannerDayData[] = plannerData?.days || [];
+  const totalUnits = plannerData?.totalUnits || 1;
+  const notes: PlannerNote[] = notesData?.notes || [];
+
   const firstDow = new Date(currentYear, currentMonth, 1).getDay();
 
-  const avgOccupancy = Math.round(monthData.reduce((s, d) => s + d.occupancy, 0) / monthData.length);
-  const totalRevenue = monthData.reduce((s, d) => s + d.revenue, 0);
-  const totalCheckIns = monthData.reduce((s, d) => s + d.checkIns, 0);
-  const avgRate = Math.round(totalRevenue / monthData.reduce((s, d) => s + (d.occupancy * 22 / 100), 0));
-  const revPAR = Math.round(totalRevenue / (22 * monthData.length));
+  const { avgOccupancy, totalRevenue, totalCheckIns, revPAR } = useMemo(() => {
+    if (monthData.length === 0) return { avgOccupancy: 0, totalRevenue: 0, totalCheckIns: 0, revPAR: 0 };
+    const avgOcc = Math.round(monthData.reduce((s, d) => s + d.occupancy, 0) / monthData.length);
+    const totRev = monthData.reduce((s, d) => s + d.revenue, 0);
+    const totCI = monthData.reduce((s, d) => s + d.checkIns, 0);
+    const rpar = Math.round(totRev / (totalUnits * monthData.length));
+    return { avgOccupancy: avgOcc, totalRevenue: totRev, totalCheckIns: totCI, revPAR: rpar };
+  }, [monthData, totalUnits]);
 
   const prevMonth = () => {
     if (currentMonth === 0) { setCurrentMonth(11); setCurrentYear(currentYear - 1); }
@@ -118,22 +93,41 @@ export default function OccupancyPlanner() {
 
   const addNote = () => {
     if (!newNote.title.trim()) return;
-    const note: Note = {
-      id: `N${Date.now()}`,
-      date: dateStr || `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-01`,
-      title: newNote.title,
-      content: newNote.content,
-      category: newNote.category,
-      pinned: false,
-      createdAt: new Date().toISOString().split('T')[0],
-    };
-    setNotes([note, ...notes]);
-    setNewNote({ title: '', content: '', category: 'reminder' });
-    setShowNewNote(false);
+    const noteDate = dateStr || `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-01`;
+    createNoteMutation.mutate(
+      { date: noteDate, title: newNote.title, content: newNote.content, category: newNote.category },
+      { onSuccess: () => {
+        setNewNote({ title: '', content: '', category: 'reminder' });
+        setShowNewNote(false);
+      }}
+    );
   };
 
-  const deleteNote = (id: string) => setNotes(notes.filter(n => n.id !== id));
-  const togglePin = (id: string) => setNotes(notes.map(n => n.id === id ? { ...n, pinned: !n.pinned } : n));
+  const deleteNote = (id: string) => deleteNoteMutation.mutate(id);
+  const togglePin = (id: string) => togglePinMutation.mutate(id);
+
+  const isLoading = dataLoading || notesLoading;
+  const hasError = dataError || notesError;
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-cream-100 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-maroon-800" />
+      </div>
+    );
+  }
+
+  if (hasError) {
+    return (
+      <div className="min-h-screen bg-cream-100 flex flex-col items-center justify-center gap-4">
+        <AlertTriangle className="w-12 h-12 text-red-500" />
+        <p className="text-charcoal-600">Failed to load planner data</p>
+        <button onClick={() => { refetchData(); refetchNotes(); }} className="px-4 py-2 bg-maroon-800 text-white rounded-lg">Retry</button>
+      </div>
+    );
+  }
+
+  const occupiedCount = selectedDayData ? Math.round(totalUnits * selectedDayData.occupancy / 100) : 0;
 
   const kpis = [
     { label: 'Avg Occupancy', value: `${avgOccupancy}%`, icon: Building2, color: 'text-maroon-800', bg: 'bg-maroon-50' },
@@ -147,7 +141,7 @@ export default function OccupancyPlanner() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-charcoal-800">Occupancy Planner</h1>
-          <p className="text-charcoal-400 mt-1">Calendar view, KPIs, and operational notes</p>
+          <p className="text-charcoal-400 mt-1">Calendar view, KPIs, and operational notes &middot; {totalUnits} units</p>
         </div>
         <button
           onClick={() => setShowNewNote(true)}
@@ -231,7 +225,7 @@ export default function OccupancyPlanner() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                 <div>
                   <p className="text-charcoal-400">Occupancy</p>
-                  <p className="font-bold text-charcoal-800">{selectedDayData.occupancy}% ({Math.round(22 * selectedDayData.occupancy / 100)} / 22)</p>
+                  <p className="font-bold text-charcoal-800">{selectedDayData.occupancy}% ({occupiedCount} / {totalUnits})</p>
                 </div>
                 <div>
                   <p className="text-charcoal-400">Revenue</p>
@@ -251,8 +245,8 @@ export default function OccupancyPlanner() {
                   <p className="text-xs font-medium text-charcoal-500 mb-2">Notes for this day:</p>
                   {dayNotes.map(n => (
                     <div key={n.id} className="bg-white rounded p-2 mb-1 text-sm">
-                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${CATEGORY_STYLES[n.category].bg} ${CATEGORY_STYLES[n.category].text} mr-2`}>
-                        {CATEGORY_STYLES[n.category].label}
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${CATEGORY_STYLES[n.category]?.bg || 'bg-gray-100'} ${CATEGORY_STYLES[n.category]?.text || 'text-gray-700'} mr-2`}>
+                        {CATEGORY_STYLES[n.category]?.label || n.category}
                       </span>
                       <span className="font-medium text-charcoal-800">{n.title}</span>
                     </div>
@@ -284,12 +278,15 @@ export default function OccupancyPlanner() {
           </div>
 
           <div className="space-y-3 max-h-[600px] overflow-y-auto">
+            {filteredNotes.length === 0 && (
+              <p className="text-sm text-charcoal-400 text-center py-8">No notes for this month</p>
+            )}
             {filteredNotes.map((note) => (
               <div key={note.id} className={`border rounded-lg p-3 ${note.pinned ? 'border-maroon-300 bg-maroon-50/30' : 'border-charcoal-100'}`}>
                 <div className="flex items-start justify-between mb-1">
                   <div className="flex items-center gap-2">
-                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${CATEGORY_STYLES[note.category].bg} ${CATEGORY_STYLES[note.category].text}`}>
-                      {CATEGORY_STYLES[note.category].label}
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${CATEGORY_STYLES[note.category]?.bg || 'bg-gray-100'} ${CATEGORY_STYLES[note.category]?.text || 'text-gray-700'}`}>
+                      {CATEGORY_STYLES[note.category]?.label || note.category}
                     </span>
                     {note.pinned && <Star className="w-3 h-3 text-maroon-800 fill-maroon-800" />}
                   </div>
@@ -297,7 +294,11 @@ export default function OccupancyPlanner() {
                     <button onClick={() => togglePin(note.id)} className="p-1 hover:bg-cream-100 rounded" title={note.pinned ? 'Unpin' : 'Pin'}>
                       <Star className={`w-3 h-3 ${note.pinned ? 'text-maroon-800' : 'text-charcoal-300'}`} />
                     </button>
-                    <button onClick={() => deleteNote(note.id)} className="p-1 hover:bg-red-50 rounded">
+                    <button
+                      onClick={() => deleteNote(note.id)}
+                      disabled={deleteNoteMutation.isPending}
+                      className="p-1 hover:bg-red-50 rounded"
+                    >
                       <Trash2 className="w-3 h-3 text-charcoal-300 hover:text-red-500" />
                     </button>
                   </div>
@@ -336,7 +337,7 @@ export default function OccupancyPlanner() {
                 <label className="block text-sm font-medium text-charcoal-700 mb-1">Category</label>
                 <select
                   value={newNote.category}
-                  onChange={(e) => setNewNote({ ...newNote, category: e.target.value as Note['category'] })}
+                  onChange={(e) => setNewNote({ ...newNote, category: e.target.value as NoteCategory })}
                   className="w-full border border-charcoal-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-maroon-800"
                 >
                   {Object.entries(CATEGORY_STYLES).map(([key, val]) => (
@@ -356,8 +357,13 @@ export default function OccupancyPlanner() {
               </div>
               <div className="flex justify-end gap-3">
                 <button onClick={() => setShowNewNote(false)} className="px-4 py-2 text-sm text-charcoal-600 hover:bg-cream-100 rounded-lg">Cancel</button>
-                <button onClick={addNote} className="flex items-center gap-2 bg-maroon-800 hover:bg-maroon-700 text-white px-4 py-2 rounded-lg text-sm transition-colors">
-                  <Save className="w-4 h-4" /> Save Note
+                <button
+                  onClick={addNote}
+                  disabled={createNoteMutation.isPending}
+                  className="flex items-center gap-2 bg-maroon-800 hover:bg-maroon-700 text-white px-4 py-2 rounded-lg text-sm transition-colors disabled:opacity-50"
+                >
+                  {createNoteMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  Save Note
                 </button>
               </div>
             </div>
