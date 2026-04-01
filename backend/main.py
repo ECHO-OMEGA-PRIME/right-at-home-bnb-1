@@ -128,6 +128,9 @@ from routers.cleaner_analytics import router as cleaner_analytics_router
 # Pool Tech Worker Portal
 from routes.pool_tech import router as pool_tech_router
 
+# Direct Booking + PayPal Payments (replaces OwnerRez)
+from routers.direct_booking import router as direct_booking_router
+
 # ============================================================================
 # CORE API ROUTES
 # ============================================================================
@@ -216,6 +219,10 @@ app.include_router(utilities_router, prefix="/api/admin/utilities", tags=["Utili
 
 # Cleaner Performance Analytics - Dashboard, rankings, bonus calculations
 app.include_router(cleaner_analytics_router, prefix="/api/admin/cleaners", tags=["Cleaner Performance Analytics"])
+
+# Direct Booking - PayPal payments, VRBO iCal sync, 25 properties
+# Replaces OwnerRez dependency — guests book direct on rah-midland.com
+app.include_router(direct_booking_router, prefix="/api/book", tags=["Direct Booking (PayPal)"])
 
 # ============================================================================
 # ECHO OMEGA PRIME BRANDING

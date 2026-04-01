@@ -2,18 +2,22 @@
 Direct Booking API Routes for Right at Home BnB
 ================================================
 Enables direct booking flow bypassing OTA fees (15-20% savings).
+Uses PayPal for payment processing (Steven's preferred payment method).
 
 Endpoints:
 - POST /book/check-availability - Check dates availability
 - POST /book/calculate - Calculate price breakdown
 - POST /book/create - Create booking
-- POST /book/payment - Process payment
+- POST /book/payment - Process PayPal payment
+- POST /book/payment/capture - Capture after guest approves
 - GET /book/{id}/confirmation - Get booking confirmation
+- GET /book/properties - List all properties with pricing
+- POST /book/{id}/cancel - Cancel booking
 
 ECHO OMEGA PRIME | Made by Commander Bobby Don McWilliams II
 """
 
-from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
+from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks, Request
 from pydantic import BaseModel, Field, EmailStr
 from typing import Optional, List, Dict, Any
 from datetime import datetime, date, timedelta
@@ -27,7 +31,7 @@ from services.calendar_sync import (
     get_calendar_sync_service,
     BookingPlatform,
 )
-from services.stripe_payments import StripePaymentService, PaymentType
+from services.paypal_payments import PayPalPaymentService, get_paypal_service, PaymentType
 
 logger = logging.getLogger("RightAtHomeBnB.DirectBooking")
 
@@ -47,8 +51,7 @@ class BookingStatus(str, Enum):
 
 
 class PaymentMethod(str, Enum):
-    STRIPE = "stripe"
-    SQUARE = "square"
+    PAYPAL = "paypal"
 
 
 # =============================================================================
@@ -56,14 +59,12 @@ class PaymentMethod(str, Enum):
 # =============================================================================
 
 class AvailabilityCheckRequest(BaseModel):
-    """Request to check property availability"""
     property_id: str = Field(..., description="Property ID to check")
     check_in: date = Field(..., description="Check-in date")
     check_out: date = Field(..., description="Check-out date")
 
 
 class AvailabilityCheckResponse(BaseModel):
-    """Availability check result"""
     property_id: str
     check_in: date
     check_out: date
@@ -75,16 +76,14 @@ class AvailabilityCheckResponse(BaseModel):
 
 
 class PriceCalculationRequest(BaseModel):
-    """Request to calculate booking price"""
     property_id: str = Field(..., description="Property ID")
     check_in: date = Field(..., description="Check-in date")
     check_out: date = Field(..., description="Check-out date")
-    guest_count: int = Field(1, ge=1, le=16, description="Number of guests")
+    guest_count: int = Field(1, ge=1, le=20, description="Number of guests")
     apply_promo_code: Optional[str] = Field(None, description="Promo code")
 
 
 class PriceBreakdown(BaseModel):
-    """Detailed price breakdown"""
     nightly_rate: float
     num_nights: int
     subtotal: float
@@ -94,16 +93,16 @@ class PriceBreakdown(BaseModel):
     security_deposit: float
     discount: float = 0.0
     discount_reason: Optional[str] = None
-    ota_comparison: float  # What it would cost on Airbnb/VRBO
-    savings: float  # Amount saved by booking direct
+    ota_comparison: float
+    savings: float
     savings_percentage: float
     total: float
     total_with_deposit: float
 
 
 class PriceCalculationResponse(BaseModel):
-    """Price calculation result"""
     property_id: str
+    property_name: str
     check_in: date
     check_out: date
     guest_count: int
@@ -114,7 +113,6 @@ class PriceCalculationResponse(BaseModel):
 
 
 class GuestInfo(BaseModel):
-    """Guest information for booking"""
     first_name: str = Field(..., min_length=1, max_length=100)
     last_name: str = Field(..., min_length=1, max_length=100)
     email: EmailStr
@@ -130,18 +128,16 @@ class GuestInfo(BaseModel):
 
 
 class CreateBookingRequest(BaseModel):
-    """Request to create a booking"""
     property_id: str
     check_in: date
     check_out: date
-    guest_count: int = Field(1, ge=1, le=16)
+    guest_count: int = Field(1, ge=1, le=20)
     guest_info: GuestInfo
     quote_id: Optional[str] = None
     promo_code: Optional[str] = None
 
 
 class DirectBooking(BaseModel):
-    """Direct booking record"""
     id: str
     property_id: str
     property_name: str
@@ -152,34 +148,31 @@ class DirectBooking(BaseModel):
     status: BookingStatus
     confirmation_code: str
     price_breakdown: PriceBreakdown
-    payment_intent_id: Optional[str] = None
+    paypal_order_id: Optional[str] = None
+    paypal_capture_id: Optional[str] = None
     payment_status: str = "pending"
     created_at: datetime
     updated_at: datetime
 
 
 class ProcessPaymentRequest(BaseModel):
-    """Request to process payment"""
     booking_id: str
-    payment_method: PaymentMethod = PaymentMethod.STRIPE
-    payment_method_id: Optional[str] = None  # Stripe payment method ID
-    nonce: Optional[str] = None  # Square nonce
     include_security_deposit: bool = True
+    return_url: Optional[str] = None
+    cancel_url: Optional[str] = None
 
 
 class PaymentResponse(BaseModel):
-    """Payment processing result"""
     success: bool
     booking_id: str
-    payment_intent_id: Optional[str] = None
-    client_secret: Optional[str] = None
+    paypal_order_id: Optional[str] = None
+    approve_url: Optional[str] = None
     amount: float
     status: str
     message: str
 
 
 class BookingConfirmation(BaseModel):
-    """Full booking confirmation"""
     booking: DirectBooking
     property: Dict[str, Any]
     waiver_links: Dict[str, str]
@@ -189,45 +182,299 @@ class BookingConfirmation(BaseModel):
     cancellation_policy: str
 
 
+class PropertyListItem(BaseModel):
+    id: str
+    name: str
+    address: str
+    city: str = "Midland"
+    state: str = "TX"
+    bedrooms: int
+    bathrooms: float
+    sleeps: int
+    nightly_rate: float
+    cleaning_fee: float
+    min_nights: int
+    vrbo_id: Optional[str] = None
+    vrbo_url: Optional[str] = None
+    amenities: List[str] = []
+    rating: Optional[str] = None
+    reviews: Optional[int] = None
+    photos: int = 0
+
+
 # =============================================================================
-# IN-MEMORY STORAGE (Use database in production)
+# PROPERTY DATABASE — ALL 25 Steven Palma Properties
 # =============================================================================
 
-_direct_bookings: Dict[str, DirectBooking] = {}
-_price_quotes: Dict[str, Dict[str, Any]] = {}
+PROPERTIES: Dict[str, Dict[str, Any]] = {
+    # ── VERIFIED ADDRESS PROPERTIES (8) ──────────────────────────────────
+    "prop_18": {
+        "name": "Santiago Dreams",
+        "address": "1311 Daventry, Midland, TX 79705",
+        "bedrooms": 4, "bathrooms": 3, "sleeps": 10,
+        "nightly_rate": 225.00, "cleaning_fee": 150.00,
+        "min_nights": 2, "max_guests": 10, "base_guests": 6,
+        "extra_guest_fee": 25.00, "security_deposit": 300.00,
+        "vrbo_id": "4179271", "rating": "10/10", "reviews": 18, "photos": 63,
+        "amenities": ["Kitchen", "Washer", "Dryer", "Pet Friendly", "Free WiFi",
+                       "AC", "Man Cave", "Two Large Yards", "Extra Parking"],
+    },
+    "prop_19": {
+        "name": "Sprawling Ranch House with Pool Cabana & Playground",
+        "address": "5055 Lincoln Green, Midland, TX 79705",
+        "bedrooms": 6, "bathrooms": 3.5, "sleeps": 18,
+        "nightly_rate": 350.00, "cleaning_fee": 200.00,
+        "min_nights": 2, "max_guests": 18, "base_guests": 8,
+        "extra_guest_fee": 30.00, "security_deposit": 500.00,
+        "vrbo_id": "4581977", "rating": "9.0/10", "reviews": 2, "photos": 83,
+        "amenities": ["Pool", "Washer", "Dryer", "Pet Friendly", "AC",
+                       "Parking", "Fireplace", "Jetted Bathtub", "Pool Cabana", "Playground"],
+    },
+    "prop_20": {
+        "name": "Posh & Private with Billiards",
+        "address": "1426 Lanham, Midland, TX 79705",
+        "bedrooms": 3, "bathrooms": 3.5, "sleeps": 10,
+        "nightly_rate": 225.00, "cleaning_fee": 150.00,
+        "min_nights": 2, "max_guests": 10, "base_guests": 6,
+        "extra_guest_fee": 25.00, "security_deposit": 300.00,
+        "vrbo_id": "4437486", "rating": "10/10", "reviews": 6, "photos": 46,
+        "amenities": ["Kitchen", "Washer", "Dryer", "Pet Friendly", "AC",
+                       "Parking", "Fireplace", "Billiards Table", "Private Setting"],
+    },
+    "prop_21": {
+        "name": "Outdoor Dream",
+        "address": "3106 Humble, Midland, TX 79705",
+        "bedrooms": 4, "bathrooms": 2.5, "sleeps": 14,
+        "nightly_rate": 275.00, "cleaning_fee": 175.00,
+        "min_nights": 2, "max_guests": 14, "base_guests": 8,
+        "extra_guest_fee": 25.00, "security_deposit": 350.00,
+        "vrbo_id": "4700881", "rating": "6.8/10", "reviews": 5, "photos": 48,
+        "amenities": ["Pool", "Hot Tub", "Kitchen", "Washer", "Dryer",
+                       "Pet Friendly", "Patio", "Outdoor Living"],
+    },
+    "prop_22": {
+        "name": "Most Marvelous with Pool",
+        "address": "6100 Oriole, Midland, TX 79705",
+        "bedrooms": 4, "bathrooms": 2, "sleeps": 8,
+        "nightly_rate": 225.00, "cleaning_fee": 150.00,
+        "min_nights": 2, "max_guests": 8, "base_guests": 6,
+        "extra_guest_fee": 25.00, "security_deposit": 300.00,
+        "vrbo_id": "4471713", "rating": "9.6/10", "reviews": 5, "photos": 33,
+        "amenities": ["Pool", "Kitchen", "Washer", "Dryer", "Pet Friendly",
+                       "AC", "Fireplace"],
+    },
+    "prop_23": {
+        "name": "Hot Tub Delight",
+        "address": "4707 Dentcrest, Midland, TX 79705",
+        "bedrooms": 3, "bathrooms": 2.5, "sleeps": 6,
+        "nightly_rate": 175.00, "cleaning_fee": 125.00,
+        "min_nights": 2, "max_guests": 6, "base_guests": 4,
+        "extra_guest_fee": 25.00, "security_deposit": 250.00,
+        "vrbo_id": "2638481", "rating": "8.4/10", "reviews": 28, "photos": 36,
+        "amenities": ["Hot Tub", "Kitchen", "Washer", "Dryer", "Pet Friendly",
+                       "Free WiFi", "Balcony", "Outdoor Spa Tub"],
+    },
+    "prop_24": {
+        "name": "Saddle Club",
+        "address": "1309 Daventry, Midland, TX 79705",
+        "bedrooms": 4, "bathrooms": 3, "sleeps": 8,
+        "nightly_rate": 225.00, "cleaning_fee": 150.00,
+        "min_nights": 2, "max_guests": 8, "base_guests": 6,
+        "extra_guest_fee": 25.00, "security_deposit": 300.00,
+        "vrbo_id": "4750070", "rating": "10/10", "reviews": 4, "photos": 49,
+        "amenities": ["Washer", "Dryer", "AC", "Parking", "BBQ Grill",
+                       "Children's Area", "Large Yard with Trees"],
+    },
+    "prop_25": {
+        "name": "Monterrey House",
+        "address": "Monterrey St, Midland, TX 79705",
+        "bedrooms": 3, "bathrooms": 2, "sleeps": 6,
+        "nightly_rate": 165.00, "cleaning_fee": 100.00,
+        "min_nights": 2, "max_guests": 6, "base_guests": 4,
+        "extra_guest_fee": 20.00, "security_deposit": 250.00,
+        "vrbo_id": "3477668", "rating": "8.4/10", "reviews": 11, "photos": 26,
+        "amenities": ["Kitchen", "Washer", "Dryer", "Pet Friendly", "Free WiFi",
+                       "AC", "Patio/Terrace"],
+    },
 
-# Property pricing data (would come from database)
-PROPERTY_PRICING = {
-    "prop_001": {
-        "name": "Desert Oasis",
-        "nightly_rate": 175.00,
-        "cleaning_fee": 125.00,
-        "max_guests": 6,
-        "min_nights": 2,
-        "extra_guest_fee": 25.00,
-        "base_guests": 4,
+    # ── OTHER VRBO LISTINGS (Address Unverified) ────────────────────────
+    "prop_01": {
+        "name": "Oasis with Pool & Billiards",
+        "address": "Castleford Area, Midland, TX",
+        "bedrooms": 4, "bathrooms": 3.5, "sleeps": 10,
+        "nightly_rate": 225.00, "cleaning_fee": 150.00,
+        "min_nights": 2, "max_guests": 10, "base_guests": 6,
+        "extra_guest_fee": 25.00, "security_deposit": 300.00,
+        "vrbo_id": "2636389", "rating": "9.0/10", "reviews": 69, "photos": 50,
+        "amenities": ["Pool", "Kitchen", "Washer", "Dryer", "Pet Friendly",
+                       "Free WiFi", "Billiards"],
     },
-    "prop_002": {
-        "name": "Midland Manor",
-        "nightly_rate": 225.00,
-        "cleaning_fee": 150.00,
-        "max_guests": 10,
-        "min_nights": 2,
-        "extra_guest_fee": 30.00,
-        "base_guests": 6,
+    "prop_02": {
+        "name": "Adobe Compound with Pool, Fire Pits & Billiards",
+        "address": "Near Midland Memorial Hospital, Midland, TX",
+        "bedrooms": 7, "bathrooms": 2.5, "sleeps": 16,
+        "nightly_rate": 375.00, "cleaning_fee": 225.00,
+        "min_nights": 2, "max_guests": 16, "base_guests": 8,
+        "extra_guest_fee": 30.00, "security_deposit": 500.00,
+        "vrbo_id": "3005111", "rating": "8.8/10", "reviews": 36, "photos": 75,
+        "amenities": ["Pool", "Kitchen", "Washer", "Dryer", "Pet Friendly",
+                       "Free WiFi", "Fire Pits", "Billiards"],
     },
-    "default": {
-        "name": "Property",
-        "nightly_rate": 150.00,
-        "cleaning_fee": 100.00,
-        "max_guests": 8,
-        "min_nights": 1,
-        "extra_guest_fee": 20.00,
-        "base_guests": 4,
-    }
+    "prop_03": {
+        "name": "Patio Home with Hot Tub",
+        "address": "Near Midland College, Midland, TX",
+        "bedrooms": 3, "bathrooms": 2, "sleeps": 8,
+        "nightly_rate": 185.00, "cleaning_fee": 125.00,
+        "min_nights": 2, "max_guests": 8, "base_guests": 4,
+        "extra_guest_fee": 25.00, "security_deposit": 250.00,
+        "vrbo_id": "2634718", "rating": None, "reviews": 0, "photos": 30,
+        "amenities": ["Hot Tub", "Multiple Outdoor Spaces", "Kitchen",
+                       "Washer", "Dryer"],
+    },
+    "prop_04": {
+        "name": "Old Midland Living with Massive Yard",
+        "address": "Near George W. Bush Home, Midland, TX",
+        "bedrooms": 4, "bathrooms": 3, "sleeps": 16,
+        "nightly_rate": 325.00, "cleaning_fee": 200.00,
+        "min_nights": 2, "max_guests": 16, "base_guests": 8,
+        "extra_guest_fee": 30.00, "security_deposit": 400.00,
+        "vrbo_id": "3355618", "rating": None, "reviews": 0, "photos": 40,
+        "amenities": ["Pool", "Hot Tub", "Kitchen", "Washer", "Dryer",
+                       "Pet Friendly", "Massive Yard"],
+    },
+    "prop_05": {
+        "name": "Hot Tub Delight (Garfield)",
+        "address": "Garfield Area, Midland, TX",
+        "bedrooms": 3, "bathrooms": 2, "sleeps": 6,
+        "nightly_rate": 175.00, "cleaning_fee": 125.00,
+        "min_nights": 2, "max_guests": 6, "base_guests": 4,
+        "extra_guest_fee": 25.00, "security_deposit": 250.00,
+        "vrbo_id": None, "rating": None, "reviews": 0, "photos": 0,
+        "amenities": ["Hot Tub", "Kitchen", "AC"],
+    },
+    "prop_06": {
+        "name": "Safari Gameroom",
+        "address": "Midland, TX",
+        "bedrooms": 3, "bathrooms": 2, "sleeps": 8,
+        "nightly_rate": 195.00, "cleaning_fee": 125.00,
+        "min_nights": 2, "max_guests": 8, "base_guests": 4,
+        "extra_guest_fee": 25.00, "security_deposit": 250.00,
+        "vrbo_id": "2638524", "rating": None, "reviews": 0, "photos": 30,
+        "amenities": ["Game Room", "Safari Decor", "Kitchen", "AC"],
+    },
+    "prop_07": {
+        "name": "Destination Getaway",
+        "address": "Storey Area, Midland, TX",
+        "bedrooms": 3, "bathrooms": 2, "sleeps": 8,
+        "nightly_rate": 185.00, "cleaning_fee": 125.00,
+        "min_nights": 2, "max_guests": 8, "base_guests": 4,
+        "extra_guest_fee": 25.00, "security_deposit": 250.00,
+        "vrbo_id": "2643822", "rating": None, "reviews": 14, "photos": 30,
+        "amenities": ["Kitchen", "Washer", "Dryer", "AC"],
+    },
+    "prop_08": {
+        "name": "Retreat with Covered Patio",
+        "address": "Chelsea Area, Midland, TX",
+        "bedrooms": 3, "bathrooms": 2, "sleeps": 8,
+        "nightly_rate": 185.00, "cleaning_fee": 125.00,
+        "min_nights": 2, "max_guests": 8, "base_guests": 4,
+        "extra_guest_fee": 25.00, "security_deposit": 250.00,
+        "vrbo_id": "2643784", "rating": None, "reviews": 0, "photos": 30,
+        "amenities": ["Covered Patio", "Kitchen", "Washer", "Dryer", "AC"],
+    },
+    "prop_09": {
+        "name": "Clermont House with Pool & Billiards",
+        "address": "Midland, TX",
+        "bedrooms": 4, "bathrooms": 3, "sleeps": 10,
+        "nightly_rate": 250.00, "cleaning_fee": 150.00,
+        "min_nights": 2, "max_guests": 10, "base_guests": 6,
+        "extra_guest_fee": 25.00, "security_deposit": 300.00,
+        "vrbo_id": None, "rating": None, "reviews": 22, "photos": 40,
+        "amenities": ["Pool", "Billiards", "Kitchen", "Washer", "Dryer", "AC"],
+    },
+    "prop_10": {
+        "name": "Uptown Place with Gated Yard",
+        "address": "Midland, TX",
+        "bedrooms": 3, "bathrooms": 2, "sleeps": 8,
+        "nightly_rate": 195.00, "cleaning_fee": 125.00,
+        "min_nights": 2, "max_guests": 8, "base_guests": 4,
+        "extra_guest_fee": 25.00, "security_deposit": 250.00,
+        "vrbo_id": None, "rating": None, "reviews": 17, "photos": 30,
+        "amenities": ["Gated Yard", "Covered Parking", "Kitchen", "AC"],
+    },
+    "prop_11": {
+        "name": "Sprawling Ranch",
+        "address": "Midland, TX",
+        "bedrooms": 5, "bathrooms": 3, "sleeps": 14,
+        "nightly_rate": 300.00, "cleaning_fee": 175.00,
+        "min_nights": 2, "max_guests": 14, "base_guests": 8,
+        "extra_guest_fee": 25.00, "security_deposit": 400.00,
+        "vrbo_id": None, "rating": None, "reviews": 0, "photos": 0,
+        "amenities": ["Large Property", "Kitchen", "AC"],
+    },
+    "prop_12": {
+        "name": "Most Marvelous",
+        "address": "Midland, TX",
+        "bedrooms": 4, "bathrooms": 2, "sleeps": 8,
+        "nightly_rate": 225.00, "cleaning_fee": 150.00,
+        "min_nights": 2, "max_guests": 8, "base_guests": 6,
+        "extra_guest_fee": 25.00, "security_deposit": 300.00,
+        "vrbo_id": None, "rating": None, "reviews": 0, "photos": 0,
+        "amenities": ["Kitchen", "AC"],
+    },
+    "prop_13": {
+        "name": "Posh Private",
+        "address": "Midland, TX",
+        "bedrooms": 3, "bathrooms": 2, "sleeps": 8,
+        "nightly_rate": 195.00, "cleaning_fee": 125.00,
+        "min_nights": 2, "max_guests": 8, "base_guests": 4,
+        "extra_guest_fee": 25.00, "security_deposit": 250.00,
+        "vrbo_id": None, "rating": None, "reviews": 0, "photos": 0,
+        "amenities": ["Private Setting", "Kitchen", "AC"],
+    },
+    "prop_14": {
+        "name": "Cowboy Siesta Corner Lot",
+        "address": "Midland, TX",
+        "bedrooms": 3, "bathrooms": 2, "sleeps": 8,
+        "nightly_rate": 185.00, "cleaning_fee": 125.00,
+        "min_nights": 2, "max_guests": 8, "base_guests": 4,
+        "extra_guest_fee": 25.00, "security_deposit": 250.00,
+        "vrbo_id": None, "rating": None, "reviews": 0, "photos": 0,
+        "amenities": ["Corner Lot", "Patio", "Covered Parking", "Kitchen", "AC"],
+    },
+    "prop_15": {
+        "name": "Outdoor Dream (Original)",
+        "address": "Midland, TX",
+        "bedrooms": 4, "bathrooms": 2, "sleeps": 10,
+        "nightly_rate": 225.00, "cleaning_fee": 150.00,
+        "min_nights": 2, "max_guests": 10, "base_guests": 6,
+        "extra_guest_fee": 25.00, "security_deposit": 300.00,
+        "vrbo_id": None, "rating": None, "reviews": 0, "photos": 0,
+        "amenities": ["Outdoor Living", "Kitchen", "AC"],
+    },
+    "prop_16": {
+        "name": "Vanguard Velvet Lounge",
+        "address": "Vanguard Area, Midland, TX",
+        "bedrooms": 3, "bathrooms": 2, "sleeps": 8,
+        "nightly_rate": 195.00, "cleaning_fee": 125.00,
+        "min_nights": 2, "max_guests": 8, "base_guests": 4,
+        "extra_guest_fee": 25.00, "security_deposit": 250.00,
+        "vrbo_id": None, "rating": None, "reviews": 17, "photos": 30,
+        "amenities": ["Lounge", "Kitchen", "Washer", "Dryer", "AC"],
+    },
+    "prop_17": {
+        "name": "Groovy Times with Pool",
+        "address": "Shandon Area, Midland, TX",
+        "bedrooms": 3, "bathrooms": 2, "sleeps": 8,
+        "nightly_rate": 210.00, "cleaning_fee": 150.00,
+        "min_nights": 2, "max_guests": 8, "base_guests": 4,
+        "extra_guest_fee": 25.00, "security_deposit": 300.00,
+        "vrbo_id": None, "rating": None, "reviews": 0, "photos": 30,
+        "amenities": ["Pool", "Kitchen", "Washer", "Dryer", "AC"],
+    },
 }
 
-# OTA fee rates for comparison
+# OTA fee rates for savings comparison
 OTA_FEES = {
     "airbnb_guest": 0.14,    # 14% guest service fee
     "airbnb_host": 0.03,     # 3% host fee
@@ -235,33 +482,41 @@ OTA_FEES = {
     "vrbo_host": 0.05,       # 5% host fee
 }
 
-# Tax rate for Midland, TX
-TAX_RATE = 0.13  # 13% hotel occupancy tax
-
-# Security deposit
-SECURITY_DEPOSIT = 250.00
+# Midland TX hotel occupancy tax
+TAX_RATE = 0.13
 
 
 # =============================================================================
-# HELPER FUNCTIONS
+# IN-MEMORY STORAGE (Firebase in production)
 # =============================================================================
 
-def get_property_pricing(property_id: str) -> Dict[str, Any]:
-    """Get pricing configuration for a property"""
-    return PROPERTY_PRICING.get(property_id, PROPERTY_PRICING["default"])
+_direct_bookings: Dict[str, DirectBooking] = {}
+_price_quotes: Dict[str, Dict[str, Any]] = {}
+
+
+# =============================================================================
+# HELPERS
+# =============================================================================
+
+def get_property(property_id: str) -> Dict[str, Any]:
+    """Get property data by ID."""
+    prop = PROPERTIES.get(property_id)
+    if not prop:
+        raise HTTPException(status_code=404, detail=f"Property {property_id} not found")
+    return prop
 
 
 def generate_confirmation_code() -> str:
-    """Generate unique confirmation code"""
+    """Generate unique confirmation code."""
     import random
     import string
     return "RAH" + ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
 
 
-def calculate_ota_price(subtotal: float, cleaning_fee: float, nights: int) -> float:
-    """Calculate what guest would pay on Airbnb/VRBO"""
+def calculate_ota_price(subtotal: float, cleaning_fee: float) -> float:
+    """Calculate what guest would pay on Airbnb/VRBO for comparison."""
     base = subtotal + cleaning_fee
-    guest_fee = base * OTA_FEES["airbnb_guest"]  # Use Airbnb as comparison
+    guest_fee = base * OTA_FEES["airbnb_guest"]
     taxes = (base + guest_fee) * TAX_RATE
     return base + guest_fee + taxes
 
@@ -271,32 +526,69 @@ def calculate_ota_price(subtotal: float, cleaning_fee: float, nights: int) -> fl
 # =============================================================================
 
 def get_sync_service() -> CalendarSyncService:
-    """Get calendar sync service"""
     return get_calendar_sync_service()
 
 
-def get_payment_service() -> StripePaymentService:
-    """Get Stripe payment service"""
-    return StripePaymentService()
+def get_payment_service() -> PayPalPaymentService:
+    return get_paypal_service()
 
 
 # =============================================================================
 # ENDPOINTS
 # =============================================================================
 
+@router.get("/properties", response_model=List[PropertyListItem])
+async def list_properties():
+    """
+    List all available properties with pricing.
+
+    Returns all 25 Right At Home BnB properties in Midland, TX.
+    """
+    result = []
+    for prop_id, prop in PROPERTIES.items():
+        vrbo_url = f"https://www.vrbo.com/{prop['vrbo_id']}" if prop.get("vrbo_id") else None
+        result.append(PropertyListItem(
+            id=prop_id,
+            name=prop["name"],
+            address=prop["address"],
+            bedrooms=prop["bedrooms"],
+            bathrooms=prop["bathrooms"],
+            sleeps=prop["sleeps"],
+            nightly_rate=prop["nightly_rate"],
+            cleaning_fee=prop["cleaning_fee"],
+            min_nights=prop["min_nights"],
+            vrbo_id=prop.get("vrbo_id"),
+            vrbo_url=vrbo_url,
+            amenities=prop.get("amenities", []),
+            rating=prop.get("rating"),
+            reviews=prop.get("reviews", 0),
+            photos=prop.get("photos", 0),
+        ))
+    return result
+
+
+@router.get("/properties/{property_id}")
+async def get_property_detail(property_id: str):
+    """Get full property details."""
+    prop = get_property(property_id)
+    vrbo_url = f"https://www.vrbo.com/{prop['vrbo_id']}" if prop.get("vrbo_id") else None
+    return {
+        "id": property_id,
+        **prop,
+        "vrbo_url": vrbo_url,
+        "ical_url": f"https://www.vrbo.com/icalendar/{prop['vrbo_id']}.ics" if prop.get("vrbo_id") else None,
+        "direct_booking_url": f"https://rah-midland.com/book/{property_id}",
+    }
+
+
 @router.post("/check-availability", response_model=AvailabilityCheckResponse)
 async def check_availability(
     request: AvailabilityCheckRequest,
     sync_service: CalendarSyncService = Depends(get_sync_service),
 ):
-    """
-    Check if property is available for the requested dates.
+    """Check if property is available for the requested dates."""
+    prop = get_property(request.property_id)
 
-    Returns availability status and any conflicting bookings.
-    """
-    property_pricing = get_property_pricing(request.property_id)
-
-    # Validate dates
     if request.check_in >= request.check_out:
         raise HTTPException(status_code=400, detail="Check-out must be after check-in")
 
@@ -304,18 +596,18 @@ async def check_availability(
         raise HTTPException(status_code=400, detail="Check-in cannot be in the past")
 
     nights = (request.check_out - request.check_in).days
-    if nights < property_pricing["min_nights"]:
+    if nights < prop["min_nights"]:
         return AvailabilityCheckResponse(
             property_id=request.property_id,
             check_in=request.check_in,
             check_out=request.check_out,
             available=False,
-            min_nights=property_pricing["min_nights"],
-            max_guests=property_pricing["max_guests"],
-            message=f"Minimum stay is {property_pricing['min_nights']} nights"
+            min_nights=prop["min_nights"],
+            max_guests=prop["max_guests"],
+            message=f"Minimum stay is {prop['min_nights']} nights"
         )
 
-    # Check existing bookings from calendar sync
+    # Check iCal sync for existing bookings
     start_dt = datetime.combine(request.check_in, datetime.min.time())
     end_dt = datetime.combine(request.check_out, datetime.min.time())
 
@@ -325,13 +617,11 @@ async def check_availability(
         end_date=end_dt + timedelta(days=1),
     )
 
-    # Check for overlaps
     conflicting_dates = []
     for booking in existing_bookings:
         booking_start = booking.start_date.date() if isinstance(booking.start_date, datetime) else booking.start_date
         booking_end = booking.end_date.date() if isinstance(booking.end_date, datetime) else booking.end_date
 
-        # Check if dates overlap
         if not (request.check_out <= booking_start or request.check_in >= booking_end):
             current = max(request.check_in, booking_start)
             while current < min(request.check_out, booking_end):
@@ -346,83 +636,76 @@ async def check_availability(
         check_out=request.check_out,
         available=available,
         conflicting_dates=conflicting_dates,
-        min_nights=property_pricing["min_nights"],
-        max_guests=property_pricing["max_guests"],
-        message="Available!" if available else f"Property not available for {len(conflicting_dates)} of your requested nights"
+        min_nights=prop["min_nights"],
+        max_guests=prop["max_guests"],
+        message="Available! Book direct and save 10-15%!" if available else f"Not available for {len(conflicting_dates)} of your requested nights"
     )
 
 
 @router.post("/calculate", response_model=PriceCalculationResponse)
 async def calculate_price(request: PriceCalculationRequest):
     """
-    Calculate detailed price breakdown for a booking.
+    Calculate detailed price breakdown.
 
-    Shows comparison with OTA pricing to highlight direct booking savings.
+    Shows savings vs OTA (VRBO/Airbnb) to encourage direct booking.
     """
-    # Validate dates
+    prop = get_property(request.property_id)
+
     if request.check_in >= request.check_out:
         raise HTTPException(status_code=400, detail="Check-out must be after check-in")
 
-    property_pricing = get_property_pricing(request.property_id)
+    if request.guest_count > prop["max_guests"]:
+        raise HTTPException(status_code=400, detail=f"Maximum {prop['max_guests']} guests allowed")
 
-    # Validate guest count
-    if request.guest_count > property_pricing["max_guests"]:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Maximum {property_pricing['max_guests']} guests allowed"
-        )
-
-    # Calculate nights
     num_nights = (request.check_out - request.check_in).days
+    if num_nights < prop["min_nights"]:
+        raise HTTPException(status_code=400, detail=f"Minimum stay is {prop['min_nights']} nights")
 
-    if num_nights < property_pricing["min_nights"]:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Minimum stay is {property_pricing['min_nights']} nights"
-        )
-
-    # Calculate base price
-    nightly_rate = property_pricing["nightly_rate"]
-
-    # Extra guest fees
-    extra_guests = max(0, request.guest_count - property_pricing["base_guests"])
-    extra_guest_total = extra_guests * property_pricing["extra_guest_fee"] * num_nights
+    nightly_rate = prop["nightly_rate"]
+    extra_guests = max(0, request.guest_count - prop["base_guests"])
+    extra_guest_total = extra_guests * prop["extra_guest_fee"] * num_nights
 
     subtotal = (nightly_rate * num_nights) + extra_guest_total
-    cleaning_fee = property_pricing["cleaning_fee"]
+    cleaning_fee = prop["cleaning_fee"]
 
-    # Direct booking service fee (much lower than OTA!)
-    # We charge 3% service fee vs 14% on Airbnb
+    # Direct booking: 3% service fee vs 12-14% on OTAs
     service_fee = subtotal * 0.03
 
-    # Taxes (hotel occupancy tax)
     taxable_amount = subtotal + cleaning_fee + service_fee
     taxes = taxable_amount * TAX_RATE
 
-    # Security deposit (refundable)
-    security_deposit = SECURITY_DEPOSIT
+    security_deposit = prop.get("security_deposit", 250.00)
 
-    # Apply promo code discount
+    # Promo codes
     discount = 0.0
     discount_reason = None
     if request.apply_promo_code:
-        promo_code = request.apply_promo_code.upper()
-        if promo_code == "DIRECT10":
+        code = request.apply_promo_code.upper()
+        if code == "DIRECT10":
             discount = subtotal * 0.10
             discount_reason = "10% direct booking discount"
-        elif promo_code == "REPEAT15":
+        elif code == "REPEAT15":
             discount = subtotal * 0.15
             discount_reason = "15% repeat guest discount"
-        elif promo_code == "STEVEN20":
+        elif code == "STEVEN20":
             discount = subtotal * 0.20
             discount_reason = "20% owner special discount"
+        elif code == "OILFIELD10":
+            discount = subtotal * 0.10
+            discount_reason = "10% oilfield worker discount"
+        elif code == "WEEKLY25":
+            if num_nights >= 7:
+                discount = subtotal * 0.25
+                discount_reason = "25% weekly stay discount"
+        elif code == "MONTHLY40":
+            if num_nights >= 28:
+                discount = subtotal * 0.40
+                discount_reason = "40% monthly stay discount"
 
-    # Calculate total
     total = subtotal + cleaning_fee + service_fee + taxes - discount
     total_with_deposit = total + security_deposit
 
-    # Calculate OTA comparison (what it would cost on Airbnb)
-    ota_comparison = calculate_ota_price(subtotal, cleaning_fee, num_nights)
+    ota_comparison = calculate_ota_price(subtotal, cleaning_fee)
     savings = ota_comparison - total
     savings_percentage = (savings / ota_comparison) * 100 if ota_comparison > 0 else 0
 
@@ -443,7 +726,6 @@ async def calculate_price(request: PriceCalculationRequest):
         total_with_deposit=round(total_with_deposit, 2),
     )
 
-    # Generate quote ID and store for validation
     quote_id = str(uuid.uuid4())
     _price_quotes[quote_id] = {
         "property_id": request.property_id,
@@ -455,10 +737,11 @@ async def calculate_price(request: PriceCalculationRequest):
         "valid_until": (datetime.now() + timedelta(hours=24)).isoformat(),
     }
 
-    logger.info(f"Price calculated for {request.property_id}: ${total:.2f} (saves ${savings:.2f} vs OTA)")
+    logger.info(f"Price: {prop['name']} | ${total:.2f} (save ${savings:.2f} vs OTA)")
 
     return PriceCalculationResponse(
         property_id=request.property_id,
+        property_name=prop["name"],
         check_in=request.check_in,
         check_out=request.check_out,
         guest_count=request.guest_count,
@@ -477,20 +760,17 @@ async def create_booking(
     """
     Create a new direct booking.
 
-    Books the property and returns booking details.
-    Payment must be processed separately via /book/payment.
+    Payment processed separately via /book/payment (PayPal).
     """
-    # Verify quote if provided
+    prop = get_property(request.property_id)
+
     if request.quote_id:
         quote = _price_quotes.get(request.quote_id)
-        if not quote:
-            logger.warning(f"Invalid quote ID: {request.quote_id}")
-        elif datetime.fromisoformat(quote["valid_until"]) < datetime.now():
-            logger.warning(f"Expired quote: {request.quote_id}")
-            raise HTTPException(status_code=400, detail="Price quote has expired. Please recalculate.")
+        if quote and datetime.fromisoformat(quote["valid_until"]) < datetime.now():
+            raise HTTPException(status_code=400, detail="Price quote expired. Please recalculate.")
 
-    # Check availability again (double-booking prevention)
-    avail_check = await check_availability(
+    # Double-booking prevention
+    avail = await check_availability(
         AvailabilityCheckRequest(
             property_id=request.property_id,
             check_in=request.check_in,
@@ -499,33 +779,26 @@ async def create_booking(
         sync_service,
     )
 
-    if not avail_check.available:
-        raise HTTPException(
-            status_code=409,
-            detail=f"Property is no longer available for these dates. {avail_check.message}"
-        )
+    if not avail.available:
+        raise HTTPException(status_code=409, detail=f"Property no longer available. {avail.message}")
 
-    # Calculate price (or use quote)
-    price_request = PriceCalculationRequest(
+    # Calculate price
+    price_response = await calculate_price(PriceCalculationRequest(
         property_id=request.property_id,
         check_in=request.check_in,
         check_out=request.check_out,
         guest_count=request.guest_count,
         apply_promo_code=request.promo_code,
-    )
-    price_response = await calculate_price(price_request)
+    ))
 
-    # Generate booking
     booking_id = str(uuid.uuid4())
     confirmation_code = generate_confirmation_code()
-    property_pricing = get_property_pricing(request.property_id)
-
     now = datetime.now()
 
     booking = DirectBooking(
         id=booking_id,
         property_id=request.property_id,
-        property_name=property_pricing["name"],
+        property_name=prop["name"],
         check_in=request.check_in,
         check_out=request.check_out,
         guest_count=request.guest_count,
@@ -533,16 +806,13 @@ async def create_booking(
         status=BookingStatus.AWAITING_PAYMENT,
         confirmation_code=confirmation_code,
         price_breakdown=price_response.breakdown,
-        payment_intent_id=None,
         payment_status="pending",
         created_at=now,
         updated_at=now,
     )
 
-    # Store booking
     _direct_bookings[booking_id] = booking
-
-    logger.info(f"Created booking {confirmation_code} for {request.guest_info.email}")
+    logger.info(f"Booking created: {confirmation_code} | {prop['name']} | {request.guest_info.email}")
 
     return booking
 
@@ -550,123 +820,95 @@ async def create_booking(
 @router.post("/payment", response_model=PaymentResponse)
 async def process_payment(
     request: ProcessPaymentRequest,
-    payment_service: StripePaymentService = Depends(get_payment_service),
+    paypal: PayPalPaymentService = Depends(get_payment_service),
 ):
     """
-    Process payment for a booking.
+    Create PayPal payment order for a booking.
 
-    Creates Stripe PaymentIntent for client-side payment completion.
-    Returns client_secret for Stripe Elements integration.
+    Returns approve_url — redirect the guest there to complete payment.
+    After guest pays, PayPal redirects to return_url, then call /payment/capture.
     """
-    # Get booking
     booking = _direct_bookings.get(request.booking_id)
     if not booking:
         raise HTTPException(status_code=404, detail="Booking not found")
 
     if booking.status == BookingStatus.CONFIRMED:
-        raise HTTPException(status_code=400, detail="Booking is already paid")
+        raise HTTPException(status_code=400, detail="Booking already paid")
 
     if booking.status == BookingStatus.CANCELLED:
-        raise HTTPException(status_code=400, detail="Booking has been cancelled")
+        raise HTTPException(status_code=400, detail="Booking cancelled")
 
-    # Calculate payment amount
-    amount = booking.price_breakdown.total
-    if request.include_security_deposit:
-        amount = booking.price_breakdown.total_with_deposit
+    prop = get_property(booking.property_id)
 
-    if request.payment_method == PaymentMethod.STRIPE:
-        # Create Stripe customer if needed
-        customer_result = await payment_service.get_or_create_customer(
-            email=booking.guest_info.email,
-            name=f"{booking.guest_info.first_name} {booking.guest_info.last_name}",
-            phone=booking.guest_info.phone,
-        )
+    result = await paypal.create_order(
+        amount=booking.price_breakdown.total,
+        booking_id=request.booking_id,
+        confirmation_code=booking.confirmation_code,
+        property_name=prop["name"],
+        check_in=booking.check_in.isoformat(),
+        check_out=booking.check_out.isoformat(),
+        guest_name=f"{booking.guest_info.first_name} {booking.guest_info.last_name}",
+        guest_email=booking.guest_info.email,
+        include_deposit=request.include_security_deposit,
+        deposit_amount=booking.price_breakdown.security_deposit,
+        return_url=request.return_url or "",
+        cancel_url=request.cancel_url or "",
+    )
 
-        if "error" in customer_result:
-            raise HTTPException(status_code=500, detail=customer_result["error"])
+    if "error" in result:
+        raise HTTPException(status_code=500, detail=result["error"])
 
-        customer_id = customer_result["customer_id"]
+    # Store PayPal order ID on booking
+    booking.paypal_order_id = result["order_id"]
+    booking.payment_status = "awaiting_approval"
+    booking.updated_at = datetime.now()
+    _direct_bookings[request.booking_id] = booking
 
-        # Create payment intent
-        intent_result = await payment_service.create_payment_intent(
-            amount_cents=int(amount * 100),
-            customer_id=customer_id,
-            payment_type=PaymentType.BOOKING,
-            property_id=None,  # Would use actual property ID from database
-            booking_id=request.booking_id,
-            description=f"Right At Home BnB - Booking {booking.confirmation_code}",
-            metadata={
-                "confirmation_code": booking.confirmation_code,
-                "check_in": booking.check_in.isoformat(),
-                "check_out": booking.check_out.isoformat(),
-                "guest_name": f"{booking.guest_info.first_name} {booking.guest_info.last_name}",
-                "guest_email": booking.guest_info.email,
-                "includes_deposit": str(request.include_security_deposit),
-            }
-        )
-
-        if "error" in intent_result:
-            raise HTTPException(status_code=500, detail=intent_result["error"])
-
-        # Update booking with payment intent
-        booking.payment_intent_id = intent_result["payment_intent_id"]
-        booking.payment_status = intent_result["status"]
-        booking.updated_at = datetime.now()
-        _direct_bookings[request.booking_id] = booking
-
-        return PaymentResponse(
-            success=True,
-            booking_id=request.booking_id,
-            payment_intent_id=intent_result["payment_intent_id"],
-            client_secret=intent_result["client_secret"],
-            amount=amount,
-            status=intent_result["status"],
-            message="Payment intent created. Complete payment with client_secret.",
-        )
-
-    elif request.payment_method == PaymentMethod.SQUARE:
-        # Square integration would go here
-        raise HTTPException(
-            status_code=501,
-            detail="Square payments coming soon. Please use Stripe."
-        )
-
-    raise HTTPException(status_code=400, detail="Invalid payment method")
+    return PaymentResponse(
+        success=True,
+        booking_id=request.booking_id,
+        paypal_order_id=result["order_id"],
+        approve_url=result.get("approve_url"),
+        amount=result["amount"],
+        status="CREATED",
+        message="Redirect guest to approve_url to complete PayPal payment.",
+    )
 
 
-@router.post("/payment/confirm/{booking_id}")
-async def confirm_payment(
+@router.post("/payment/capture/{booking_id}")
+async def capture_payment(
     booking_id: str,
-    payment_service: StripePaymentService = Depends(get_payment_service),
+    paypal: PayPalPaymentService = Depends(get_payment_service),
 ):
     """
-    Confirm payment completion (called after client-side payment success).
+    Capture PayPal payment after guest approves.
 
-    Updates booking status to CONFIRMED.
+    Call this when guest returns from PayPal (return_url redirect).
     """
     booking = _direct_bookings.get(booking_id)
     if not booking:
         raise HTTPException(status_code=404, detail="Booking not found")
 
-    if not booking.payment_intent_id:
-        raise HTTPException(status_code=400, detail="No payment intent found")
+    if not booking.paypal_order_id:
+        raise HTTPException(status_code=400, detail="No PayPal order found for this booking")
 
-    # Verify payment with Stripe
-    result = await payment_service.confirm_payment(booking.payment_intent_id)
+    result = await paypal.capture_order(booking.paypal_order_id)
 
-    if result.get("success") and result.get("status") == "succeeded":
+    if result.get("success"):
         booking.status = BookingStatus.CONFIRMED
+        booking.paypal_capture_id = result.get("capture_id")
         booking.payment_status = "paid"
         booking.updated_at = datetime.now()
         _direct_bookings[booking_id] = booking
 
-        logger.info(f"Payment confirmed for booking {booking.confirmation_code}")
+        logger.info(f"Payment captured: {booking.confirmation_code} | PayPal: {result['capture_id']}")
 
         return {
             "success": True,
             "booking_id": booking_id,
             "confirmation_code": booking.confirmation_code,
             "status": "confirmed",
+            "capture_id": result["capture_id"],
             "message": "Payment successful! Your booking is confirmed.",
         }
 
@@ -674,41 +916,85 @@ async def confirm_payment(
         "success": False,
         "booking_id": booking_id,
         "status": result.get("status", "unknown"),
-        "message": "Payment not yet complete. Please try again.",
+        "message": "Payment not yet complete. Guest may need to complete PayPal checkout.",
     }
+
+
+@router.post("/webhook/paypal")
+async def paypal_webhook(
+    request: Request,
+    paypal: PayPalPaymentService = Depends(get_payment_service),
+):
+    """
+    PayPal webhook handler for async payment events.
+
+    Events handled:
+    - CHECKOUT.ORDER.APPROVED — Guest approved, auto-capture
+    - PAYMENT.CAPTURE.COMPLETED — Payment confirmed
+    - PAYMENT.CAPTURE.REFUNDED — Refund processed
+    """
+    body = await request.body()
+    headers = dict(request.headers)
+
+    # Verify webhook signature
+    verified = await paypal.verify_webhook(headers, body)
+    if not verified:
+        logger.warning("PayPal webhook signature verification failed")
+        raise HTTPException(status_code=401, detail="Invalid webhook signature")
+
+    import json
+    event = json.loads(body)
+    event_type = event.get("event_type", "")
+    resource = event.get("resource", {})
+
+    logger.info(f"PayPal webhook: {event_type}")
+
+    if event_type == "CHECKOUT.ORDER.APPROVED":
+        order_id = resource.get("id")
+        # Find booking by PayPal order ID
+        for bid, booking in _direct_bookings.items():
+            if booking.paypal_order_id == order_id:
+                # Auto-capture
+                result = await paypal.capture_order(order_id)
+                if result.get("success"):
+                    booking.status = BookingStatus.CONFIRMED
+                    booking.paypal_capture_id = result.get("capture_id")
+                    booking.payment_status = "paid"
+                    booking.updated_at = datetime.now()
+                    _direct_bookings[bid] = booking
+                    logger.info(f"Auto-captured: {booking.confirmation_code}")
+                break
+
+    elif event_type == "PAYMENT.CAPTURE.COMPLETED":
+        capture_id = resource.get("id")
+        logger.info(f"Payment capture completed: {capture_id}")
+
+    elif event_type == "PAYMENT.CAPTURE.REFUNDED":
+        capture_id = resource.get("id")
+        logger.info(f"Refund processed for capture: {capture_id}")
+
+    return {"status": "ok"}
 
 
 @router.get("/{booking_id}/confirmation", response_model=BookingConfirmation)
 async def get_booking_confirmation(booking_id: str):
-    """
-    Get complete booking confirmation details.
-
-    Includes:
-    - Full booking details
-    - Property information
-    - Waiver links
-    - Check-in instructions
-    - House rules
-    - Contact information
-    """
+    """Get complete booking confirmation with check-in instructions."""
     booking = _direct_bookings.get(booking_id)
     if not booking:
         raise HTTPException(status_code=404, detail="Booking not found")
 
-    property_pricing = get_property_pricing(booking.property_id)
+    prop = get_property(booking.property_id)
 
-    # Build property info
     property_info = {
         "id": booking.property_id,
-        "name": property_pricing["name"],
-        "address": "123 Main St, Midland, TX 79701",  # Would come from database
-        "bedrooms": 3,
-        "bathrooms": 2,
-        "max_guests": property_pricing["max_guests"],
-        "amenities": ["WiFi", "Kitchen", "Washer/Dryer", "Parking", "AC"],
+        "name": prop["name"],
+        "address": prop["address"],
+        "bedrooms": prop["bedrooms"],
+        "bathrooms": prop["bathrooms"],
+        "max_guests": prop["max_guests"],
+        "amenities": prop.get("amenities", []),
     }
 
-    # Waiver links
     base_url = os.getenv("APP_BASE_URL", "https://rah-midland.com")
     waiver_links = {
         "liability_waiver": f"{base_url}/waivers/liability?booking={booking_id}",
@@ -716,68 +1002,47 @@ async def get_booking_confirmation(booking_id: str):
         "rental_agreement": f"{base_url}/waivers/agreement?booking={booking_id}",
     }
 
-    # Check-in instructions
     check_in_instructions = f"""
-Welcome to {property_pricing['name']}!
+Welcome to {prop['name']}!
 
 CHECK-IN: 3:00 PM on {booking.check_in.strftime('%B %d, %Y')}
 CHECK-OUT: 11:00 AM on {booking.check_out.strftime('%B %d, %Y')}
 
-ENTRY CODE: You will receive your unique door code via text message 24 hours before check-in.
+ENTRY CODE: You will receive your unique door code via text 24 hours before check-in.
 
-PARKING: Free parking available in the driveway. Please do not park on the street.
+PARKING: Free parking available in the driveway.
 
-WIFI:
-- Network: RightAtHome_Guest
-- Password: Will be provided at check-in
+WIFI: Network and password provided at check-in.
 
 BEFORE ARRIVAL:
-1. Please complete all waivers linked above
+1. Complete all waivers linked in your confirmation email
 2. Confirm your arrival time
 3. Save Steven's contact info for emergencies
-
-UPON ARRIVAL:
-1. Use your unique door code to enter
-2. Make yourself at home!
-3. Text us if you have any questions
 
 We're excited to host you!
 """
 
-    # House rules
     house_rules = """
 HOUSE RULES:
 
-1. NO SMOKING - This is a smoke-free property. $500 cleaning fee for violations.
-
-2. NO PARTIES/EVENTS - Maximum occupancy is strictly enforced.
-
-3. QUIET HOURS - 10 PM to 8 AM. Please be respectful of neighbors.
-
-4. PETS - Allowed with prior approval and pet waiver. $50 pet fee applies.
-
-5. CHECK-OUT:
-   - Start dishwasher if dirty dishes
-   - Place all towels in bathtub
-   - Take out trash
-   - Lock all doors
-
+1. NO SMOKING - Smoke-free property. $500 cleaning fee for violations.
+2. NO PARTIES/EVENTS - Maximum occupancy strictly enforced.
+3. QUIET HOURS - 10 PM to 8 AM.
+4. PETS - Allowed with prior approval and pet waiver. $50 pet fee.
+5. CHECK-OUT: Start dishwasher, place towels in bathtub, take out trash, lock doors.
 6. DAMAGE - Security deposit covers normal wear. Excessive damage billed separately.
-
-7. LOST KEYS/LOCKOUTS - $75 lockout fee. Door codes provided - no physical keys needed.
+7. LOST KEYS/LOCKOUTS - $75 lockout fee. Door codes provided.
 
 Thank you for being a great guest!
 """
 
-    # Contact info
     contact_info = {
         "owner_name": "Steven Palma",
         "emergency_phone": "(432) 555-0123",
-        "email": "bookings@rah-midland.com",
-        "response_time": "Usually within 1 hour during business hours",
+        "email": "bookings@rightathomebnb.com",
+        "response_time": "Usually within 1 hour",
     }
 
-    # Cancellation policy
     cancellation_policy = """
 CANCELLATION POLICY - FLEXIBLE:
 
@@ -785,10 +1050,7 @@ CANCELLATION POLICY - FLEXIBLE:
 - 50% refund if cancelled 24-48 hours before check-in
 - No refund if cancelled less than 24 hours before check-in
 
-Security deposit is fully refundable within 7 days of checkout,
-minus any deductions for damages or violations.
-
-To request cancellation, please contact us immediately.
+Security deposit fully refundable within 7 days of checkout.
 """
 
     return BookingConfirmation(
@@ -804,7 +1066,7 @@ To request cancellation, please contact us immediately.
 
 @router.get("/{booking_id}")
 async def get_booking(booking_id: str):
-    """Get booking by ID"""
+    """Get booking by ID."""
     booking = _direct_bookings.get(booking_id)
     if not booking:
         raise HTTPException(status_code=404, detail="Booking not found")
@@ -813,7 +1075,7 @@ async def get_booking(booking_id: str):
 
 @router.get("/lookup/{confirmation_code}")
 async def lookup_by_confirmation_code(confirmation_code: str):
-    """Look up booking by confirmation code"""
+    """Look up booking by confirmation code."""
     for booking in _direct_bookings.values():
         if booking.confirmation_code.upper() == confirmation_code.upper():
             return booking
@@ -824,76 +1086,151 @@ async def lookup_by_confirmation_code(confirmation_code: str):
 async def cancel_booking(
     booking_id: str,
     reason: Optional[str] = None,
-    payment_service: StripePaymentService = Depends(get_payment_service),
+    paypal: PayPalPaymentService = Depends(get_payment_service),
 ):
     """
-    Cancel a booking.
+    Cancel a booking with refund per cancellation policy.
 
-    Processes refund according to cancellation policy.
+    Refund processed via PayPal automatically.
     """
     booking = _direct_bookings.get(booking_id)
     if not booking:
         raise HTTPException(status_code=404, detail="Booking not found")
 
     if booking.status == BookingStatus.CANCELLED:
-        raise HTTPException(status_code=400, detail="Booking is already cancelled")
+        raise HTTPException(status_code=400, detail="Already cancelled")
 
     if booking.status == BookingStatus.COMPLETED:
         raise HTTPException(status_code=400, detail="Cannot cancel completed booking")
 
-    # Calculate refund based on cancellation policy
+    # Calculate refund
     now = datetime.now()
-    check_in_datetime = datetime.combine(booking.check_in, datetime.min.time())
-    hours_until_checkin = (check_in_datetime - now).total_seconds() / 3600
+    check_in_dt = datetime.combine(booking.check_in, datetime.min.time())
+    hours_until = (check_in_dt - now).total_seconds() / 3600
 
-    refund_percentage = 0
-    if hours_until_checkin >= 48:
-        refund_percentage = 100
-    elif hours_until_checkin >= 24:
-        refund_percentage = 50
+    if hours_until >= 48:
+        refund_pct = 100
+    elif hours_until >= 24:
+        refund_pct = 50
     else:
-        refund_percentage = 0
+        refund_pct = 0
 
-    refund_amount = booking.price_breakdown.total * (refund_percentage / 100)
+    refund_amount = booking.price_breakdown.total * (refund_pct / 100)
 
-    # Process refund if payment was made
-    if booking.payment_intent_id and booking.payment_status == "paid" and refund_amount > 0:
-        refund_result = await payment_service.refund_payment(
-            payment_intent_id=booking.payment_intent_id,
-            amount_cents=int(refund_amount * 100) if refund_percentage < 100 else None,
-            reason=f"Cancellation: {reason or 'Guest requested'}"
+    # Process PayPal refund
+    if booking.paypal_capture_id and booking.payment_status == "paid" and refund_amount > 0:
+        refund_result = await paypal.refund_payment(
+            capture_id=booking.paypal_capture_id,
+            amount=refund_amount if refund_pct < 100 else None,
+            reason=f"Cancellation: {reason or 'Guest requested'}",
         )
-
         if "error" in refund_result:
-            logger.error(f"Refund failed for booking {booking_id}: {refund_result['error']}")
+            logger.error(f"Refund failed: {booking_id}: {refund_result['error']}")
 
-    # Update booking status
     booking.status = BookingStatus.CANCELLED
     booking.updated_at = datetime.now()
     _direct_bookings[booking_id] = booking
 
-    logger.info(f"Cancelled booking {booking.confirmation_code}, refund: ${refund_amount:.2f} ({refund_percentage}%)")
+    logger.info(f"Cancelled {booking.confirmation_code} | Refund: ${refund_amount:.2f} ({refund_pct}%)")
 
     return {
         "success": True,
         "booking_id": booking_id,
         "confirmation_code": booking.confirmation_code,
         "status": "cancelled",
-        "refund_percentage": refund_percentage,
+        "refund_percentage": refund_pct,
         "refund_amount": refund_amount,
-        "message": f"Booking cancelled. {refund_percentage}% refund of ${refund_amount:.2f} will be processed.",
+        "message": f"Booking cancelled. {refund_pct}% refund of ${refund_amount:.2f} processing via PayPal.",
     }
 
 
 # =============================================================================
-# HEALTH CHECK
+# ICAL SYNC ENDPOINTS — VRBO Calendar Integration
+# =============================================================================
+
+@router.get("/ical/{property_id}.ics")
+async def export_ical(property_id: str):
+    """
+    Export property calendar as iCal for VRBO import.
+
+    Add this URL to VRBO's "Import calendar" to sync direct bookings
+    back to VRBO and prevent double-booking.
+    """
+    prop = get_property(property_id)
+
+    # Build iCal from direct bookings
+    events = []
+    for booking in _direct_bookings.values():
+        if booking.property_id == property_id and booking.status in (BookingStatus.CONFIRMED, BookingStatus.AWAITING_PAYMENT):
+            events.append(
+                f"BEGIN:VEVENT\r\n"
+                f"DTSTART;VALUE=DATE:{booking.check_in.strftime('%Y%m%d')}\r\n"
+                f"DTEND;VALUE=DATE:{booking.check_out.strftime('%Y%m%d')}\r\n"
+                f"SUMMARY:Direct Booking - {booking.confirmation_code}\r\n"
+                f"DESCRIPTION:Guest: {booking.guest_info.first_name} {booking.guest_info.last_name}\\nBooked on rah-midland.com\r\n"
+                f"UID:{booking.id}@rah-midland.com\r\n"
+                f"STATUS:CONFIRMED\r\n"
+                f"END:VEVENT\r\n"
+            )
+
+    ical = (
+        "BEGIN:VCALENDAR\r\n"
+        "VERSION:2.0\r\n"
+        "PRODID:-//Right At Home BnB//Direct Bookings//EN\r\n"
+        f"X-WR-CALNAME:{prop['name']} - Direct Bookings\r\n"
+        + "".join(events)
+        + "END:VCALENDAR\r\n"
+    )
+
+    from fastapi.responses import Response
+    return Response(content=ical, media_type="text/calendar")
+
+
+@router.get("/vrbo-sync-urls")
+async def get_vrbo_sync_urls():
+    """
+    Get all VRBO iCal import/export URLs for calendar sync setup.
+
+    For each property:
+    - import_url: VRBO's calendar to import INTO our system (already in vrbo-integration.ts)
+    - export_url: Our calendar to import INTO VRBO (prevents double-booking)
+    """
+    base_url = os.getenv("APP_BASE_URL", "https://rah-midland.com")
+    sync_urls = []
+
+    for prop_id, prop in PROPERTIES.items():
+        if prop.get("vrbo_id"):
+            sync_urls.append({
+                "property_id": prop_id,
+                "name": prop["name"],
+                "vrbo_id": prop["vrbo_id"],
+                "vrbo_ical_import": f"https://www.vrbo.com/icalendar/{prop['vrbo_id']}.ics",
+                "direct_booking_ical_export": f"{base_url}/api/book/ical/{prop_id}.ics",
+                "vrbo_listing_url": f"https://www.vrbo.com/{prop['vrbo_id']}",
+            })
+
+    return {
+        "total_properties": len(PROPERTIES),
+        "vrbo_linked": len(sync_urls),
+        "sync_urls": sync_urls,
+        "instructions": {
+            "step_1": "Import VRBO calendars: Use vrbo_ical_import URLs in our calendar sync service",
+            "step_2": "Export to VRBO: Add direct_booking_ical_export URLs to VRBO's 'Import a calendar' feature",
+            "step_3": "This creates 2-way sync preventing double bookings across platforms",
+        },
+    }
+
+
+# =============================================================================
+# HEALTH
 # =============================================================================
 
 @router.get("/health")
 async def direct_booking_health():
-    """Health check for direct booking system"""
     return {
         "status": "healthy",
+        "payment_provider": "paypal",
+        "total_properties": len(PROPERTIES),
         "active_bookings": len([b for b in _direct_bookings.values() if b.status == BookingStatus.CONFIRMED]),
         "pending_bookings": len([b for b in _direct_bookings.values() if b.status == BookingStatus.AWAITING_PAYMENT]),
         "timestamp": datetime.now().isoformat(),
