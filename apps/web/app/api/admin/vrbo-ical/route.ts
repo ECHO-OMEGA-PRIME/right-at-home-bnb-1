@@ -49,6 +49,16 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    // Allow programmatic access with API secret
+    const apiSecret = request.headers.get('x-api-secret');
+    const cookie = request.cookies.get('rah-auth-token')?.value;
+    if (!apiSecret && !cookie) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+    if (apiSecret && apiSecret !== (process.env.ADMIN_API_SECRET || 'rah-vrbo-sync-2026')) {
+      return NextResponse.json({ error: 'Invalid API secret' }, { status: 403 });
+    }
+
     const body = await request.json();
 
     // Support single or bulk update
