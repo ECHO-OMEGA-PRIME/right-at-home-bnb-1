@@ -9,14 +9,10 @@
       "schedule": "0,15,30,45 * * * *"
     }
   ],
-  "buildCommand": "npm run build",
+  "buildCommand": "pnpm run build",
   "outputDirectory": ".next",
-  "installCommand": "npm install --legacy-peer-deps",
-  "devCommand": "npm run dev",
-  "env": {
-    "NEXT_PUBLIC_API_URL": "https://rightathome-api.bmcii1976.workers.dev",
-    "DATABASE_URL": "file:./dev.db"
-  },
+  "installCommand": "cd ../.. && corepack enable && pnpm install",
+  "devCommand": "pnpm run dev",
   "headers": [
     {
       "source": "/api/(.*)",

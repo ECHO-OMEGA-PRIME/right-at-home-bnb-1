@@ -1,4 +1,0 @@
-{
-  "installCommand": "cd ../.. && corepack enable && pnpm install",
-  "framework": "nextjs"
-}
