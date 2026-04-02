@@ -342,12 +342,12 @@ export default function CostsPage() {
           </thead>
           <tbody>
             {filteredExpenses.map((e, i) => {
-              const Icon = CATEGORY_ICONS[e.category] || DollarSign;
+              const Icon = CATEGORY_ICONS[e.category as ExpenseCategory] || DollarSign;
               return (
                 <tr key={e.id} className={`border-b border-gray-100 hover:bg-gray-50 ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}>
                   <td className="px-4 py-3 text-gray-600">{e.date}</td>
                   <td className="px-4 py-3">
-                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium" style={{ backgroundColor: CATEGORY_COLORS[e.category] + '15', color: CATEGORY_COLORS[e.category] }}>
+                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium" style={{ backgroundColor: CATEGORY_COLORS[e.category as ExpenseCategory] + '15', color: CATEGORY_COLORS[e.category as ExpenseCategory] }}>
                       <Icon className="w-3 h-3" /> {e.category}
                     </span>
                   </td>

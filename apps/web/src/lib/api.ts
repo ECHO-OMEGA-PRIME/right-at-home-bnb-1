@@ -1593,7 +1593,7 @@ export function useAdminReviews() {
   });
 }
 
-export function useRespondToReview() {
+export function useRespondToAdminReview() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, response }: { id: string; response: string }) => {

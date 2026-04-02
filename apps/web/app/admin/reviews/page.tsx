@@ -6,7 +6,7 @@ import {
   Clock, CheckCircle, AlertTriangle, TrendingUp, Eye, Sparkles,
   ExternalLink, X, Filter, Loader2
 } from 'lucide-react';
-import { useAdminReviews, useRespondToReview, AdminReview } from '@/lib/api';
+import { useAdminReviews, useRespondToAdminReview, AdminReview } from '@/lib/api';
 
 function formatMoney(cents: number): string {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100);
@@ -52,7 +52,7 @@ function StarRating({ count }: { count: number }) {
 
 export default function ReviewManagement() {
   const { data: apiData, isLoading, error, refetch } = useAdminReviews();
-  const respondMutation = useRespondToReview();
+  const respondMutation = useRespondToAdminReview();
 
   const [filterPlatform, setFilterPlatform] = useState<Platform | 'all'>('all');
   const [filterStatus, setFilterStatus] = useState<ReviewStatus | 'all'>('all');
