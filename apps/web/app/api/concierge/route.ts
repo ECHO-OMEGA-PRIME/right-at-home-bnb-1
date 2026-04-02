@@ -13,6 +13,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
 
 // API Keys
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
@@ -35,130 +36,7 @@ const VOICE_CONFIG = {
   },
 };
 
-// Property Knowledge Base
-const PROPERTIES: Record<string, PropertyInfo> = {
-  'dentcrest': {
-    name: 'Dentcrest Den',
-    address: '4201 Dentcrest Dr',
-    bedrooms: 3,
-    bathrooms: 2,
-    sleeps: 8,
-    amenities: ['WiFi', 'Full Kitchen', 'Washer/Dryer', 'TV', 'Parking'],
-    wifi: { network: 'RightAtHome_Dentcrest', password: 'Welcome2Midland' },
-    door_code: '4201',
-    rules: ['No smoking', 'No parties', 'Quiet hours 10pm-7am'],
-    features: ['Great for work crews', 'Close to oil field access roads'],
-  },
-  'haynes': {
-    name: 'Haynes Haven',
-    address: '3405 Haynes Dr',
-    bedrooms: 4,
-    bathrooms: 2,
-    sleeps: 10,
-    amenities: ['WiFi', 'Full Kitchen', 'Washer/Dryer', 'TV', 'Parking', 'Large Backyard'],
-    wifi: { network: 'RightAtHome_Haynes', password: 'Welcome2Midland' },
-    door_code: '3405',
-    rules: ['No smoking', 'No parties', 'Quiet hours 10pm-7am'],
-    features: ['Family-friendly', 'Large backyard for kids'],
-  },
-  'garfield': {
-    name: 'Garfield Getaway',
-    address: '2702 N Garfield',
-    bedrooms: 3,
-    bathrooms: 2,
-    sleeps: 6,
-    amenities: ['WiFi', 'Full Kitchen', 'Washer/Dryer', 'TV', 'HOT TUB', 'Parking'],
-    wifi: { network: 'RightAtHome_Garfield', password: 'Welcome2Midland' },
-    door_code: '2702',
-    rules: ['No smoking', 'No parties', 'No glass near hot tub', 'Hot tub hours 8am-10pm'],
-    features: ['Hot tub', 'Romantic getaway', 'Quiet neighborhood'],
-  },
-  'shandon': {
-    name: 'Shandon Sanctuary',
-    address: '4600 Shandon Ave',
-    bedrooms: 4,
-    bathrooms: 3,
-    sleeps: 10,
-    amenities: ['WiFi', 'Full Kitchen', 'Washer/Dryer', 'TV', 'POOL', 'Parking', 'Grill'],
-    wifi: { network: 'RightAtHome_Shandon', password: 'Welcome2Midland' },
-    door_code: '4600',
-    rules: ['No smoking', 'No parties', 'No glass in pool area', 'Pool hours 8am-10pm', 'Supervise children'],
-    features: ['Swimming pool', 'Great for families', 'BBQ grill'],
-  },
-  'castleford': {
-    name: 'Castleford Castle',
-    address: '5001 Castleford Rd',
-    bedrooms: 5,
-    bathrooms: 4,
-    sleeps: 14,
-    amenities: ['WiFi', 'Full Kitchen', 'Washer/Dryer', 'TV', 'POOL', 'HOT TUB', 'Game Room', 'Parking'],
-    wifi: { network: 'RightAtHome_Castleford', password: 'Welcome2Midland' },
-    door_code: '5001',
-    rules: ['No smoking', 'No parties over 14 guests', 'No glass near pool/hot tub', 'Pool hours 8am-10pm'],
-    features: ['Premium property', 'Pool AND hot tub', 'Game room with billiards', 'Perfect for large groups'],
-  },
-  'lincoln_green': {
-    name: 'Lincoln Green Estate',
-    address: '5055 Lincoln Green',
-    bedrooms: 6,
-    bathrooms: 4,
-    sleeps: 18,
-    amenities: ['WiFi', 'Full Kitchen', 'Washer/Dryer', 'TV', 'POOL', 'Pool Cabana', 'Playground', 'Fire Pit', 'Parking'],
-    wifi: { network: 'RightAtHome_LincolnGreen', password: 'Welcome2Midland' },
-    door_code: '5055',
-    rules: ['No smoking', 'No parties over 20 guests', 'No glass near pool', 'Pool hours 8am-10pm', 'Fire pit supervision required'],
-    features: ['FLAGSHIP property', 'Sleeps 18', 'Pool cabana', 'Kids playground', 'Fire pit', 'Perfect for reunions'],
-  },
-  'chelsea': {
-    name: 'Chelsea Chalet',
-    address: '3210 Chelsea Ln',
-    bedrooms: 3,
-    bathrooms: 2,
-    sleeps: 6,
-    amenities: ['WiFi', 'Full Kitchen', 'Washer/Dryer', 'TV', 'HOT TUB', 'Fireplace', 'Parking'],
-    wifi: { network: 'RightAtHome_Chelsea', password: 'Welcome2Midland' },
-    door_code: '3210',
-    rules: ['No smoking', 'No parties', 'No glass near hot tub'],
-    features: ['Cozy retreat', 'Hot tub', 'Fireplace', 'Romantic couples getaway'],
-  },
-  'neely': {
-    name: 'Neely Nest',
-    address: '2801 Neely Ave',
-    bedrooms: 4,
-    bathrooms: 2,
-    sleeps: 10,
-    amenities: ['WiFi', 'Full Kitchen', 'Washer/Dryer', 'TV', 'Parking', 'Fenced Yard'],
-    wifi: { network: 'RightAtHome_Neely', password: 'Welcome2Midland' },
-    door_code: '2801',
-    rules: ['No smoking', 'No parties', 'Quiet hours 10pm-7am'],
-    features: ['Pet-friendly', 'Fenced yard', 'Great for families'],
-  },
-  'cuthbert': {
-    name: 'Cuthbert Cottage',
-    address: '1907 Cuthbert Ave',
-    bedrooms: 2,
-    bathrooms: 1,
-    sleeps: 4,
-    amenities: ['WiFi', 'Full Kitchen', 'Washer/Dryer', 'TV', 'Parking'],
-    wifi: { network: 'RightAtHome_Cuthbert', password: 'Welcome2Midland' },
-    door_code: '1907',
-    rules: ['No smoking', 'No parties', 'Quiet hours 10pm-7am'],
-    features: ['Cozy cottage', 'Perfect for couples', 'Budget-friendly'],
-  },
-  'stanolind': {
-    name: 'Stanolind Station',
-    address: '3002 Stanolind Ave',
-    bedrooms: 4,
-    bathrooms: 2,
-    sleeps: 8,
-    amenities: ['WiFi', 'Full Kitchen', 'Washer/Dryer', 'TV', 'Parking', 'Workshop Area'],
-    wifi: { network: 'RightAtHome_Stanolind', password: 'Welcome2Midland' },
-    door_code: '3002',
-    rules: ['No smoking', 'No parties', 'Workshop use at your own risk'],
-    features: ['Workshop area', 'Great for work crews', 'Truck parking'],
-  },
-};
-
+// Property info fetched from database at runtime — no hardcoded secrets
 interface PropertyInfo {
   name: string;
   address: string;
@@ -170,6 +48,87 @@ interface PropertyInfo {
   door_code: string;
   rules: string[];
   features: string[];
+}
+
+/**
+ * Fetch property info from Prisma DB instead of hardcoded constants.
+ * WiFi passwords and door codes stay in the database, not source code.
+ */
+async function getPropertyFromDB(propertySlug: string): Promise<PropertyInfo | null> {
+  try {
+    // Try to find by name match (slug → name)
+    const slugToName: Record<string, string> = {};
+    const allProps = await prisma.property.findMany({
+      where: { status: 'ACTIVE' },
+      select: {
+        name: true, address: true, bedrooms: true, bathrooms: true,
+        maxGuests: true, amenities: true, wifiNetwork: true, wifiPassword: true,
+        houseRules: true, checkInInstr: true,
+        smartLock: { select: { currentCode: true } },
+        bookings: {
+          where: { status: 'CONFIRMED', checkOut: { gt: new Date() } },
+          select: { accessCode: true },
+          take: 1,
+          orderBy: { checkIn: 'desc' },
+        },
+      },
+    });
+
+    // Build slug map from property names
+    for (const p of allProps) {
+      const slug = p.name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/_+$/, '');
+      slugToName[slug] = p.name;
+    }
+
+    const matchedName = slugToName[propertySlug];
+    const prop = allProps.find((p) => p.name === matchedName);
+    if (!prop) return null;
+
+    const amenities = prop.amenities ? JSON.parse(prop.amenities) : ['WiFi', 'Full Kitchen', 'Parking'];
+    const rules = prop.houseRules ? JSON.parse(prop.houseRules) : ['No smoking', 'No parties', 'Quiet hours 10pm-7am'];
+    const doorCode = prop.smartLock?.currentCode || prop.bookings[0]?.accessCode || '****';
+
+    return {
+      name: prop.name,
+      address: prop.address,
+      bedrooms: prop.bedrooms,
+      bathrooms: prop.bathrooms,
+      sleeps: prop.maxGuests,
+      amenities,
+      wifi: {
+        network: prop.wifiNetwork || `RightAtHome_${prop.name.split(' ')[0]}`,
+        password: prop.wifiPassword || '',
+      },
+      door_code: doorCode,
+      rules,
+      features: [],
+    };
+  } catch (e: any) {
+    console.error('[Concierge] DB property lookup failed:', e.message);
+    return null;
+  }
+}
+
+/**
+ * Get all properties summary for the system prompt
+ */
+async function getAllPropertiesSummary(): Promise<string> {
+  try {
+    const props = await prisma.property.findMany({
+      where: { status: 'ACTIVE' },
+      select: { name: true, bedrooms: true, bathrooms: true, maxGuests: true, amenities: true },
+      orderBy: { name: 'asc' },
+    });
+
+    return props.map((p) => {
+      const amenities = p.amenities ? JSON.parse(p.amenities) : [];
+      const hasPool = amenities.some((a: string) => a.toLowerCase().includes('pool'));
+      const hasHotTub = amenities.some((a: string) => a.toLowerCase().includes('hot tub') || a.toLowerCase().includes('jacuzzi'));
+      return `- ${p.name}: ${p.bedrooms}BR/${p.bathrooms}BA, sleeps ${p.maxGuests}${hasPool ? ' [POOL]' : ''}${hasHotTub ? ' [HOT TUB]' : ''}`;
+    }).join('\n');
+  } catch {
+    return '(Property list unavailable - database error)';
+  }
 }
 
 // Restaurant Knowledge Base
@@ -393,8 +352,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Build system prompt with property context
-    const systemPrompt = buildSystemPrompt(propertyId, guestType);
+    // Build system prompt with property context from database
+    const systemPrompt = await buildSystemPrompt(propertyId, guestType);
 
     // Get or create conversation history
     let history = sessions.get(sessionId) || [];
@@ -647,7 +606,7 @@ async function generateVoiceResponse(
 /**
  * Build system prompt with property and guest context
  */
-function buildSystemPrompt(propertyId?: string, guestType: string = 'general'): string {
+async function buildSystemPrompt(propertyId?: string, guestType: string = 'general'): Promise<string> {
   let prompt = `You are the AI Concierge for Right at Home BnB, a vacation rental company in Midland, Texas owned by Steven Palma. You are warm, helpful, and knowledgeable about the Permian Basin area.
 
 YOUR PERSONALITY:
@@ -669,10 +628,11 @@ EMERGENCY INFORMATION:
 
 `;
 
-  // Add property-specific context
-  if (propertyId && PROPERTIES[propertyId]) {
-    const prop = PROPERTIES[propertyId];
-    prompt += `
+  // Add property-specific context from database
+  if (propertyId) {
+    const prop = await getPropertyFromDB(propertyId);
+    if (prop) {
+      prompt += `
 CURRENT PROPERTY: ${prop.name}
 Address: ${prop.address}
 Bedrooms: ${prop.bedrooms} | Bathrooms: ${prop.bathrooms} | Sleeps: ${prop.sleeps}
@@ -680,9 +640,9 @@ Amenities: ${prop.amenities.join(', ')}
 WiFi Network: ${prop.wifi.network} | Password: ${prop.wifi.password}
 Door Code: ${prop.door_code}
 House Rules: ${prop.rules.join('; ')}
-Special Features: ${prop.features.join(', ')}
 
 `;
+    }
   }
 
   // Add guest type context
@@ -699,9 +659,7 @@ TOP RESTAURANT RECOMMENDATIONS:
 - Brunch: ${RESTAURANTS.brunch.map(r => r.name).join(', ')}
 
 PROPERTIES AVAILABLE:
-${Object.entries(PROPERTIES).map(([key, p]) =>
-  `- ${p.name}: ${p.bedrooms}BR/${p.bathrooms}BA, sleeps ${p.sleeps}${p.amenities.includes('POOL') ? ' [POOL]' : ''}${p.amenities.includes('HOT TUB') ? ' [HOT TUB]' : ''}`
-).join('\n')}
+${await getAllPropertiesSummary()}
 
 CHECKOUT PROCEDURE (Standard):
 1. Check-out by 11:00 AM
@@ -1065,7 +1023,7 @@ export async function GET(request: NextRequest) {
       'Response caching for cost reduction',
     ],
     guestTypes: ['work_crew', 'family', 'couple', 'business', 'general'],
-    properties: Object.keys(PROPERTIES),
+    properties: 'Loaded from database at runtime',
     voiceOptions: Object.keys(VOICE_CONFIG),
     contact: EMERGENCY_INFO.host,
     cacheEnabled: true,

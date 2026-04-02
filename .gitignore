@@ -1,6 +1,9 @@
 # Right At Home BnB - Git Ignore
 # Texas A&M Aggies Maroon & White
 
+# Vercel
+.vercel/
+
 # Dependencies
 node_modules/
 .pnp

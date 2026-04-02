@@ -1,62 +1,87 @@
 /**
  * Right at Home BnB - Cleaning Reports API
  * Handles cleaning job management, checklist progress, and issue reporting
+ * Uses Prisma for persistent storage (replaces in-memory Map)
+ * @author ECHO OMEGA PRIME
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
 import {
-  CleaningReport,
-  CleaningIssue,
   masterChecklist,
   getChecklistForProperty
 } from '@/lib/cleaning-system';
 
-// In production, this would be Firebase Firestore
-// For now, we'll use a simple in-memory store for demo
-const cleaningReports: Map<string, CleaningReport> = new Map();
+// ============================================================================
+// GET - List cleaning jobs or get specific job
+// ============================================================================
 
-// GET - List all cleaning reports or get specific report
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const reportId = searchParams.get('id');
+    const jobId = searchParams.get('id');
     const cleanerId = searchParams.get('cleanerId');
     const propertyId = searchParams.get('propertyId');
     const status = searchParams.get('status');
 
-    // Get specific report
-    if (reportId) {
-      const report = cleaningReports.get(reportId);
-      if (!report) {
-        return NextResponse.json({ error: 'Report not found' }, { status: 404 });
+    // Get specific job
+    if (jobId) {
+      const job = await prisma.cleaningJob.findUnique({
+        where: { id: jobId },
+        include: {
+          property: { select: { name: true, address: true } },
+          cleaner: { select: { name: true, email: true, phone: true } },
+          booking: { select: { id: true, checkIn: true, checkOut: true } },
+        },
+      });
+
+      if (!job) {
+        return NextResponse.json({ error: 'Job not found' }, { status: 404 });
       }
-      return NextResponse.json(report);
+
+      return NextResponse.json({
+        ...job,
+        checklistProgress: job.checklistProgress ? JSON.parse(job.checklistProgress) : [],
+        photos: job.photos ? JSON.parse(job.photos) : [],
+        issues: job.issues ? JSON.parse(job.issues) : [],
+      });
     }
 
-    // Filter reports
-    let reports = Array.from(cleaningReports.values());
+    // Build where clause from filters
+    const where: any = {};
+    if (cleanerId) where.cleanerId = cleanerId;
+    if (propertyId) where.propertyId = propertyId;
+    if (status) where.status = status;
 
-    if (cleanerId) {
-      reports = reports.filter(r => r.cleanerId === cleanerId);
-    }
-    if (propertyId) {
-      reports = reports.filter(r => r.propertyId === propertyId);
-    }
-    if (status) {
-      reports = reports.filter(r => r.status === status);
-    }
+    const jobs = await prisma.cleaningJob.findMany({
+      where,
+      include: {
+        property: { select: { name: true, address: true } },
+        cleaner: { select: { name: true, email: true } },
+      },
+      orderBy: { scheduledAt: 'desc' },
+      take: 100,
+    });
 
-    // Sort by date, most recent first
-    reports.sort((a, b) => new Date(b.startedAt || b.scheduledAt).getTime() - new Date(a.startedAt || a.scheduledAt).getTime());
-
-    return NextResponse.json({ reports, total: reports.length });
-  } catch (error) {
-    console.error('Error fetching cleaning reports:', error);
-    return NextResponse.json({ error: 'Failed to fetch reports' }, { status: 500 });
+    return NextResponse.json({
+      reports: jobs.map((j) => ({
+        ...j,
+        checklistProgress: j.checklistProgress ? JSON.parse(j.checklistProgress) : [],
+        photos: j.photos ? JSON.parse(j.photos) : [],
+        issues: j.issues ? JSON.parse(j.issues) : [],
+      })),
+      total: jobs.length,
+    });
+  } catch (error: any) {
+    console.error('[Cleaning GET]', error);
+    return NextResponse.json({ error: error.message || 'Failed to fetch' }, { status: 500 });
   }
 }
 
-// POST - Create a new cleaning report or start a job
+// ============================================================================
+// POST - Create or manage cleaning jobs
+// ============================================================================
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -64,70 +89,85 @@ export async function POST(request: NextRequest) {
 
     switch (action) {
       case 'create': {
-        const { propertyId, propertyName, cleanerId, cleanerName, scheduledAt, jobType = 'turnover' } = body;
+        const { propertyId, cleanerId, scheduledAt, bookingId, jobType = 'TURNOVER' } = body;
 
-        if (!propertyId || !cleanerId || !scheduledAt) {
-          return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+        if (!propertyId || !scheduledAt) {
+          return NextResponse.json({ error: 'propertyId and scheduledAt required' }, { status: 400 });
         }
 
         const checklist = getChecklistForProperty(propertyId);
-        const reportId = `clean-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        const checklistItems = checklist.map((item) => ({
+          itemId: item.id,
+          completed: false,
+        }));
 
-        const report: CleaningReport = {
-          id: reportId,
-          propertyId,
-          propertyName: propertyName || 'Unknown Property',
-          cleanerId,
-          cleanerName: cleanerName || 'Unknown Cleaner',
-          scheduledAt: new Date(scheduledAt),
-          jobType,
-          status: 'not_started',
-          checklist: checklist.map(item => ({
-            itemId: item.id,
-            completed: false,
-            photoUrl: undefined,
-            notes: undefined,
-            completedAt: undefined
-          })),
-          issues: [],
-          verificationPhotos: [],
-          overallNotes: ''
-        };
+        const job = await prisma.cleaningJob.create({
+          data: {
+            propertyId,
+            cleanerId: cleanerId || null,
+            bookingId: bookingId || null,
+            scheduledAt: new Date(scheduledAt),
+            jobType,
+            status: 'SCHEDULED',
+            checklistProgress: JSON.stringify(checklistItems),
+            photos: JSON.stringify([]),
+            issues: JSON.stringify([]),
+          },
+          include: {
+            property: { select: { name: true } },
+            cleaner: { select: { name: true } },
+          },
+        });
 
-        cleaningReports.set(reportId, report);
-        return NextResponse.json({ success: true, report });
+        return NextResponse.json({ success: true, report: job });
       }
 
       case 'start': {
         const { reportId } = body;
-        const report = cleaningReports.get(reportId);
 
-        if (!report) {
-          return NextResponse.json({ error: 'Report not found' }, { status: 404 });
-        }
+        const job = await prisma.cleaningJob.update({
+          where: { id: reportId },
+          data: {
+            status: 'IN_PROGRESS',
+            startedAt: new Date(),
+          },
+        });
 
-        report.status = 'in_progress';
-        report.startedAt = new Date();
-        cleaningReports.set(reportId, report);
+        return NextResponse.json({ success: true, report: job });
+      }
 
-        return NextResponse.json({ success: true, report });
+      case 'gps-checkin': {
+        const { reportId, lat, lng } = body;
+
+        const job = await prisma.cleaningJob.update({
+          where: { id: reportId },
+          data: {
+            checkInLat: lat,
+            checkInLng: lng,
+            startedAt: new Date(),
+            status: 'IN_PROGRESS',
+          },
+        });
+
+        return NextResponse.json({ success: true, report: job });
       }
 
       case 'complete_item': {
         const { reportId, itemId, photoUrl, notes } = body;
-        const report = cleaningReports.get(reportId);
 
-        if (!report) {
-          return NextResponse.json({ error: 'Report not found' }, { status: 404 });
+        const job = await prisma.cleaningJob.findUnique({ where: { id: reportId } });
+        if (!job) {
+          return NextResponse.json({ error: 'Job not found' }, { status: 404 });
         }
 
-        const item = report.checklist.find(i => i.itemId === itemId);
+        const checklist = job.checklistProgress ? JSON.parse(job.checklistProgress) : [];
+        const item = checklist.find((i: any) => i.itemId === itemId);
         if (!item) {
           return NextResponse.json({ error: 'Checklist item not found' }, { status: 404 });
         }
 
-        // Check if photo is required by looking up the original checklist item
-        const originalItem = masterChecklist.find(i => i.id === itemId);
+        // Check if photo is required
+        const originalItem = masterChecklist.find((i) => i.id === itemId);
         if (originalItem?.requiresPhoto && !photoUrl) {
           return NextResponse.json({ error: 'Photo required for this item' }, { status: 400 });
         }
@@ -135,174 +175,220 @@ export async function POST(request: NextRequest) {
         item.completed = true;
         item.photoUrl = photoUrl;
         item.notes = notes;
-        item.completedAt = new Date();
+        item.completedAt = new Date().toISOString();
 
-        cleaningReports.set(reportId, report);
+        await prisma.cleaningJob.update({
+          where: { id: reportId },
+          data: { checklistProgress: JSON.stringify(checklist) },
+        });
 
-        // Calculate progress
-        const completed = report.checklist.filter(i => i.completed).length;
-        const total = report.checklist.length;
+        const completed = checklist.filter((i: any) => i.completed).length;
+        const total = checklist.length;
 
         return NextResponse.json({
           success: true,
           item,
-          progress: { completed, total, percentage: Math.round((completed / total) * 100) }
+          progress: { completed, total, percentage: Math.round((completed / total) * 100) },
         });
       }
 
       case 'report_issue': {
         const { reportId, issue } = body;
-        const report = cleaningReports.get(reportId);
 
-        if (!report) {
-          return NextResponse.json({ error: 'Report not found' }, { status: 404 });
+        const job = await prisma.cleaningJob.findUnique({ where: { id: reportId } });
+        if (!job) {
+          return NextResponse.json({ error: 'Job not found' }, { status: 404 });
         }
 
-        const newIssue: CleaningIssue = {
+        const issues = job.issues ? JSON.parse(job.issues) : [];
+        const newIssue = {
           ...issue,
-          id: `issue-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          reportedAt: new Date(),
-          status: 'reported'
+          id: `issue-${Date.now()}`,
+          reportedAt: new Date().toISOString(),
+          status: 'reported',
         };
+        issues.push(newIssue);
 
-        report.issues.push(newIssue);
-        cleaningReports.set(reportId, report);
+        await prisma.cleaningJob.update({
+          where: { id: reportId },
+          data: { issues: JSON.stringify(issues) },
+        });
 
         return NextResponse.json({ success: true, issue: newIssue });
       }
 
       case 'add_photo': {
         const { reportId, photoUrl, description, location } = body;
-        const report = cleaningReports.get(reportId);
 
-        if (!report) {
-          return NextResponse.json({ error: 'Report not found' }, { status: 404 });
+        const job = await prisma.cleaningJob.findUnique({ where: { id: reportId } });
+        if (!job) {
+          return NextResponse.json({ error: 'Job not found' }, { status: 404 });
         }
 
+        const photos = job.photos ? JSON.parse(job.photos) : [];
         const photo = {
           area: location || description || 'General',
-          photoUrl: photoUrl,
-          takenAt: new Date()
+          photoUrl,
+          takenAt: new Date().toISOString(),
         };
+        photos.push(photo);
 
-        report.verificationPhotos.push(photo);
-        cleaningReports.set(reportId, report);
+        await prisma.cleaningJob.update({
+          where: { id: reportId },
+          data: { photos: JSON.stringify(photos) },
+        });
 
         return NextResponse.json({ success: true, photo });
       }
 
       case 'complete': {
-        const { reportId, notes, overallRating } = body;
-        const report = cleaningReports.get(reportId);
+        const { reportId, notes } = body;
 
-        if (!report) {
-          return NextResponse.json({ error: 'Report not found' }, { status: 404 });
+        const job = await prisma.cleaningJob.findUnique({ where: { id: reportId } });
+        if (!job) {
+          return NextResponse.json({ error: 'Job not found' }, { status: 404 });
         }
 
-        // Check if all required items are completed
-        const incompleteRequired = report.checklist.filter(item => {
-          const originalItem = masterChecklist.find(m => m.id === item.itemId);
-          return originalItem?.requiresPhoto && !item.completed;
+        const checklist = job.checklistProgress ? JSON.parse(job.checklistProgress) : [];
+
+        // Check required items
+        const incompleteRequired = checklist.filter((item: any) => {
+          const original = masterChecklist.find((m) => m.id === item.itemId);
+          return original?.requiresPhoto && !item.completed;
         });
 
         if (incompleteRequired.length > 0) {
           return NextResponse.json({
             error: 'All required items must be completed with photos',
-            incompleteItems: incompleteRequired.map(i => {
-              const original = masterChecklist.find(m => m.id === i.itemId);
+            incompleteItems: incompleteRequired.map((i: any) => {
+              const original = masterChecklist.find((m) => m.id === i.itemId);
               return original?.task || i.itemId;
-            })
+            }),
           }, { status: 400 });
         }
 
-        report.status = 'completed';
-        report.completedAt = new Date();
-        report.overallNotes = notes || report.overallNotes;
+        const now = new Date();
+        const durationMins = job.startedAt
+          ? Math.round((now.getTime() - job.startedAt.getTime()) / 60000)
+          : null;
 
-        // Calculate duration
-        if (report.startedAt) {
-          const start = new Date(report.startedAt).getTime();
-          const end = new Date(report.completedAt!).getTime();
-          report.timeSpentMinutes = Math.round((end - start) / 60000);
-        }
+        // Calculate quality score
+        const completedItems = checklist.filter((i: any) => i.completed).length;
+        const totalItems = checklist.length;
+        const issues = job.issues ? JSON.parse(job.issues) : [];
+        const issueDeduction = issues.filter((i: any) => i.severity === 'high' || i.severity === 'urgent').length * 10;
+        const score = Math.max(0, Math.round(((completedItems / totalItems) * 100) - issueDeduction));
 
-        // Calculate rating based on completion and issues
-        const completedItems = report.checklist.filter(i => i.completed).length;
-        const totalItems = report.checklist.length;
-        const issueDeduction = report.issues.filter(i => i.severity === 'high' || i.severity === 'urgent').length * 0.5;
-        report.rating = Math.max(0, Math.round(((completedItems / totalItems) * 5) - issueDeduction));
-
-        cleaningReports.set(reportId, report);
+        const updated = await prisma.cleaningJob.update({
+          where: { id: reportId },
+          data: {
+            status: 'COMPLETED',
+            completedAt: now,
+            durationMins,
+            score,
+            notes: notes || job.notes,
+          },
+          include: {
+            property: { select: { name: true } },
+            cleaner: { select: { name: true } },
+          },
+        });
 
         return NextResponse.json({
           success: true,
-          report,
+          report: updated,
           summary: {
             completedItems,
             totalItems,
-            issuesReported: report.issues.length,
-            photosUploaded: report.verificationPhotos.length + report.checklist.filter(i => i.photoUrl).length,
-            timeSpentMinutes: report.timeSpentMinutes,
-            rating: report.rating
-          }
+            issuesReported: issues.length,
+            photosUploaded: (job.photos ? JSON.parse(job.photos) : []).length +
+              checklist.filter((i: any) => i.photoUrl).length,
+            timeSpentMinutes: durationMins,
+            score,
+          },
         });
+      }
+
+      case 'gps-checkout': {
+        const { reportId, lat, lng } = body;
+
+        const job = await prisma.cleaningJob.update({
+          where: { id: reportId },
+          data: {
+            checkOutLat: lat,
+            checkOutLng: lng,
+          },
+        });
+
+        return NextResponse.json({ success: true, report: job });
       }
 
       default:
         return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
     }
-  } catch (error) {
-    console.error('Error processing cleaning report:', error);
-    return NextResponse.json({ error: 'Failed to process request' }, { status: 500 });
+  } catch (error: any) {
+    console.error('[Cleaning POST]', error);
+    return NextResponse.json({ error: error.message || 'Failed to process' }, { status: 500 });
   }
 }
 
-// PUT - Update a cleaning report
+// ============================================================================
+// PUT - Update a cleaning job
+// ============================================================================
+
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
     const { reportId, updates } = body;
 
-    const report = cleaningReports.get(reportId);
-    if (!report) {
-      return NextResponse.json({ error: 'Report not found' }, { status: 404 });
+    if (!reportId) {
+      return NextResponse.json({ error: 'reportId required' }, { status: 400 });
     }
 
-    // Update allowed fields
-    if (updates.overallNotes !== undefined) report.overallNotes = updates.overallNotes;
-    if (updates.status !== undefined) report.status = updates.status;
+    const data: any = {};
+    if (updates.notes !== undefined) data.notes = updates.notes;
+    if (updates.status !== undefined) data.status = updates.status;
+    if (updates.cleanerId !== undefined) data.cleanerId = updates.cleanerId;
+    if (updates.scheduledAt !== undefined) data.scheduledAt = new Date(updates.scheduledAt);
 
-    cleaningReports.set(reportId, report);
-    return NextResponse.json({ success: true, report });
-  } catch (error) {
-    console.error('Error updating cleaning report:', error);
-    return NextResponse.json({ error: 'Failed to update report' }, { status: 500 });
+    const job = await prisma.cleaningJob.update({
+      where: { id: reportId },
+      data,
+    });
+
+    return NextResponse.json({ success: true, report: job });
+  } catch (error: any) {
+    console.error('[Cleaning PUT]', error);
+    return NextResponse.json({ error: error.message || 'Failed to update' }, { status: 500 });
   }
 }
 
+// ============================================================================
 // DELETE - Cancel a cleaning job
+// ============================================================================
+
 export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const reportId = searchParams.get('id');
+    const jobId = searchParams.get('id');
 
-    if (!reportId) {
-      return NextResponse.json({ error: 'Report ID required' }, { status: 400 });
+    if (!jobId) {
+      return NextResponse.json({ error: 'Job ID required' }, { status: 400 });
     }
 
-    const report = cleaningReports.get(reportId);
-    if (!report) {
-      return NextResponse.json({ error: 'Report not found' }, { status: 404 });
+    const job = await prisma.cleaningJob.findUnique({ where: { id: jobId } });
+    if (!job) {
+      return NextResponse.json({ error: 'Job not found' }, { status: 404 });
     }
 
-    if (report.status === 'completed') {
-      return NextResponse.json({ error: 'Cannot delete completed reports' }, { status: 400 });
+    if (job.status === 'COMPLETED') {
+      return NextResponse.json({ error: 'Cannot delete completed jobs' }, { status: 400 });
     }
 
-    cleaningReports.delete(reportId);
-    return NextResponse.json({ success: true, message: 'Report deleted' });
-  } catch (error) {
-    console.error('Error deleting cleaning report:', error);
-    return NextResponse.json({ error: 'Failed to delete report' }, { status: 500 });
+    await prisma.cleaningJob.delete({ where: { id: jobId } });
+    return NextResponse.json({ success: true, message: 'Job deleted' });
+  } catch (error: any) {
+    console.error('[Cleaning DELETE]', error);
+    return NextResponse.json({ error: error.message || 'Failed to delete' }, { status: 500 });
   }
 }

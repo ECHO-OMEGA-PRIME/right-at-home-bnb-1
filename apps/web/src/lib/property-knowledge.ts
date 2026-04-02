@@ -135,9 +135,9 @@ export const properties: PropertyDetails[] = [
     maxGuests: 18,
     rating: 9.0,
     reviewCount: 2,
-    doorCode: '5055',
+    doorCode: '',
     wifiName: 'RightAtHome_LincolnGreen',
-    wifiPassword: 'Welcome2Midland',
+    wifiPassword: '', // Loaded from database at runtime
     checkIn: '3:00 PM',
     checkOut: '11:00 AM',
     amenities: {
@@ -189,9 +189,9 @@ export const properties: PropertyDetails[] = [
     maxGuests: 10,
     rating: 10.0,
     reviewCount: 18,
-    doorCode: '1311',
+    doorCode: '',
     wifiName: 'RightAtHome_Santiago',
-    wifiPassword: 'Welcome2Midland',
+    wifiPassword: '', // Loaded from database at runtime
     checkIn: '3:00 PM',
     checkOut: '11:00 AM',
     amenities: {
@@ -234,9 +234,9 @@ export const properties: PropertyDetails[] = [
     maxGuests: 10,
     rating: 10.0,
     reviewCount: 6,
-    doorCode: '1426',
+    doorCode: '',
     wifiName: 'RightAtHome_Lanham',
-    wifiPassword: 'Welcome2Midland',
+    wifiPassword: '', // Loaded from database at runtime
     checkIn: '3:00 PM',
     checkOut: '11:00 AM',
     amenities: {
@@ -280,9 +280,9 @@ export const properties: PropertyDetails[] = [
     maxGuests: 14,
     rating: 6.8,
     reviewCount: 5,
-    doorCode: '3106',
+    doorCode: '',
     wifiName: 'RightAtHome_Humble',
-    wifiPassword: 'Welcome2Midland',
+    wifiPassword: '', // Loaded from database at runtime
     checkIn: '3:00 PM',
     checkOut: '11:00 AM',
     amenities: {
@@ -325,9 +325,9 @@ export const properties: PropertyDetails[] = [
     maxGuests: 8,
     rating: 9.6,
     reviewCount: 5,
-    doorCode: '6100',
+    doorCode: '',
     wifiName: 'RightAtHome_Oriole',
-    wifiPassword: 'Welcome2Midland',
+    wifiPassword: '', // Loaded from database at runtime
     checkIn: '3:00 PM',
     checkOut: '11:00 AM',
     amenities: {
@@ -369,9 +369,9 @@ export const properties: PropertyDetails[] = [
     maxGuests: 6,
     rating: 8.4,
     reviewCount: 28,
-    doorCode: '4707',
+    doorCode: '',
     wifiName: 'RightAtHome_Dentcrest',
-    wifiPassword: 'Welcome2Midland',
+    wifiPassword: '', // Loaded from database at runtime
     checkIn: '3:00 PM',
     checkOut: '11:00 AM',
     amenities: {
@@ -412,9 +412,9 @@ export const properties: PropertyDetails[] = [
     maxGuests: 8,
     rating: 10.0,
     reviewCount: 4,
-    doorCode: '1309',
+    doorCode: '',
     wifiName: 'RightAtHome_SaddleClub',
-    wifiPassword: 'Welcome2Midland',
+    wifiPassword: '', // Loaded from database at runtime
     checkIn: '3:00 PM',
     checkOut: '11:00 AM',
     amenities: {
@@ -455,9 +455,9 @@ export const properties: PropertyDetails[] = [
     maxGuests: 6,
     rating: 8.4,
     reviewCount: 11,
-    doorCode: 'TBD',
+    doorCode: '',
     wifiName: 'RightAtHome_Monterrey',
-    wifiPassword: 'Welcome2Midland',
+    wifiPassword: '', // Loaded from database at runtime
     checkIn: '3:00 PM',
     checkOut: '11:00 AM',
     amenities: {
@@ -498,9 +498,9 @@ export const properties: PropertyDetails[] = [
     maxGuests: 16,
     rating: 8.8,
     reviewCount: 36,
-    doorCode: 'TBD',
+    doorCode: '',
     wifiName: 'RightAtHome_Adobe',
-    wifiPassword: 'Welcome2Midland',
+    wifiPassword: '', // Loaded from database at runtime
     checkIn: '3:00 PM',
     checkOut: '11:00 AM',
     amenities: {
@@ -546,9 +546,9 @@ export const properties: PropertyDetails[] = [
     maxGuests: 16,
     rating: 0,
     reviewCount: 0,
-    doorCode: 'TBD',
+    doorCode: '',
     wifiName: 'RightAtHome_OldMidland',
-    wifiPassword: 'Welcome2Midland',
+    wifiPassword: '', // Loaded from database at runtime
     checkIn: '3:00 PM',
     checkOut: '11:00 AM',
     amenities: {
@@ -588,9 +588,9 @@ export const properties: PropertyDetails[] = [
     maxGuests: 10,
     rating: 9.0,
     reviewCount: 69,
-    doorCode: 'TBD',
+    doorCode: '',
     wifiName: 'RightAtHome_Oasis',
-    wifiPassword: 'Welcome2Midland',
+    wifiPassword: '', // Loaded from database at runtime
     checkIn: '3:00 PM',
     checkOut: '11:00 AM',
     amenities: {
@@ -634,9 +634,9 @@ export const properties: PropertyDetails[] = [
     maxGuests: 8,
     rating: 0,
     reviewCount: 0,
-    doorCode: 'TBD',
+    doorCode: '',
     wifiName: 'RightAtHome_PatioHome',
-    wifiPassword: 'Welcome2Midland',
+    wifiPassword: '', // Loaded from database at runtime
     checkIn: '3:00 PM',
     checkOut: '11:00 AM',
     amenities: {
@@ -675,9 +675,9 @@ export const properties: PropertyDetails[] = [
     maxGuests: 6,
     rating: 0,
     reviewCount: 0,
-    doorCode: 'TBD',
+    doorCode: '',
     wifiName: 'RightAtHome_Safari',
-    wifiPassword: 'Welcome2Midland',
+    wifiPassword: '', // Loaded from database at runtime
     checkIn: '3:00 PM',
     checkOut: '11:00 AM',
     amenities: {
@@ -713,9 +713,9 @@ export const properties: PropertyDetails[] = [
     maxGuests: 6,
     rating: 0,
     reviewCount: 14,
-    doorCode: 'TBD',
+    doorCode: '',
     wifiName: 'RightAtHome_Destination',
-    wifiPassword: 'Welcome2Midland',
+    wifiPassword: '', // Loaded from database at runtime
     checkIn: '3:00 PM',
     checkOut: '11:00 AM',
     amenities: {
@@ -749,9 +749,9 @@ export const properties: PropertyDetails[] = [
     maxGuests: 6,
     rating: 0,
     reviewCount: 0,
-    doorCode: 'TBD',
+    doorCode: '',
     wifiName: 'RightAtHome_Chelsea',
-    wifiPassword: 'Welcome2Midland',
+    wifiPassword: '', // Loaded from database at runtime
     checkIn: '3:00 PM',
     checkOut: '11:00 AM',
     amenities: {
@@ -792,9 +792,9 @@ export const properties: PropertyDetails[] = [
     maxGuests: 8,
     rating: 0,
     reviewCount: 22,
-    doorCode: 'TBD',
+    doorCode: '',
     wifiName: 'RightAtHome_Clermont',
-    wifiPassword: 'Welcome2Midland',
+    wifiPassword: '', // Loaded from database at runtime
     checkIn: '3:00 PM',
     checkOut: '11:00 AM',
     amenities: {
@@ -832,9 +832,9 @@ export const properties: PropertyDetails[] = [
     maxGuests: 6,
     rating: 0,
     reviewCount: 17,
-    doorCode: 'TBD',
+    doorCode: '',
     wifiName: 'RightAtHome_Uptown',
-    wifiPassword: 'Welcome2Midland',
+    wifiPassword: '', // Loaded from database at runtime
     checkIn: '3:00 PM',
     checkOut: '11:00 AM',
     amenities: {
@@ -872,9 +872,9 @@ export const properties: PropertyDetails[] = [
     maxGuests: 6,
     rating: 0,
     reviewCount: 0,
-    doorCode: 'TBD',
+    doorCode: '',
     wifiName: 'RightAtHome_Cowboy',
-    wifiPassword: 'Welcome2Midland',
+    wifiPassword: '', // Loaded from database at runtime
     checkIn: '3:00 PM',
     checkOut: '11:00 AM',
     amenities: {
@@ -912,9 +912,9 @@ export const properties: PropertyDetails[] = [
     maxGuests: 6,
     rating: 0,
     reviewCount: 17,
-    doorCode: 'TBD',
+    doorCode: '',
     wifiName: 'RightAtHome_Vanguard',
-    wifiPassword: 'Welcome2Midland',
+    wifiPassword: '', // Loaded from database at runtime
     checkIn: '3:00 PM',
     checkOut: '11:00 AM',
     amenities: {
@@ -949,9 +949,9 @@ export const properties: PropertyDetails[] = [
     maxGuests: 8,
     rating: 0,
     reviewCount: 0,
-    doorCode: 'TBD',
+    doorCode: '',
     wifiName: 'RightAtHome_Groovy',
-    wifiPassword: 'Welcome2Midland',
+    wifiPassword: '', // Loaded from database at runtime
     checkIn: '3:00 PM',
     checkOut: '11:00 AM',
     amenities: {
