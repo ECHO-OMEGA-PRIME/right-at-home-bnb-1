@@ -93,6 +93,7 @@ model Property {
   smartLock       SmartLock?
   expenses        Expense[]
   photos          PropertyPhoto[]
+  vrboSync        VrboSync?
 
   // Performance indexes
   @@index([status])
@@ -503,4 +504,45 @@ model Setting {
   value         String
   description   String?
   updatedAt     DateTime  @updatedAt
+}
+
+// ============================================
+// VRBO DIRECT INTEGRATION (No PMS needed)
+// ============================================
+
+model VrboSync {
+  id              String    @id @default(cuid())
+  propertyId      String
+  vrboListingId   String
+  icalUrl         String?
+  lastIcalSync    DateTime?
+  lastScrapeSync  DateTime?
+  syncEnabled     Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  property        Property  @relation(fields: [propertyId], references: [id])
+
+  @@unique([propertyId])
+  @@unique([vrboListingId])
+  @@index([syncEnabled])
+}
+
+model SyncLog {
+  id              String    @id @default(cuid())
+  propertyId      String?
+  syncType        String    // ical_import, ical_export, scrape_bookings, scrape_messages, rate_push
+  source          String    // vrbo, airbnb, booking
+  status          String    // success, partial, failed
+  itemsProcessed  Int       @default(0)
+  itemsCreated    Int       @default(0)
+  itemsUpdated    Int       @default(0)
+  errorMessage    String?
+  durationMs      Int?
+  metadata        String?
+  createdAt       DateTime  @default(now())
+
+  @@index([propertyId, createdAt])
+  @@index([syncType, createdAt])
+  @@index([status])
 }
