@@ -44,7 +44,6 @@
     "backend": "cd backend && python -m uvicorn main:app --reload --port 8000",
     "backend:prod": "cd backend && python -m uvicorn main:app --host 0.0.0.0 --port 8000",
 
-    "prepare": "npm run db:generate && npm run packages:build",
     "postinstall": "prisma generate"
   },
   "dependencies": {
