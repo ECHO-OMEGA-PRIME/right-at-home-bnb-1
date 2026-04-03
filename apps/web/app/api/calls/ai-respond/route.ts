@@ -20,7 +20,26 @@ const CF_API_TOKEN = process.env.CF_AI_TOKEN || process.env.CLOUDFLARE_API_TOKEN
 const CF_ACCOUNT_ID = process.env.CF_ACCOUNT_ID || 'b9af3a4bf161132bb7e5d3d365fb8bb0';
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const BASE_URL = process.env.NEXT_PUBLIC_URL || 'https://rah-midland.com';
-const VOICE = 'voice="Polly.Matthew" language="en-US"';
+const VOICE = 'voice="Polly.Matthew-Neural" language="en-US"';
+const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY || '';
+
+// Natural follow-up prompts to vary conversation flow
+const FOLLOW_UP_PROMPTS = [
+  'Is there anything else I can help you with?',
+  'What else can I do for you?',
+  'Is there anything else you need?',
+  'Can I help you with anything else today?',
+  'Do you have any other questions?',
+  'Anything else on your mind?',
+  'Is there something else I can assist with?',
+];
+
+const MAX_TURN_PROMPTS = [
+  'Is there anything else I can help with, or would you like me to connect you with Steven?',
+  'Can I help with anything else, or should I put you through to Steven?',
+  'Do you have more questions, or would you prefer to speak with Steven directly?',
+  'Anything else I can assist with, or would you like to talk to Steven?',
+];
 
 // Emergency keywords — immediate escalation to Steven
 const EMERGENCY_KEYWORDS = ['emergency', 'urgent', 'fire', 'flood', 'locked out', 'police', '911', 'help me', 'break in', 'broken into'];
@@ -240,26 +259,43 @@ function connectToSteven(preamble?: string): string {
 }
 
 /**
+ * Build TwiML element for AI response — uses <Play> with ElevenLabs TTS if available, else <Say>.
+ */
+function buildResponseTwiml(text: string): string {
+  if (ELEVENLABS_API_KEY) {
+    const encoded = Buffer.from(text).toString('base64');
+    const ttsUrl = `${BASE_URL}/api/calls/tts?t=${encodeURIComponent(encoded)}`;
+    // Use <Play> with ElevenLabs, fall back to <Say> if TTS endpoint fails
+    return `<Play>${ttsUrl}</Play>`;
+  }
+  return `<Say ${VOICE}>${text}</Say>`;
+}
+
+/**
  * Build TwiML that says the AI response and gathers the next speech input.
  */
 function continueConversation(aiResponse: string, turnCount: number, maxTurns: number): string {
+  const responseTwiml = buildResponseTwiml(aiResponse);
+
   // After maxTurns, offer to connect to Steven
   if (turnCount >= maxTurns) {
+    const maxTurnPrompt = MAX_TURN_PROMPTS[turnCount % MAX_TURN_PROMPTS.length];
     return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Say ${VOICE}>${aiResponse}</Say>
+  ${responseTwiml}
   <Gather input="speech" action="${BASE_URL}/api/calls/ai-respond" method="POST" speechTimeout="auto" language="en-US">
-    <Say ${VOICE}>Is there anything else I can help with, or would you like me to connect you with Steven?</Say>
+    <Say ${VOICE}>${maxTurnPrompt}</Say>
   </Gather>
   <Say ${VOICE}>Thank you for calling Right at Home B and B. Have a wonderful day!</Say>
 </Response>`;
   }
 
+  const followUp = FOLLOW_UP_PROMPTS[turnCount % FOLLOW_UP_PROMPTS.length];
   return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Say ${VOICE}>${aiResponse}</Say>
+  ${responseTwiml}
   <Gather input="speech" action="${BASE_URL}/api/calls/ai-respond" method="POST" speechTimeout="auto" language="en-US">
-    <Say ${VOICE}>Is there anything else I can help you with?</Say>
+    <Say ${VOICE}>${followUp}</Say>
   </Gather>
   <Say ${VOICE}>It sounds like we're all set. Thank you for calling Right at Home B and B. Have a great day!</Say>
 </Response>`;

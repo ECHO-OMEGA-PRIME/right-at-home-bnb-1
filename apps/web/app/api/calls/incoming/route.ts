@@ -20,7 +20,7 @@ import { prisma } from '@/lib/prisma';
 
 const STEVEN_PHONE = process.env.STEVEN_PHONE || '+14325591904';
 const BASE_URL = process.env.NEXT_PUBLIC_URL || 'https://rah-midland.com';
-const VOICE = 'voice="Polly.Matthew" language="en-US"';
+const VOICE = 'voice="Polly.Matthew-Neural" language="en-US"';
 
 // Default settings used when DB is unreachable
 const FALLBACK_SETTINGS = {
