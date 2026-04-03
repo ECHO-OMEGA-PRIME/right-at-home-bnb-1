@@ -39,7 +39,6 @@ const PUBLIC_API_ROUTES = [
   "/api/webhooks/vrbo",
   "/api/integrations/vrbo/webhook",
   "/api/integrations/ical",
-  "/api/admin/vrbo-ical",
 ];
 
 // Admin-only routes — require owner/admin role

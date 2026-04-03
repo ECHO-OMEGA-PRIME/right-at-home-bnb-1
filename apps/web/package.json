@@ -4,10 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
+    "build": "prisma generate --schema=../../prisma/schema.prisma && next build",
     "start": "next start",
     "lint": "next lint",
-    "postinstall": "prisma generate",
+    "postinstall": "prisma generate --schema=../../prisma/schema.prisma",
     "db:generate": "drizzle-kit generate:pg",
     "db:push": "drizzle-kit push:pg",
     "db:studio": "drizzle-kit studio",
@@ -57,5 +57,8 @@
     "typescript": "^5.3.3",
     "drizzle-kit": "^0.20.13",
     "@types/pg": "^8.10.9"
+  },
+  "prisma": {
+    "schema": "../../prisma/schema.prisma"
   }
 }
