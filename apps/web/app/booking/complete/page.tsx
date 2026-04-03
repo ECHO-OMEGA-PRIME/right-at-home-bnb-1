@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -16,6 +16,18 @@ interface CaptureResult {
 }
 
 export default function BookingCompletePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#0a0505] flex items-center justify-center">
+        <Loader2 className="w-10 h-10 text-[#C4A777] animate-spin" />
+      </div>
+    }>
+      <BookingCompleteContent />
+    </Suspense>
+  );
+}
+
+function BookingCompleteContent() {
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [result, setResult] = useState<CaptureResult | null>(null);
