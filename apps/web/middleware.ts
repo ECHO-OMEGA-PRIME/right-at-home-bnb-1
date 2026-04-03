@@ -29,6 +29,7 @@ const PUBLIC_ROUTES = [
   "/privacy-policy",
   "/terms-of-service",
   "/booking/success",
+  "/booking/complete",
 ];
 
 // API routes that are public (no auth)
@@ -42,6 +43,8 @@ const PUBLIC_API_ROUTES = [
   "/api/cron",
   "/api/calls",        // Twilio webhooks (incoming, gather, status, ai-respond, transcribe)
   "/api/concierge",    // AI concierge (public guest access)
+  "/api/bookings/checkout",  // PayPal direct booking checkout
+  "/api/bookings/capture",   // PayPal payment capture
 ];
 
 // Admin-only routes — require owner/admin role
@@ -87,6 +90,7 @@ function isPublicRoute(pathname: string): boolean {
   if (PUBLIC_ROUTES.includes(pathname)) return true;
   if (pathname.startsWith("/properties/")) return true;
   if (pathname.startsWith("/booking/success")) return true;
+  if (pathname.startsWith("/booking/complete")) return true;
   return false;
 }
 

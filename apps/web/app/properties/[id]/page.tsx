@@ -426,27 +426,32 @@ export default function PropertyDetailPage() {
                   </div>
                 )}
 
-                {/* VRBO Link */}
-                {property.vrboUrl ? (
+                {/* Direct Booking — Primary */}
+                <Link
+                  href={`/properties/${property.id}/book`}
+                  className="w-full flex items-center justify-center gap-2 bg-[#C4A777] hover:bg-[#d4b787]
+                           text-[#0a0505] font-bold py-3 px-6 rounded-xl transition-colors mb-2"
+                >
+                  Book Now — Best Price
+                </Link>
+
+                {/* VRBO — Secondary */}
+                {property.vrboUrl && (
                   <a
                     href={property.vrboUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-full flex items-center justify-center gap-2 bg-[#500000] hover:bg-[#600000]
-                             text-white font-semibold py-3 px-6 rounded-xl transition-colors mb-3"
+                    className="w-full flex items-center justify-center gap-2 border border-white/20
+                             text-white/70 text-sm py-2.5 px-6 rounded-xl hover:bg-white/5 transition-colors mb-2"
                   >
-                    Book on VRBO
-                    <ExternalLink className="w-4 h-4" />
-                  </a>
-                ) : (
-                  <a
-                    href="tel:+14325551234"
-                    className="w-full flex items-center justify-center gap-2 bg-[#500000] hover:bg-[#600000]
-                             text-white font-semibold py-3 px-6 rounded-xl transition-colors mb-3"
-                  >
-                    Contact to Book
+                    Or book on VRBO
+                    <ExternalLink className="w-3.5 h-3.5" />
                   </a>
                 )}
+
+                <p className="text-green-400 text-xs text-center mb-2">
+                  Save by booking direct!
+                </p>
 
                 <p className="text-white/40 text-xs text-center">
                   Managed by Steven Palma
