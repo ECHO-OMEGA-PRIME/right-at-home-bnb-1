@@ -1,0 +1,548 @@
+// Right at Home BnB - Prisma Schema
+// Steven Palma | Midland, TX | 22 Properties
+// Complete database schema for property management system
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ============================================
+// USER & AUTHENTICATION
+// ============================================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String
+  phone         String?
+  avatarUrl     String?
+  role          String    @default("GUEST")
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  cleaningJobs  CleaningJob[]
+  expenses      Expense[]
+  approvedMsgs  Message[]     @relation("ApprovedBy")
+
+  // Performance indexes
+  @@index([email])
+  @@index([role])
+  @@index([isActive])                     // Filter active users
+  @@index([role, isActive])               // Composite: active users by role
+  @@index([createdAt])                    // Sort by creation date
+}
+
+// ============================================
+// PROPERTIES
+// ============================================
+
+model Property {
+  id              String    @id @default(cuid())
+  name            String
+  address         String
+  city            String    @default("Midland")
+  state           String    @default("TX")
+  zipCode         String?
+  latitude        Float?
+  longitude       Float?
+
+  // Property Details
+  bedrooms        Int
+  bathrooms       Float
+  maxGuests       Int
+  squareFeet      Int?
+  propertyType    String    @default("HOUSE")
+
+  // Amenities & Info (stored as JSON string)
+  amenities       String?
+  wifiNetwork     String?
+  wifiPassword    String?
+  parkingInfo     String?
+  checkInInstr    String?
+  checkOutInstr   String?
+  houseRules      String?
+
+  // Cleaning
+  cleaningChecklist String?
+
+  // Pricing
+  nightlyRate     Float
+  cleaningFee     Float?
+  securityDeposit Float?
+
+  // External IDs
+  airbnbId        String?
+  vrboId          String?
+
+  // Status
+  status          String    @default("ACTIVE")
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  bookings        Booking[]
+  cleaningJobs    CleaningJob[]
+  smartLock       SmartLock?
+  expenses        Expense[]
+  photos          PropertyPhoto[]
+  vrboSync        VrboSync?
+
+  // Performance indexes
+  @@index([status])
+  @@index([city])
+  @@index([status, city])             // Composite: filter by status and city
+  @@index([propertyType])             // Filter by property type
+  @@index([bedrooms])                 // Filter by bedroom count
+  @@index([nightlyRate])              // Sort/filter by price
+  @@index([airbnbId])                 // Lookup by external ID
+  @@index([vrboId])                   // Lookup by external ID
+  @@index([createdAt])                // Sort by creation date
+}
+
+model PropertyPhoto {
+  id          String    @id @default(cuid())
+  propertyId  String
+  url         String
+  caption     String?
+  isPrimary   Boolean   @default(false)
+  sortOrder   Int       @default(0)
+  createdAt   DateTime  @default(now())
+
+  property    Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId])
+}
+
+// ============================================
+// GUESTS & CRM
+// ============================================
+
+model Guest {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String
+  phone         String?
+
+  // Source
+  platform      String    @default("DIRECT")
+  platformId    String?
+
+  // CRM Data
+  firstStay     DateTime?
+  lastStay      DateTime?
+  totalStays    Int       @default(0)
+  totalSpent    Float     @default(0)
+  avgRating     Float?
+
+  // Tags & Preferences (stored as JSON string)
+  tags          String?
+  notes         String?
+  preferences   String?
+
+  // VIP Status
+  isVip         Boolean   @default(false)
+  vipTier       String?
+
+  // Special Dates
+  birthday      DateTime?
+  anniversary   DateTime?
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  bookings      Booking[]
+  messages      Message[]
+  conciergeQueries ConciergeQuery[]
+
+  // Performance indexes
+  @@index([email])
+  @@index([isVip])
+  @@index([platform])                     // Filter by booking platform
+  @@index([platform, platformId])         // Lookup by platform ID
+  @@index([totalStays])                   // Sort by stay count (loyalty)
+  @@index([totalSpent])                   // Sort by revenue (VIP identification)
+  @@index([lastStay])                     // Filter by recency
+  @@index([isVip, totalSpent])            // Composite: VIP ranking
+  @@index([createdAt])                    // Sort by registration date
+  @@index([birthday])                     // Birthday campaign targeting
+}
+
+// ============================================
+// BOOKINGS
+// ============================================
+
+model Booking {
+  id            String    @id @default(cuid())
+  propertyId    String
+  guestId       String
+
+  // Dates
+  checkIn       DateTime
+  checkOut      DateTime
+
+  // Details
+  guestCount    Int       @default(1)
+  platform      String    @default("DIRECT")
+  confirmCode   String?
+
+  // Pricing
+  nightlyRate   Float
+  totalNights   Int
+  subtotal      Float
+  cleaningFee   Float?
+  serviceFee    Float?
+  taxes         Float?
+  totalPrice    Float
+
+  // Access
+  accessCode    String?
+  codeExpiresAt DateTime?
+
+  // Status
+  status        String    @default("CONFIRMED")
+  specialReqs   String?
+  internalNotes String?
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  property      Property  @relation(fields: [propertyId], references: [id])
+  guest         Guest     @relation(fields: [guestId], references: [id])
+  cleaningJob   CleaningJob?
+  messages      Message[]
+
+  // Performance indexes
+  @@index([propertyId])
+  @@index([guestId])
+  @@index([checkIn])
+  @@index([checkOut])
+  @@index([status])
+  @@index([propertyId, checkIn])          // Composite: property availability queries
+  @@index([propertyId, status])           // Composite: property bookings by status
+  @@index([propertyId, checkIn, checkOut]) // Composite: date range availability
+  @@index([platform, status])             // Filter by platform and status
+  @@index([platform])                     // Filter by booking source
+  @@index([createdAt])                    // Sort by creation date
+  @@index([confirmCode])                  // Lookup by confirmation code
+}
+
+// ============================================
+// CLEANING & CREW
+// ============================================
+
+model CleaningJob {
+  id            String    @id @default(cuid())
+  propertyId    String
+  cleanerId     String?
+  bookingId     String?   @unique
+
+  // Scheduling
+  scheduledAt   DateTime
+  startedAt     DateTime?
+  completedAt   DateTime?
+
+  // Type
+  jobType       String    @default("TURNOVER")
+
+  // Status
+  status        String    @default("SCHEDULED")
+
+  // GPS Verification
+  checkInLat    Float?
+  checkInLng    Float?
+  checkOutLat   Float?
+  checkOutLng   Float?
+
+  // Checklist & Photos (stored as JSON string)
+  checklistProgress String?
+  photos        String?
+
+  // Quality
+  score         Int?
+  scoreFeedback String?
+
+  // Notes
+  notes         String?
+  issues        String?
+
+  // Duration
+  durationMins  Int?
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  property      Property  @relation(fields: [propertyId], references: [id])
+  cleaner       User?     @relation(fields: [cleanerId], references: [id])
+  booking       Booking?  @relation(fields: [bookingId], references: [id])
+
+  // Performance indexes
+  @@index([propertyId])
+  @@index([cleanerId])
+  @@index([status])
+  @@index([scheduledAt])
+  @@index([propertyId, scheduledAt])      // Composite: property cleaning schedule
+  @@index([cleanerId, status])            // Composite: cleaner's active jobs
+  @@index([cleanerId, scheduledAt])       // Composite: cleaner's schedule
+  @@index([scheduledAt, status])          // Composite: upcoming jobs by status
+  @@index([jobType, status])              // Filter by job type and status
+  @@index([createdAt])                    // Sort by creation date
+  @@index([completedAt])                  // Query completed jobs
+}
+
+// ============================================
+// SMART LOCKS
+// ============================================
+
+model SmartLock {
+  id            String    @id @default(cuid())
+  propertyId    String    @unique
+
+  // Device Info
+  brand         String
+  model         String?
+  deviceId      String
+  serialNumber  String?
+
+  // Current State
+  currentCode   String?
+  codeExpiresAt DateTime?
+  batteryLevel  Int?
+  lastActivity  DateTime?
+  isOnline      Boolean   @default(true)
+
+  // Access Log (stored as JSON string)
+  accessLog     String?
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  property      Property  @relation(fields: [propertyId], references: [id])
+
+  @@index([brand])
+}
+
+// ============================================
+// MESSAGING
+// ============================================
+
+model Message {
+  id            String    @id @default(cuid())
+  guestId       String
+  bookingId     String?
+
+  // Message Details
+  type          String
+  channel       String    @default("EMAIL")
+  subject       String?
+  body          String
+
+  // Status
+  status        String    @default("DRAFT")
+
+  // Scheduling
+  scheduledFor  DateTime?
+  sentAt        DateTime?
+
+  // Approval
+  approvedBy    String?
+  approvedAt    DateTime?
+
+  // AI Analysis
+  sentiment     String?
+  sentimentScore Float?
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  guest         Guest     @relation(fields: [guestId], references: [id])
+  booking       Booking?  @relation(fields: [bookingId], references: [id])
+  approver      User?     @relation("ApprovedBy", fields: [approvedBy], references: [id])
+
+  // Performance indexes
+  @@index([guestId])
+  @@index([bookingId])
+  @@index([status])
+  @@index([type])
+  @@index([channel])                      // Filter by message channel
+  @@index([guestId, type])                // Composite: guest messages by type
+  @@index([status, scheduledFor])         // Composite: scheduled messages queue
+  @@index([sentAt])                       // Query sent messages
+  @@index([createdAt])                    // Sort by creation date
+  @@index([sentiment])                    // Filter by sentiment analysis
+}
+
+// ============================================
+// FINANCES
+// ============================================
+
+model Expense {
+  id            String    @id @default(cuid())
+  propertyId    String
+  createdById   String?
+
+  // Expense Details
+  category      String
+  subcategory   String?
+  amount        Float
+  description   String
+  vendor        String?
+
+  // Date
+  date          DateTime
+
+  // Receipt
+  receiptUrl    String?
+
+  // Tax
+  isTaxDeductible Boolean @default(true)
+  taxCategory   String?
+
+  // Status
+  status        String    @default("PENDING")
+
+  // Notes
+  notes         String?
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  property      Property  @relation(fields: [propertyId], references: [id])
+  createdBy     User?     @relation(fields: [createdById], references: [id])
+
+  // Performance indexes
+  @@index([propertyId])
+  @@index([category])
+  @@index([date])
+  @@index([propertyId, date])             // Composite: property expenses by date
+  @@index([propertyId, category])         // Composite: property expenses by category
+  @@index([category, date])               // Composite: expenses report
+  @@index([status])                       // Filter by approval status
+  @@index([isTaxDeductible])              // Filter for tax reports
+  @@index([isTaxDeductible, taxCategory]) // Composite: tax category reports
+  @@index([vendor])                       // Group by vendor
+  @@index([createdAt])                    // Sort by creation date
+}
+
+// ============================================
+// AI CONCIERGE
+// ============================================
+
+model ConciergeQuery {
+  id            String    @id @default(cuid())
+  guestId       String?
+  propertyId    String?
+
+  // Query & Response
+  query         String
+  response      String
+
+  // Classification
+  category      String?
+  intent        String?
+
+  // Quality
+  wasHelpful    Boolean?
+  rating        Int?
+
+  // Voice
+  voiceUsed     Boolean   @default(false)
+  audioUrl      String?
+
+  createdAt     DateTime  @default(now())
+
+  // Relations
+  guest         Guest?    @relation(fields: [guestId], references: [id])
+
+  @@index([guestId])
+  @@index([category])
+  @@index([createdAt])
+}
+
+// ============================================
+// SYSTEM & AUDIT
+// ============================================
+
+model AuditLog {
+  id            String    @id @default(cuid())
+  userId        String?
+  action        String
+  entity        String
+  entityId      String?
+  oldValues     String?
+  newValues     String?
+  ipAddress     String?
+  userAgent     String?
+  createdAt     DateTime  @default(now())
+
+  // Performance indexes
+  @@index([userId])
+  @@index([entity])
+  @@index([createdAt])
+  @@index([entity, entityId])             // Composite: lookup entity history
+  @@index([action])                       // Filter by action type
+  @@index([userId, createdAt])            // Composite: user activity history
+  @@index([entity, action])               // Composite: entity action reports
+}
+
+model Setting {
+  id            String    @id @default(cuid())
+  key           String    @unique
+  value         String
+  description   String?
+  updatedAt     DateTime  @updatedAt
+}
+
+// ============================================
+// VRBO DIRECT INTEGRATION (No PMS needed)
+// ============================================
+
+model VrboSync {
+  id              String    @id @default(cuid())
+  propertyId      String
+  vrboListingId   String
+  icalUrl         String?
+  lastIcalSync    DateTime?
+  lastScrapeSync  DateTime?
+  syncEnabled     Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  property        Property  @relation(fields: [propertyId], references: [id])
+
+  @@unique([propertyId])
+  @@unique([vrboListingId])
+  @@index([syncEnabled])
+}
+
+model SyncLog {
+  id              String    @id @default(cuid())
+  propertyId      String?
+  syncType        String    // ical_import, ical_export, scrape_bookings, scrape_messages, rate_push
+  source          String    // vrbo, airbnb, booking
+  status          String    // success, partial, failed
+  itemsProcessed  Int       @default(0)
+  itemsCreated    Int       @default(0)
+  itemsUpdated    Int       @default(0)
+  errorMessage    String?
+  durationMs      Int?
+  metadata        String?
+  createdAt       DateTime  @default(now())
+
+  @@index([propertyId, createdAt])
+  @@index([syncType, createdAt])
+  @@index([status])
+}
