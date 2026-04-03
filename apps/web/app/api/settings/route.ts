@@ -11,6 +11,7 @@ import { prisma } from '@/lib/prisma';
 // Default call routing settings
 const DEFAULT_CALL_ROUTING = {
   aiCallsEnabled: false,
+  aiAssistantEnabled: true,
   availabilityMode: 'scheduled',
   quietHoursEnabled: true,
   quietHoursStart: '22:00',
@@ -23,6 +24,8 @@ const DEFAULT_CALL_ROUTING = {
   aiGreeting: "Hello! You've reached Right at Home BnB. I'm the AI concierge assistant. How can I help you today?",
   notifyOnAICall: true,
   callTranscriptionEnabled: true,
+  aiEscalateKeywords: ['speak to someone', 'talk to steven', 'real person', 'human', 'manager', 'complaint', 'refund'],
+  maxAiTurns: 3,
 };
 
 async function getSettings() {

@@ -49,6 +49,7 @@ const navItems: NavItem[] = [
   { label: 'Inventory', href: '/admin/inventory', icon: Package },
   { label: 'Smart Home', href: '/admin/smart-home', icon: Wifi },
   { label: 'Costs', href: '/admin/costs', icon: PieChart },
+  { label: 'Service Costs', href: '/admin/service-costs', icon: CreditCard },
   { label: 'Taxes', href: '/admin/taxes', icon: Calculator },
   { label: 'Reviews', href: '/admin/reviews', icon: Star },
   { label: 'Planner', href: '/admin/planner', icon: Calendar },
