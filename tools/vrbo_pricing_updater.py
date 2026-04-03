@@ -27,28 +27,39 @@ except:
     print("WARNING: tools/vrbo-internal-ids.json not found")
 
 VRBO_PROPERTIES = {
-    "2636389": "castleford-5001",
-    "3005111": "adobe-compound-gc",
-    "2634718": "garfield-2702",
-    "3355618": "douglas-4501",
-    "2638481": "dentcrest-4707",
-    "2638524": "safari-gameroom",
-    "2643822": "storey-2103",
-    "2643784": "chelsea-3210",
-    "4471713": "oriole-6100",
-    "4437486": "lanham-1426",
-    "4700881": "humble-3106",
-    "4179271": "daventry-1311",
-    "4581977": "lincoln-green-5055",
-    "4750070": "daventry-1309",
-    "3477668": "monterrey-house",
-    "3724481": "clermont-house",
-    "4135262": "cowboy-siesta",
-    "3764453": "groovy-times",
-    "3559249": "vanguard-velvet",
-    "5103283": "mockingbird-ridge",
-    "5103284": "blazing-saddle",
-    "2641181": "uptown-place",
+    # === ACTIVE (18) ===
+    "2636389": "castleford-5005",          # Oasis with Pool & Billiards — 5005 Castleford Rd 79705
+    "3005111": "golf-course-2309",         # Adobe Compound with Pool and Fire Pits and Billiards — 2309 W Golf Course Rd 79701
+    "2634718": "garfield-2702",            # Patio Home with Hot Tub — 2702 N Garfield St 79705
+    "3355618": "douglas-2000",             # Old Midland Living — 2000 Douglas Ave 79701
+    "2638481": "dentcrest-4707",           # Hot Tub Delight — 4707 Dentcrest Dr 79707
+    "2643784": "chelsea-3210",             # Retreat with Covered Patio — 3210 Chelsea Pl 79705
+    "2643822": "storey-4801",              # Destination Getaway — 4801 Storey Ave 79703
+    "4750070": "daventry-1309",            # Saddle Club — 1309 Daventry Pl 79705
+    "4179271": "daventry-1311",            # Santiago Dreams — 1311 Daventry Pl 79705
+    "4581977": "lincoln-green-5800",       # Sprawling Ranch House with Pool Cabana — 5800 Lincoln Green Ct 79707
+    "4894280": "shandon-3528",             # Groovy Times with Pool — 3528 W Shandon Ave 79707
+    "3477668": "monterrey-1605",           # Monterrey House — 1605 Monterrey Dr 79703
+    "2643808": "gleneagles-4535",          # Northtown Place — 4535 Gleneagles Dr 79707
+    "4700881": "humble-3104",              # Outdoor Dream — 3104 Humble Ave 79705
+    "4437486": "lanham-1426",              # Posh & Private with Billiards — 1426 Lanham St 79701
+    "4135262": "siesta-4217",              # Cowboy Siesta Corner Lot — 4217 Siesta Ln 79705
+    "3724481": "mogford-1408",             # Clermont House with Pool & Billiards — 1408 Mogford St 79701
+    "5103283": "mockingbird-ridge-2501",   # Mockingbird Ridge — 2501 Blazing Saddle Blvd 79705
+    # === INACTIVE (13) ===
+    "2638524": "haynes-2802",              # Safari Gameroom — 2802 Haynes Dr 79705
+    "3559249": "vanguard-6613",            # Vanguard Velvet Lounge — 6613 Vanguard Rd 79706
+    "4471713": "oriole-6100",              # Most Marvelous with Pool — 6100 Oriole Dr 79707
+    "4056016": "gleneagles-4533",          # Uptown Place — 4533 Gleneagles Dr 79707 (long-term renter)
+    "4162037": "haynes-2314",              # Grand Encore — 2314 Haynes Dr 79705
+    "2641181": "haynes-2312",              # Grand Lodging — 2312 Haynes Ave 79705
+    "4255338": "cuthbert-1702",            # Sprawling Ranch (Cuthbert) — 1702 W Cuthbert Ave 79701
+    "2685503": "spring-meadow-4823",       # Meadowpark — 4823 Spring Meadow Ln 79705
+    "2635356": "douglas-2800",             # Park View — 2800 Douglas Dr 79701
+    "2636694": "medina-6002",              # Los Patios — 6002 Medina Dr 79707
+    "2983233": "boulder-4700",             # Bungalow on Boulder — 4700 Boulder Dr 79705
+    "3764453": "fenway-5705",              # Chateau with Sequestered Loft — 5705 Fenway Dr 79707
+    "5103284": "blazing-saddle-1309",      # Blazing Saddle — 1309 Daventry Pl 79705 (duplicate of Saddle Club)
 }
 
 def cdp_send(ws, method, params=None):
