@@ -39,6 +39,7 @@ const PUBLIC_API_ROUTES = [
   "/api/webhooks/vrbo",
   "/api/integrations/vrbo/webhook",
   "/api/integrations/ical",
+  "/api/cron",
 ];
 
 // Admin-only routes — require owner/admin role
@@ -124,6 +125,12 @@ export function middleware(request: NextRequest) {
     // Public API routes (health, webhooks, public property listing)
     if (isPublicApiRoute(pathname)) {
       return response;
+    }
+
+    // Allow API routes with valid API secret header (programmatic access)
+    const apiSecret = request.headers.get("x-api-secret");
+    if (apiSecret) {
+      return response; // Route handler validates the secret
     }
 
     // All other API routes require auth cookie
