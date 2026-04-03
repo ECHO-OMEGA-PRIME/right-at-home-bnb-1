@@ -10,7 +10,7 @@
     },
     {
       "path": "/api/cron/vrbo-sync",
-      "schedule": "5,20,35,50 * * * *"
+      "schedule": "*/5 * * * *"
     }
   ],
   "buildCommand": "pnpm run build",

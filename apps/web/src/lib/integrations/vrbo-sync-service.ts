@@ -5,6 +5,8 @@
  */
 
 import prisma from '@/lib/prisma';
+import { runNewBookingAutomations, runModifiedBookingAutomations, runCancelledBookingAutomations } from './booking-automations';
+import type { NewBookingEvent, AutomationResult } from './booking-automations';
 
 // ============================================
 // VRBO PROPERTY MAP (15 VRBO-listed properties)
@@ -166,6 +168,7 @@ export interface SyncResult {
   skipped: number;
   errors: string[];
   durationMs: number;
+  automations?: AutomationResult[];
 }
 
 export interface FullSyncResult {
@@ -261,7 +264,9 @@ export async function syncPropertyIcal(propertyId: string, vrboListingId: string
           // Update if dates changed
           const datesChanged = existingBooking.checkIn.getTime() !== booking.checkIn.getTime() ||
                                existingBooking.checkOut.getTime() !== booking.checkOut.getTime();
-          if (datesChanged) {
+          const wasCancelled = booking.status === 'CANCELLED' && existingBooking.status !== 'CANCELLED';
+
+          if (datesChanged || wasCancelled) {
             await prisma.booking.update({
               where: { id: existingBooking.id },
               data: {
@@ -272,12 +277,35 @@ export async function syncPropertyIcal(propertyId: string, vrboListingId: string
               },
             });
             result.updated++;
+
+            // Fire automations on date change or cancellation
+            if (wasCancelled) {
+              try {
+                await runCancelledBookingAutomations(existingBooking.id, property.id);
+              } catch {}
+            } else if (datesChanged) {
+              try {
+                const autoResult = await runModifiedBookingAutomations({
+                  bookingId: existingBooking.id,
+                  propertyId: property.id,
+                  propertyName: property.name,
+                  guestId: guest.id,
+                  guestName: booking.guestName || guest.name,
+                  checkIn: booking.checkIn,
+                  checkOut: booking.checkOut,
+                  confirmCode: booking.confirmCode || booking.uid,
+                  platform: 'VRBO',
+                });
+                if (!result.automations) result.automations = [];
+                result.automations.push(autoResult);
+              } catch {}
+            }
           } else {
             result.skipped++;
           }
         } else {
           // Create new booking
-          await prisma.booking.create({
+          const newBooking = await prisma.booking.create({
             data: {
               propertyId: property.id,
               guestId: guest.id,
@@ -296,6 +324,28 @@ export async function syncPropertyIcal(propertyId: string, vrboListingId: string
             },
           });
           result.imported++;
+
+          // 🔥 FIRE AUTOMATIONS for new booking
+          if (booking.status !== 'CANCELLED') {
+            try {
+              const autoResult = await runNewBookingAutomations({
+                bookingId: newBooking.id,
+                propertyId: property.id,
+                propertyName: property.name,
+                guestId: guest.id,
+                guestName: booking.guestName || guest.name,
+                guestEmail: guest.email,
+                checkIn: booking.checkIn,
+                checkOut: booking.checkOut,
+                confirmCode: booking.confirmCode || booking.uid,
+                platform: 'VRBO',
+              });
+              if (!result.automations) result.automations = [];
+              result.automations.push(autoResult);
+            } catch (autoErr: any) {
+              console.error(`[vrbo-sync] Automation error: ${autoErr.message}`);
+            }
+          }
         }
       } catch (err: any) {
         result.errors.push(`Booking ${booking.uid}: ${err.message}`);

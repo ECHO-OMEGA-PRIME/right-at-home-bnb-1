@@ -103,3 +103,8 @@ Desktop.ini
 .env*.local
 
 .vercel
+tools/.edge-vrbo-profile/
+tools/vrbo-screenshots/
+tools/.vrbo-chrome-profile/
+tools/.edge-vrbo-profile/
+tools/vrbo-screenshots/
