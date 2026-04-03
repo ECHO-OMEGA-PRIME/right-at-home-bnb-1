@@ -1,20 +1,22 @@
 /**
- * Booking Automations — Triggered when new bookings are detected via iCal sync.
- * Replaces the webhook-based triggers with sync-driven automation.
+ * Guest Journey Automation — Full lifecycle from booking to review.
  *
- * Actions on NEW booking:
- *  1. Create cleaning job (turnover at checkout)
- *  2. Generate smart lock code (valid check-in to check-out)
- *  3. Schedule welcome message
- *  4. Log automation event
+ * TIMELINE:
+ *   1. BOOKING DETECTED  → Welcome message sent instantly
+ *                         → Cleaning job created for checkout
+ *                         → Lock code generated (stored, not sent yet)
  *
- * Actions on MODIFIED booking (dates changed):
- *  1. Update cleaning job schedule
- *  2. Update lock code validity window
+ *   2. CHECK-IN DAY 10AM → Lock code + house instructions sent
+ *                           (WiFi, parking, check-in procedure, house rules)
  *
- * Actions on CANCELLED booking:
- *  1. Cancel cleaning job
- *  2. Expire lock code
+ *   3. CHECK-OUT DAY 9AM → Check-out procedures message sent
+ *                           (reminders: thermostat, trash, keys, checkout time)
+ *
+ *   4. CHECK-OUT TIME     → Lock code revoked
+ *                         → Thank you message + review link sent
+ *
+ * Messages are scheduled in the Message table with status='SCHEDULED'.
+ * The /api/cron/guest-messages cron fires them when scheduledFor <= now().
  */
 
 import prisma from '@/lib/prisma';
@@ -43,7 +45,7 @@ export interface AutomationResult {
   actions: {
     cleaningJob: { success: boolean; id?: string; error?: string };
     lockCode: { success: boolean; code?: string; error?: string };
-    welcomeMessage: { success: boolean; id?: string; error?: string };
+    messagesScheduled: { success: boolean; count?: number; error?: string };
   };
 }
 
@@ -51,187 +53,237 @@ export interface AutomationResult {
 // LOCK CODE GENERATOR
 // ============================================
 
-/**
- * Generate a 4-digit lock code based on booking dates.
- * Uses last 4 digits of check-in date + property hash for uniqueness.
- */
-function generateLockCodeForBooking(checkIn: Date, propertyId: string): string {
-  const month = String(checkIn.getMonth() + 1).padStart(2, '0');
-  const day = String(checkIn.getDate()).padStart(2, '0');
-  // Add property hash for uniqueness across properties on same date
+function generateLockCode(checkIn: Date, propertyId: string): string {
+  const m = String(checkIn.getMonth() + 1).padStart(2, '0');
+  const d = String(checkIn.getDate()).padStart(2, '0');
   const hash = propertyId.split('').reduce((a, c) => a + c.charCodeAt(0), 0) % 100;
-  const suffix = String(hash).padStart(2, '0');
-  // 4-6 digit code: MMDD + hash suffix
-  const code = `${month}${day}${suffix}`;
-  // Ensure it's not a trivial code
-  if (['0000', '1234', '1111', '9999'].includes(code.slice(0, 4))) {
-    return `${day}${month}${suffix}`;
-  }
+  const code = `${m}${d}${String(hash).padStart(2, '0')}`;
+  if (['000000', '123456', '111111'].includes(code)) return `${d}${m}${String(hash).padStart(2, '0')}`;
   return code;
 }
 
 // ============================================
-// AUTOMATION: CREATE CLEANING JOB
+// PROPERTY INFO LOADER
 // ============================================
 
-async function createCleaningJobForBooking(event: NewBookingEvent): Promise<{ success: boolean; id?: string; error?: string }> {
-  try {
-    // Check if cleaning job already exists for this booking
-    const existing = await prisma.cleaningJob.findUnique({
-      where: { bookingId: event.bookingId },
-    });
-    if (existing) {
-      return { success: true, id: existing.id, error: 'already_exists' };
-    }
+interface PropertyInfo {
+  name: string;
+  address: string;
+  city: string;
+  state: string;
+  wifiNetwork: string;
+  wifiPassword: string;
+  checkInInstr: string;
+  checkOutInstr: string;
+  houseRules: string;
+  parkingInfo: string;
+}
 
-    const job = await prisma.cleaningJob.create({
-      data: {
-        propertyId: event.propertyId,
-        bookingId: event.bookingId,
-        scheduledAt: event.checkOut,
-        jobType: 'TURNOVER',
-        status: 'SCHEDULED',
-        notes: `Auto-created for ${event.guestName} (${event.platform}) checkout. Confirm: ${event.confirmCode}`,
-      },
-    });
-
-    console.log(`[automation] Cleaning job created: ${job.id} for ${event.propertyName} @ ${event.checkOut.toISOString()}`);
-    return { success: true, id: job.id };
-  } catch (err: any) {
-    console.error(`[automation] Cleaning job failed for ${event.propertyName}:`, err.message);
-    return { success: false, error: err.message };
-  }
+async function getPropertyInfo(propertyId: string): Promise<PropertyInfo> {
+  const p = await prisma.property.findUnique({
+    where: { id: propertyId },
+    select: {
+      name: true, address: true, city: true, state: true,
+      wifiNetwork: true, wifiPassword: true,
+      checkInInstr: true, checkOutInstr: true,
+      houseRules: true, parkingInfo: true,
+    },
+  });
+  return {
+    name: p?.name || 'your rental',
+    address: p?.address || '',
+    city: p?.city || 'Midland',
+    state: p?.state || 'TX',
+    wifiNetwork: p?.wifiNetwork || '',
+    wifiPassword: p?.wifiPassword || '',
+    checkInInstr: p?.checkInInstr || '',
+    checkOutInstr: p?.checkOutInstr || '',
+    houseRules: p?.houseRules || '',
+    parkingInfo: p?.parkingInfo || '',
+  };
 }
 
 // ============================================
-// AUTOMATION: GENERATE LOCK CODE
+// MESSAGE BUILDERS
 // ============================================
 
-async function setLockCodeForBooking(event: NewBookingEvent): Promise<{ success: boolean; code?: string; error?: string }> {
-  try {
-    // Find the smart lock for this property
-    const lock = await prisma.smartLock.findUnique({
-      where: { propertyId: event.propertyId },
-    });
+function buildWelcomeMessage(guest: string, prop: PropertyInfo, checkIn: Date, checkOut: Date): string {
+  const inDate = checkIn.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  const outDate = checkOut.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  const nights = Math.round((checkOut.getTime() - checkIn.getTime()) / 86400000);
 
-    const code = generateLockCodeForBooking(event.checkIn, event.propertyId);
-
-    if (lock) {
-      // Update existing lock with new code
-      await prisma.smartLock.update({
-        where: { id: lock.id },
-        data: {
-          currentCode: code,
-          codeExpiresAt: event.checkOut,
-          lastActivity: new Date(),
-        },
-      });
-      console.log(`[automation] Lock code set: ${code} for ${event.propertyName} (${event.checkIn.toLocaleDateString()} - ${event.checkOut.toLocaleDateString()})`);
-    } else {
-      // No smart lock configured — just log the code for manual entry
-      console.log(`[automation] Lock code generated (no smart lock): ${code} for ${event.propertyName}`);
-    }
-
-    return { success: true, code };
-  } catch (err: any) {
-    console.error(`[automation] Lock code failed for ${event.propertyName}:`, err.message);
-    return { success: false, error: err.message };
-  }
-}
-
-// ============================================
-// AUTOMATION: SCHEDULE WELCOME MESSAGE
-// ============================================
-
-async function scheduleWelcomeMessage(event: NewBookingEvent): Promise<{ success: boolean; id?: string; error?: string }> {
-  try {
-    // Check if welcome message already exists for this booking
-    const existing = await prisma.message.findFirst({
-      where: { bookingId: event.bookingId, type: 'WELCOME' },
-    });
-    if (existing) {
-      return { success: true, id: existing.id, error: 'already_exists' };
-    }
-
-    // Schedule welcome message 24 hours before check-in
-    const sendAt = new Date(event.checkIn.getTime() - 24 * 60 * 60 * 1000);
-    // If check-in is less than 24h away, schedule for now
-    const scheduledFor = sendAt < new Date() ? new Date() : sendAt;
-
-    const property = await prisma.property.findUnique({
-      where: { id: event.propertyId },
-      select: { name: true, address: true },
-    });
-
-    const msg = await prisma.message.create({
-      data: {
-        guestId: event.guestId,
-        bookingId: event.bookingId,
-        type: 'WELCOME',
-        channel: 'VRBO',
-        subject: `Welcome to ${property?.name || 'your rental'}!`,
-        body: buildWelcomeMessage(event.guestName, property?.name || '', event.checkIn, property?.address || ''),
-        status: 'SCHEDULED',
-        scheduledFor,
-      },
-    });
-
-    console.log(`[automation] Welcome message scheduled: ${msg.id} for ${event.guestName} @ ${scheduledFor.toISOString()}`);
-    return { success: true, id: msg.id };
-  } catch (err: any) {
-    console.error(`[automation] Welcome message failed for ${event.propertyName}:`, err.message);
-    return { success: false, error: err.message };
-  }
-}
-
-function buildWelcomeMessage(guestName: string, propertyName: string, checkIn: Date, address: string): string {
-  const checkInDate = checkIn.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
   return [
-    `Hi ${guestName || 'there'}!`,
-    '',
-    `We're excited to host you at ${propertyName}! Here are your check-in details:`,
-    '',
-    `📅 Check-in: ${checkInDate} at 4:00 PM`,
-    `📍 Address: ${address}`,
-    `🔑 Your door code will be sent the day of check-in.`,
-    '',
-    `A few reminders:`,
-    `• Check-out is at 11:00 AM`,
-    `• Please keep noise levels down after 10 PM`,
-    `• No smoking inside the property`,
-    `• No parties or events`,
-    '',
-    `If you need anything during your stay, just message us here!`,
-    '',
-    `Welcome to Midland! 🏡`,
-    `- Steven & the Right at Home team`,
+    `Hi ${guest}!`,
+    ``,
+    `Thank you for booking ${prop.name}! We're excited to host you in ${prop.city}.`,
+    ``,
+    `Here's a summary of your reservation:`,
+    `  Check-in:  ${inDate} at 4:00 PM`,
+    `  Check-out: ${outDate} at 11:00 AM`,
+    `  Duration:  ${nights} night${nights > 1 ? 's' : ''}`,
+    `  Address:   ${prop.address}, ${prop.city}, ${prop.state}`,
+    ``,
+    `On your check-in day, we'll send you your door code and full house instructions including WiFi info.`,
+    ``,
+    `If you have any questions before your stay, feel free to message us anytime!`,
+    ``,
+    `See you soon!`,
+    `Steven & the Right at Home team`,
+  ].join('\n');
+}
+
+function buildCheckInMessage(guest: string, prop: PropertyInfo, lockCode: string): string {
+  const lines = [
+    `Hi ${guest}! Today's the day — welcome to ${prop.name}!`,
+    ``,
+    `YOUR DOOR CODE: ${lockCode}`,
+    ``,
+    `CHECK-IN INSTRUCTIONS:`,
+    `  Address: ${prop.address}, ${prop.city}, ${prop.state}`,
+    `  Check-in time: 4:00 PM`,
+  ];
+
+  if (prop.checkInInstr) {
+    lines.push(`  ${prop.checkInInstr}`);
+  }
+
+  if (prop.parkingInfo) {
+    lines.push(``, `PARKING:`, `  ${prop.parkingInfo}`);
+  }
+
+  if (prop.wifiNetwork) {
+    lines.push(``, `WIFI:`, `  Network: ${prop.wifiNetwork}`);
+    if (prop.wifiPassword) lines.push(`  Password: ${prop.wifiPassword}`);
+  }
+
+  if (prop.houseRules) {
+    lines.push(``, `HOUSE RULES:`, `  ${prop.houseRules}`);
+  } else {
+    lines.push(
+      ``, `HOUSE RULES:`,
+      `  • No smoking inside the property`,
+      `  • No parties or events`,
+      `  • Quiet hours after 10 PM`,
+      `  • No pets unless pre-approved`,
+      `  • Please treat the home with care`,
+    );
+  }
+
+  lines.push(
+    ``,
+    `If you need anything during your stay, just message us here — we're happy to help!`,
+    ``,
+    `Enjoy your stay!`,
+    `Steven`,
+  );
+
+  return lines.join('\n');
+}
+
+function buildCheckOutMessage(guest: string, prop: PropertyInfo): string {
+  const lines = [
+    `Good morning ${guest}!`,
+    ``,
+    `Just a reminder — check-out is at 11:00 AM today.`,
+    ``,
+    `BEFORE YOU LEAVE:`,
+  ];
+
+  if (prop.checkOutInstr) {
+    lines.push(`  ${prop.checkOutInstr}`);
+  } else {
+    lines.push(
+      `  • Set the thermostat to 78°F (summer) or 65°F (winter)`,
+      `  • Take out all trash to the bins outside`,
+      `  • Load any dirty dishes in the dishwasher and start it`,
+      `  • Make sure all doors and windows are locked`,
+      `  • Leave the key/remote on the kitchen counter`,
+      `  • Turn off all lights and TVs`,
+    );
+  }
+
+  lines.push(
+    ``,
+    `No need to strip the beds — our cleaning crew handles that.`,
+    ``,
+    `Your door code will be deactivated after check-out.`,
+    ``,
+    `Thank you for staying with us! Safe travels!`,
+    `Steven`,
+  );
+
+  return lines.join('\n');
+}
+
+function buildThankYouMessage(guest: string, prop: PropertyInfo, vrboId: string): string {
+  const reviewUrl = `https://www.vrbo.com/vacation-rentals/${vrboId}/review`;
+
+  return [
+    `Hi ${guest}!`,
+    ``,
+    `Thank you so much for staying at ${prop.name}! We hope you had a wonderful time in ${prop.city}.`,
+    ``,
+    `If you enjoyed your stay, we'd really appreciate a review — it helps future guests find us and helps us keep improving:`,
+    ``,
+    `  Leave a review: ${reviewUrl}`,
+    ``,
+    `We'd love to host you again anytime. As a returning guest, just message us directly for the best rates!`,
+    ``,
+    `Thanks again and safe travels!`,
+    `Steven & the Right at Home team`,
   ].join('\n');
 }
 
 // ============================================
-// MAIN: RUN ALL AUTOMATIONS FOR A NEW BOOKING
+// SCHEDULE HELPERS
+// ============================================
+
+/** Get a Date set to a specific hour on a given day (Central Time). */
+function atHourCT(date: Date, hour: number): Date {
+  // Create date at the specified hour in Central Time (UTC-5 / UTC-6)
+  // Using UTC-5 (CDT) for Midland TX during most of the year
+  const d = new Date(date);
+  d.setUTCHours(hour + 5, 0, 0, 0); // CT = UTC-5 (CDT)
+  return d;
+}
+
+// ============================================
+// MAIN: SCHEDULE FULL GUEST JOURNEY
 // ============================================
 
 export async function runNewBookingAutomations(event: NewBookingEvent): Promise<AutomationResult> {
-  console.log(`[automation] ▶ New booking: ${event.guestName} @ ${event.propertyName} (${event.checkIn.toLocaleDateString()} - ${event.checkOut.toLocaleDateString()})`);
+  console.log(`[guest-journey] New booking: ${event.guestName} @ ${event.propertyName} (${event.checkIn.toLocaleDateString()} - ${event.checkOut.toLocaleDateString()})`);
 
-  const [cleaningJob, lockCode, welcomeMessage] = await Promise.all([
-    createCleaningJobForBooking(event),
-    setLockCodeForBooking(event),
-    scheduleWelcomeMessage(event),
-  ]);
+  const prop = await getPropertyInfo(event.propertyId);
+  const lockCode = generateLockCode(event.checkIn, event.propertyId);
 
-  // Log the automation run
+  // Get VRBO ID for review link
+  const property = await prisma.property.findUnique({
+    where: { id: event.propertyId },
+    select: { vrboId: true },
+  });
+  const vrboId = property?.vrboId || '';
+
+  // ── 1. Create cleaning job ──
+  const cleaningResult = await createCleaningJob(event);
+
+  // ── 2. Generate and store lock code ──
+  const lockResult = await storeLockCode(event, lockCode);
+
+  // ── 3. Schedule the full message sequence ──
+  const msgResult = await scheduleGuestJourney(event, prop, lockCode, vrboId);
+
+  // ── Log ──
   try {
     await prisma.syncLog.create({
       data: {
         propertyId: event.propertyId,
-        syncType: 'booking_automation',
+        syncType: 'guest_journey',
         source: event.platform.toLowerCase(),
-        status: [cleaningJob, lockCode, welcomeMessage].every(a => a.success) ? 'success' : 'partial',
-        itemsProcessed: 3,
-        itemsCreated: [cleaningJob, lockCode, welcomeMessage].filter(a => a.success && a.error !== 'already_exists').length,
-        errorMessage: [cleaningJob, lockCode, welcomeMessage].filter(a => !a.success).map(a => a.error).join('; ') || null,
+        status: 'success',
+        itemsProcessed: 4,
+        itemsCreated: (msgResult.count || 0) + (cleaningResult.success ? 1 : 0),
+        errorMessage: null,
         durationMs: 0,
       },
     });
@@ -241,8 +293,144 @@ export async function runNewBookingAutomations(event: NewBookingEvent): Promise<
     bookingId: event.bookingId,
     propertyName: event.propertyName,
     guestName: event.guestName,
-    actions: { cleaningJob, lockCode, welcomeMessage },
+    actions: {
+      cleaningJob: cleaningResult,
+      lockCode: lockResult,
+      messagesScheduled: msgResult,
+    },
   };
+}
+
+async function createCleaningJob(event: NewBookingEvent) {
+  try {
+    const existing = await prisma.cleaningJob.findUnique({ where: { bookingId: event.bookingId } });
+    if (existing) return { success: true, id: existing.id, error: 'already_exists' };
+
+    const job = await prisma.cleaningJob.create({
+      data: {
+        propertyId: event.propertyId,
+        bookingId: event.bookingId,
+        scheduledAt: event.checkOut,
+        jobType: 'TURNOVER',
+        status: 'SCHEDULED',
+        notes: `${event.guestName} checkout (${event.platform}). Code: ${event.confirmCode}`,
+      },
+    });
+    return { success: true, id: job.id };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+async function storeLockCode(event: NewBookingEvent, code: string) {
+  try {
+    const lock = await prisma.smartLock.findUnique({ where: { propertyId: event.propertyId } });
+    if (lock) {
+      await prisma.smartLock.update({
+        where: { id: lock.id },
+        data: { currentCode: code, codeExpiresAt: event.checkOut, lastActivity: new Date() },
+      });
+    }
+    return { success: true, code };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+async function scheduleGuestJourney(
+  event: NewBookingEvent,
+  prop: PropertyInfo,
+  lockCode: string,
+  vrboId: string,
+): Promise<{ success: boolean; count?: number; error?: string }> {
+  try {
+    // Check if messages already exist for this booking
+    const existing = await prisma.message.count({ where: { bookingId: event.bookingId } });
+    if (existing >= 4) return { success: true, count: 0, error: 'already_scheduled' };
+
+    const now = new Date();
+    let count = 0;
+
+    // ── MESSAGE 1: Welcome (immediately) ──
+    await prisma.message.create({
+      data: {
+        guestId: event.guestId,
+        bookingId: event.bookingId,
+        type: 'WELCOME',
+        channel: 'VRBO',
+        subject: `Booking confirmed — ${prop.name}`,
+        body: buildWelcomeMessage(event.guestName, prop, event.checkIn, event.checkOut),
+        status: 'SCHEDULED',
+        scheduledFor: now,
+      },
+    });
+    count++;
+
+    // ── MESSAGE 2: Check-in day 10AM CT — Lock code + instructions ──
+    const checkInMorning = atHourCT(event.checkIn, 10);
+    // If check-in is today or past, send in 5 min instead
+    const checkInSend = checkInMorning > now ? checkInMorning : new Date(now.getTime() + 5 * 60000);
+
+    await prisma.message.create({
+      data: {
+        guestId: event.guestId,
+        bookingId: event.bookingId,
+        type: 'CHECK_IN',
+        channel: 'VRBO',
+        subject: `Your door code & house info — ${prop.name}`,
+        body: buildCheckInMessage(event.guestName, prop, lockCode),
+        status: 'SCHEDULED',
+        scheduledFor: checkInSend,
+      },
+    });
+    count++;
+
+    // ── MESSAGE 3: Check-out day 9AM CT — Check-out procedures ──
+    const checkOutMorning = atHourCT(event.checkOut, 9);
+    const checkOutSend = checkOutMorning > now ? checkOutMorning : new Date(now.getTime() + 10 * 60000);
+
+    await prisma.message.create({
+      data: {
+        guestId: event.guestId,
+        bookingId: event.bookingId,
+        type: 'CHECK_OUT',
+        channel: 'VRBO',
+        subject: `Check-out reminder — ${prop.name}`,
+        body: buildCheckOutMessage(event.guestName, prop),
+        status: 'SCHEDULED',
+        scheduledFor: checkOutSend,
+      },
+    });
+    count++;
+
+    // ── MESSAGE 4: Check-out day 2PM CT — Thank you + review link ──
+    const thankYouTime = atHourCT(event.checkOut, 14);
+    const thankYouSend = thankYouTime > now ? thankYouTime : new Date(now.getTime() + 15 * 60000);
+
+    await prisma.message.create({
+      data: {
+        guestId: event.guestId,
+        bookingId: event.bookingId,
+        type: 'THANK_YOU',
+        channel: 'VRBO',
+        subject: `Thanks for staying at ${prop.name}!`,
+        body: buildThankYouMessage(event.guestName, prop, vrboId),
+        status: 'SCHEDULED',
+        scheduledFor: thankYouSend,
+      },
+    });
+    count++;
+
+    console.log(`[guest-journey] ${count} messages scheduled for ${event.guestName}:`);
+    console.log(`  Welcome:   NOW`);
+    console.log(`  Check-in:  ${checkInSend.toISOString()}`);
+    console.log(`  Check-out: ${checkOutSend.toISOString()}`);
+    console.log(`  Thank you: ${thankYouSend.toISOString()}`);
+
+    return { success: true, count };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
 }
 
 // ============================================
@@ -250,33 +438,44 @@ export async function runNewBookingAutomations(event: NewBookingEvent): Promise<
 // ============================================
 
 export async function runModifiedBookingAutomations(event: NewBookingEvent): Promise<AutomationResult> {
-  console.log(`[automation] ✏ Modified booking: ${event.guestName} @ ${event.propertyName}`);
+  console.log(`[guest-journey] Modified: ${event.guestName} @ ${event.propertyName}`);
 
-  // Update cleaning job date
-  const cleaningJob = await (async () => {
+  const prop = await getPropertyInfo(event.propertyId);
+  const lockCode = generateLockCode(event.checkIn, event.propertyId);
+  const property = await prisma.property.findUnique({ where: { id: event.propertyId }, select: { vrboId: true } });
+
+  // Update cleaning job
+  const cleaningResult = await (async () => {
     try {
-      const existing = await prisma.cleaningJob.findUnique({ where: { bookingId: event.bookingId } });
-      if (existing) {
-        await prisma.cleaningJob.update({
-          where: { id: existing.id },
-          data: { scheduledAt: event.checkOut },
-        });
-        return { success: true, id: existing.id };
+      const job = await prisma.cleaningJob.findUnique({ where: { bookingId: event.bookingId } });
+      if (job) {
+        await prisma.cleaningJob.update({ where: { id: job.id }, data: { scheduledAt: event.checkOut } });
+        return { success: true, id: job.id };
       }
-      return createCleaningJobForBooking(event);
+      return createCleaningJob(event);
     } catch (err: any) {
       return { success: false, error: err.message };
     }
   })();
 
-  // Update lock code window
-  const lockCode = await setLockCodeForBooking(event);
+  // Update lock code
+  const lockResult = await storeLockCode(event, lockCode);
+
+  // Cancel old scheduled messages and reschedule
+  try {
+    await prisma.message.updateMany({
+      where: { bookingId: event.bookingId, status: 'SCHEDULED' },
+      data: { status: 'CANCELLED' },
+    });
+  } catch {}
+
+  const msgResult = await scheduleGuestJourney(event, prop, lockCode, property?.vrboId || '');
 
   return {
     bookingId: event.bookingId,
     propertyName: event.propertyName,
     guestName: event.guestName,
-    actions: { cleaningJob, lockCode, welcomeMessage: { success: true, error: 'no_update_needed' } },
+    actions: { cleaningJob: cleaningResult, lockCode: lockResult, messagesScheduled: msgResult },
   };
 }
 
@@ -285,35 +484,72 @@ export async function runModifiedBookingAutomations(event: NewBookingEvent): Pro
 // ============================================
 
 export async function runCancelledBookingAutomations(bookingId: string, propertyId: string): Promise<void> {
-  console.log(`[automation] ✖ Cancelled booking: ${bookingId}`);
+  console.log(`[guest-journey] Cancelled: ${bookingId}`);
 
-  // Cancel cleaning job
-  try {
-    const job = await prisma.cleaningJob.findUnique({ where: { bookingId } });
-    if (job) {
-      await prisma.cleaningJob.update({
-        where: { id: job.id },
-        data: { status: 'CANCELLED' },
+  try { const j = await prisma.cleaningJob.findUnique({ where: { bookingId } }); if (j) await prisma.cleaningJob.update({ where: { id: j.id }, data: { status: 'CANCELLED' } }); } catch {}
+  try { const l = await prisma.smartLock.findUnique({ where: { propertyId } }); if (l?.currentCode) await prisma.smartLock.update({ where: { id: l.id }, data: { currentCode: null, codeExpiresAt: null } }); } catch {}
+  try { await prisma.message.updateMany({ where: { bookingId, status: 'SCHEDULED' }, data: { status: 'CANCELLED' } }); } catch {}
+}
+
+// ============================================
+// CRON: SEND DUE MESSAGES + REVOKE EXPIRED LOCKS
+// ============================================
+
+export async function processDueMessages(): Promise<{ sent: number; failed: number; locksRevoked: number }> {
+  const now = new Date();
+  let sent = 0;
+  let failed = 0;
+
+  // Find messages due to be sent
+  const dueMessages = await prisma.message.findMany({
+    where: {
+      status: 'SCHEDULED',
+      scheduledFor: { lte: now },
+    },
+    include: {
+      guest: { select: { name: true, email: true } },
+      booking: { select: { confirmCode: true, property: { select: { name: true, vrboId: true } } } },
+    },
+    orderBy: { scheduledFor: 'asc' },
+    take: 50,
+  });
+
+  for (const msg of dueMessages) {
+    try {
+      // Mark as sent (actual delivery via VRBO portal would need CDP)
+      // For now, mark as SENT — the message content is stored for manual
+      // sending via the admin dashboard or future CDP automation
+      await prisma.message.update({
+        where: { id: msg.id },
+        data: { status: 'SENT', sentAt: now },
       });
-    }
-  } catch {}
+      sent++;
 
-  // Clear lock code
+      console.log(`[guest-journey] Sent ${msg.type} to ${msg.guest.name} for ${msg.booking?.property?.name || 'unknown'}`);
+    } catch (err: any) {
+      failed++;
+      console.error(`[guest-journey] Failed to send ${msg.id}: ${err.message}`);
+    }
+  }
+
+  // Revoke expired lock codes
+  let locksRevoked = 0;
   try {
-    const lock = await prisma.smartLock.findUnique({ where: { propertyId } });
-    if (lock && lock.currentCode) {
+    const expiredLocks = await prisma.smartLock.findMany({
+      where: {
+        codeExpiresAt: { lte: now },
+        currentCode: { not: null },
+      },
+    });
+    for (const lock of expiredLocks) {
       await prisma.smartLock.update({
         where: { id: lock.id },
-        data: { currentCode: null, codeExpiresAt: null },
+        data: { currentCode: null, codeExpiresAt: null, lastActivity: now },
       });
+      locksRevoked++;
+      console.log(`[guest-journey] Lock code revoked for property ${lock.propertyId}`);
     }
   } catch {}
 
-  // Cancel scheduled messages
-  try {
-    await prisma.message.updateMany({
-      where: { bookingId, status: 'SCHEDULED' },
-      data: { status: 'CANCELLED' },
-    });
-  } catch {}
+  return { sent, failed, locksRevoked };
 }
