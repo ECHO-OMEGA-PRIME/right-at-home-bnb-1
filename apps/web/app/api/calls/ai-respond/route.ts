@@ -16,6 +16,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
 const STEVEN_PHONE = process.env.STEVEN_PHONE || '+14325591904';
+const CF_API_TOKEN = process.env.CF_AI_TOKEN || process.env.CLOUDFLARE_API_TOKEN || '';
+const CF_ACCOUNT_ID = process.env.CF_ACCOUNT_ID || 'b9af3a4bf161132bb7e5d3d365fb8bb0';
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const BASE_URL = process.env.NEXT_PUBLIC_URL || 'https://rah-midland.com';
 const VOICE = 'voice="Polly.Matthew" language="en-US"';
@@ -134,63 +136,88 @@ Remember: You are on a phone call. Speak naturally, avoid lists or special chara
 }
 
 /**
- * Call GROQ API to generate a response.
+ * Call AI API to generate a response.
+ * Priority: Cloudflare Workers AI (free) -> GROQ -> fallback
  */
 async function generateAiResponse(userMessage: string, systemPrompt: string): Promise<{ text: string; shouldEscalate: boolean }> {
-  if (!GROQ_API_KEY) {
-    console.error('[AI Respond] GROQ_API_KEY not set');
-    return { text: 'I apologize, but I am having a technical issue right now. Let me connect you with Steven.', shouldEscalate: true };
+  // Try Cloudflare Workers AI first (free, reliable)
+  if (CF_API_TOKEN) {
+    try {
+      const cfResponse = await fetch(
+        `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/ai/run/@cf/meta/llama-3.1-8b-instruct`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${CF_API_TOKEN}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: userMessage },
+            ],
+            max_tokens: 200,
+            temperature: 0.7,
+          }),
+        }
+      );
+
+      if (cfResponse.ok) {
+        const cfData = await cfResponse.json() as any;
+        const aiText = cfData?.result?.response?.trim() || '';
+        if (aiText) {
+          const escalationPhrases = ['connect you with steven', 'transfer you to steven', 'let me get steven', 'put you through to steven', 'connect you directly'];
+          const shouldEscalate = escalationPhrases.some(p => aiText.toLowerCase().includes(p));
+          return { text: aiText, shouldEscalate };
+        }
+      } else {
+        console.error('[AI Respond] CF Workers AI error:', cfResponse.status);
+      }
+    } catch (cfErr) {
+      console.error('[AI Respond] CF Workers AI exception:', cfErr);
+    }
   }
 
-  try {
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${GROQ_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userMessage },
-        ],
-        temperature: 0.7,
-        max_tokens: 200,
-        stream: false,
-      }),
-    });
+  // Fallback to GROQ
+  if (GROQ_API_KEY) {
+    try {
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${GROQ_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'llama-3.3-70b-versatile',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userMessage },
+          ],
+          temperature: 0.7,
+          max_tokens: 200,
+          stream: false,
+        }),
+      });
 
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error('[AI Respond] GROQ error:', response.status, errText);
-      return { text: 'I apologize, but I am having a technical issue. Let me connect you with Steven directly.', shouldEscalate: true };
+      if (response.ok) {
+        const data = await response.json();
+        const aiText = data.choices?.[0]?.message?.content?.trim() || '';
+        if (aiText) {
+          const escalationPhrases = ['connect you with steven', 'transfer you to steven', 'let me get steven', 'put you through to steven', 'connect you directly'];
+          const shouldEscalate = escalationPhrases.some(p => aiText.toLowerCase().includes(p));
+          return { text: aiText, shouldEscalate };
+        }
+      }
+    } catch (groqErr) {
+      console.error('[AI Respond] GROQ exception:', groqErr);
     }
-
-    const data = await response.json();
-    const aiText = data.choices?.[0]?.message?.content?.trim() || '';
-
-    if (!aiText) {
-      return { text: 'I apologize, I did not understand that. Let me connect you with Steven.', shouldEscalate: true };
-    }
-
-    // Check if the AI itself decided to escalate
-    const escalationPhrases = [
-      'connect you with steven',
-      'transfer you to steven',
-      'let me get steven',
-      'put you through to steven',
-      'connect you directly',
-    ];
-    const lowerText = aiText.toLowerCase();
-    const shouldEscalate = escalationPhrases.some((phrase) => lowerText.includes(phrase));
-
-    return { text: aiText, shouldEscalate };
-  } catch (error) {
-    console.error('[AI Respond] Fetch error:', error);
-    return { text: 'I am experiencing a connection issue. Let me connect you with Steven.', shouldEscalate: true };
   }
+
+  // No AI provider available
+  console.error('[AI Respond] No AI provider available (CF_AI_TOKEN and GROQ_API_KEY both failed)');
+  return { text: 'I apologize, but I am having a technical issue right now. Let me connect you with Steven.', shouldEscalate: true };
 }
+
 
 /**
  * Build TwiML to forward the call to Steven.
