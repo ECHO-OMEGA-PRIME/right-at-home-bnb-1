@@ -9,25 +9,44 @@ import { runNewBookingAutomations, runModifiedBookingAutomations, runCancelledBo
 import type { NewBookingEvent, AutomationResult } from './booking-automations';
 
 // ============================================
-// VRBO PROPERTY MAP (15 VRBO-listed properties)
+// VRBO PROPERTY MAP — Corrected from Partner Central April 2026
+// slug -> VRBO listing ID (18 active + 13 inactive = 31 total)
 // ============================================
 
 export const VRBO_PROPERTIES: Record<string, string> = {
-  'castleford-5001': '2636389',
-  'adobe-compound-gc': '3005111',
-  'garfield-2702': '2634718',
-  'douglas-4501': '3355618',
-  'dentcrest-4707': '2638481',
-  'safari-gameroom': '2638524',
-  'storey-2103': '2643822',
-  'chelsea-3210': '2643784',
-  'oriole-6100': '4471713',
-  'lanham-1426': '4437486',
-  'humble-3106': '4700881',
-  'daventry-1311': '4179271',
-  'lincoln-green-5055': '4581977',
-  'daventry-1309': '4750070',
-  'monterrey-house': '3477668',
+  // ── ACTIVE (18) ──
+  'castleford-5005': '2636389',       // Oasis with Pool & Billiards
+  'golf-course-2309': '3005111',      // Adobe Compound w/Pool, Fire Pits, Billiards
+  'garfield-2702': '2634718',         // Patio Home with Hot Tub
+  'douglas-2000': '3355618',          // Old Midland Living
+  'dentcrest-4707': '2638481',        // Hot Tub Delight
+  'chelsea-3210': '2643784',          // Retreat with Covered Patio
+  'storey-4801': '2643822',           // Destination Getaway
+  'daventry-1309': '4750070',         // Saddle Club
+  'daventry-1311': '4179271',         // Santiago Dreams
+  'lincoln-green-5800': '4581977',    // Sprawling Ranch House
+  'shandon-3528': '4894280',          // Groovy Times with Pool
+  'monterrey-1605': '3477668',        // Monterrey House
+  'gleneagles-4535': '2643808',       // Northtown Place
+  'humble-3104': '4700881',           // Outdoor Dream
+  'lanham-1426': '4437486',           // Posh & Private with Billiards
+  'siesta-4217': '4135262',           // Cowboy Siesta Corner Lot
+  'mogford-1408': '3724481',          // Clermont House w/Pool & Billiards
+  'blazing-saddle-2501': '5103283',   // Mockingbird Ridge
+  // ── INACTIVE (13) ──
+  'haynes-2802': '2638524',           // Safari Gameroom
+  'vanguard-6613': '3559249',         // Vanguard Velvet Lounge
+  'oriole-6100': '4471713',           // Most Marvelous with Pool
+  'gleneagles-4533': '4056016',       // Uptown Place (long-term renter)
+  'haynes-2314': '4162037',           // Grand Encore
+  'haynes-2312': '2641181',           // Grand Lodging
+  'cuthbert-1702': '4255338',         // Sprawling Ranch (Cuthbert)
+  'spring-meadow-4823': '2685503',    // Meadowpark
+  'douglas-2800': '2635356',          // Park View
+  'medina-6002': '2636694',           // Los Patios
+  'boulder-4700': '2983233',          // Bungalow on Boulder
+  'fenway-5705': '3764453',           // Chateau w/Sequestered Loft
+  'blazing-saddle-dup': '5103284',    // Blazing Saddle (duplicate of Saddle Club)
 };
 
 // ============================================
