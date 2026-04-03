@@ -40,6 +40,8 @@ const PUBLIC_API_ROUTES = [
   "/api/integrations/vrbo/webhook",
   "/api/integrations/ical",
   "/api/cron",
+  "/api/calls",        // Twilio webhooks (incoming, gather, status, ai-respond, transcribe)
+  "/api/concierge",    // AI concierge (public guest access)
 ];
 
 // Admin-only routes — require owner/admin role
