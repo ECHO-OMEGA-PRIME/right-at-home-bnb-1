@@ -16,7 +16,8 @@ import {
   Wifi, Car, Droplets, Flame, Sparkles, Home, ChevronRight,
   Grid3X3, X, ChevronLeft, ZoomIn, Heart, Share2,
   Coffee, Tv, Waves, TreePine, Shield, UtensilsCrossed,
-  Shirt, Gamepad2, Baby, PawPrint, Wind, Maximize2
+  Shirt, Gamepad2, Baby, PawPrint, Wind, Maximize2,
+  Clock, DoorOpen, DoorClosed, Tag, Info
 } from 'lucide-react';
 import {
   PROPERTIES, CATEGORY_CONFIG, normalizeCategory,
@@ -290,10 +291,127 @@ export default function PropertyDetailPage() {
               ))}
             </div>
 
-            {/* Description */}
+            {/* About This Property - Full Description */}
             <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6">
               <h2 className="font-playfair text-xl text-white mb-3">About This Property</h2>
-              <p className="text-white/70 leading-relaxed">{property.description}</p>
+              <p className="text-white/70 leading-relaxed text-base">
+                {property.fullDescription || property.description}
+              </p>
+            </div>
+
+            {/* Property Highlights Pills */}
+            {property.highlights && property.highlights.length > 0 && (
+              <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6">
+                <h2 className="font-playfair text-xl text-white mb-4">Property Highlights</h2>
+                <div className="flex flex-wrap gap-2">
+                  {property.highlights.map((highlight) => (
+                    <span
+                      key={highlight}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm
+                                 bg-[#500000]/40 border border-[#C4A777]/30 text-[#C4A777]"
+                    >
+                      <Tag className="w-3 h-3" />
+                      {highlight}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Rooms & Beds */}
+            {property.rooms && property.rooms.length > 0 && (
+              <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6">
+                <h2 className="font-playfair text-xl text-white mb-4">Rooms &amp; Beds</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {property.rooms.map((room) => (
+                    <div
+                      key={room.name}
+                      className="bg-white/5 border border-white/10 rounded-lg p-4"
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <Bed className="w-5 h-5 text-[#C4A777]" />
+                        <span className="text-white font-medium text-sm">{room.name}</span>
+                      </div>
+                      <p className="text-white/60 text-sm">{room.beds}</p>
+                    </div>
+                  ))}
+                  {/* Bathroom cards */}
+                  {property.bathrooms_detail && property.bathrooms_detail.map((bath) => (
+                    <div
+                      key={bath.name}
+                      className="bg-white/5 border border-white/10 rounded-lg p-4"
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <Bath className="w-5 h-5 text-[#C4A777]" />
+                        <span className="text-white font-medium text-sm">{bath.name}</span>
+                      </div>
+                      <p className="text-white/60 text-sm">{bath.features}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Spaces */}
+            {property.spaces && property.spaces.length > 0 && (
+              <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6">
+                <h2 className="font-playfair text-xl text-white mb-4">Spaces</h2>
+                <div className="flex flex-wrap gap-2">
+                  {property.spaces.map((space) => (
+                    <span
+                      key={space}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm
+                                 bg-white/5 border border-white/10 text-white/70"
+                    >
+                      <Home className="w-3 h-3 text-[#C4A777]" />
+                      {space}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* House Rules */}
+            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6">
+              <h2 className="font-playfair text-xl text-white mb-4">House Rules</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-[#500000]/30 flex items-center justify-center shrink-0">
+                    <DoorOpen className="w-5 h-5 text-[#C4A777]" />
+                  </div>
+                  <div>
+                    <div className="text-white text-sm font-medium">Check-in</div>
+                    <div className="text-white/50 text-sm">{property.checkInTime || '4:00 PM'}</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-[#500000]/30 flex items-center justify-center shrink-0">
+                    <DoorClosed className="w-5 h-5 text-[#C4A777]" />
+                  </div>
+                  <div>
+                    <div className="text-white text-sm font-medium">Check-out</div>
+                    <div className="text-white/50 text-sm">{property.checkOutTime || '11:00 AM'}</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-[#500000]/30 flex items-center justify-center shrink-0">
+                    <Users className="w-5 h-5 text-[#C4A777]" />
+                  </div>
+                  <div>
+                    <div className="text-white text-sm font-medium">Max guests</div>
+                    <div className="text-white/50 text-sm">{property.sleeps} guests</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-[#500000]/30 flex items-center justify-center shrink-0">
+                    <PawPrint className="w-5 h-5 text-[#C4A777]" />
+                  </div>
+                  <div>
+                    <div className="text-white text-sm font-medium">Pet policy</div>
+                    <div className="text-white/50 text-sm">{property.petPolicy || 'Contact host'}</div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Amenities */}
@@ -492,6 +610,34 @@ export default function PropertyDetailPage() {
                       </div>
                     </div>
                   )}
+                </div>
+              </div>
+
+              {/* Pricing Breakdown */}
+              <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
+                <h3 className="font-playfair text-lg text-white mb-4">Pricing</h3>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-white/70">Nightly rate</span>
+                    <span className="text-white font-medium">${property.nightlyRate}</span>
+                  </div>
+                  {property.cleaningFee && property.cleaningFee > 0 ? (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-white/70">Cleaning fee</span>
+                      <span className="text-white font-medium">${property.cleaningFee}</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-white/70">Cleaning fee</span>
+                      <span className="text-green-400 font-medium">Included</span>
+                    </div>
+                  )}
+                  <div className="border-t border-white/10 pt-3">
+                    <div className="flex items-center gap-2 text-green-400 text-sm">
+                      <Info className="w-4 h-4" />
+                      <span>No hidden fees — price includes all fees</span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
