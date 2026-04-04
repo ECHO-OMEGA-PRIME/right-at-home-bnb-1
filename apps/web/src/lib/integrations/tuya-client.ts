@@ -70,8 +70,8 @@ export interface WorkerTimeEntry {
 // ─── Tuya Auth ───────────────────────────────────────────────────────────────
 
 const TUYA_BASE_URL = process.env.TUYA_BASE_URL || 'https://openapi.tuyaus.com';
-const TUYA_CLIENT_ID = process.env.TUYA_CLIENT_ID || '';
-const TUYA_CLIENT_SECRET = process.env.TUYA_CLIENT_SECRET || '';
+const TUYA_CLIENT_ID = process.env.TUYA_CLIENT_ID || process.env.TUYA_ACCESS_ID || '';
+const TUYA_CLIENT_SECRET = process.env.TUYA_CLIENT_SECRET || process.env.TUYA_ACCESS_SECRET || '';
 
 let _accessToken: string | null = null;
 let _tokenExpiry = 0;
