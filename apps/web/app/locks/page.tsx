@@ -16,6 +16,7 @@ import {
   Zap, BatteryLow, BatteryWarning, MessageSquare
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import DashboardShell from '@/components/layout/DashboardShell';
 
 // Types
 interface SmartLock {
@@ -67,10 +68,13 @@ const brandConfig: Record<string, { name: string; color: string; bgColor: string
   YALE: { name: 'Yale', color: 'text-purple-500', bgColor: 'bg-purple-500/10' },
   AUGUST: { name: 'August', color: 'text-emerald-500', bgColor: 'bg-emerald-500/10' },
   KWIKSET: { name: 'Kwikset', color: 'text-amber-500', bgColor: 'bg-amber-500/10' },
+  ARPHA: { name: 'ARPHA (Tuya)', color: 'text-orange-500', bgColor: 'bg-orange-500/10' },
+  TUYA: { name: 'Tuya', color: 'text-orange-500', bgColor: 'bg-orange-500/10' },
   OTHER: { name: 'Other', color: 'text-gray-500', bgColor: 'bg-gray-500/10' },
 };
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+// Use Next.js API route (has Tuya integration) instead of Python backend
+const API_BASE = '/api/smart-home';
 
 export default function LocksPage() {
   const [locks, setLocks] = useState<SmartLock[]>([]);
@@ -83,10 +87,10 @@ export default function LocksPage() {
   const [accessCodes, setAccessCodes] = useState<AccessCode[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Fetch locks
+  // Fetch locks from Next.js API route (Tuya integration)
   const fetchLocks = useCallback(async () => {
     try {
-      const response = await fetch(`${API_BASE}/locks/`);
+      const response = await fetch(`${API_BASE}/locks`);
       if (response.ok) {
         const data = await response.json();
         setLocks(data.locks || []);
@@ -135,8 +139,12 @@ export default function LocksPage() {
 
   const handleLock = async (lockId: string) => {
     try {
-      const response = await fetch(`${API_BASE}/locks/${lockId}/lock`, {
+      const lock = locks.find(l => l.id === lockId || l.lock_id === lockId);
+      const deviceId = (lock as any)?.device_id || lockId;
+      const response = await fetch(`${API_BASE}/locks`, {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'lock', lock_id: lockId, device_id: deviceId }),
       });
       if (response.ok) {
         toast.success('Lock secured');
@@ -151,13 +159,15 @@ export default function LocksPage() {
 
   const handleUnlock = async (lockId: string) => {
     try {
-      const response = await fetch(`${API_BASE}/locks/${lockId}/unlock`, {
+      const lock = locks.find(l => l.id === lockId || l.lock_id === lockId);
+      const deviceId = (lock as any)?.device_id || lockId;
+      const response = await fetch(`${API_BASE}/locks`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ duration_seconds: 30 }),
+        body: JSON.stringify({ action: 'unlock', lock_id: lockId, device_id: deviceId }),
       });
       if (response.ok) {
-        toast.success('Unlocked for 30 seconds');
+        toast.success('Unlocked');
         fetchLocks();
       } else {
         toast.error('Failed to unlock');
@@ -170,10 +180,11 @@ export default function LocksPage() {
   const handleViewActivity = async (lock: SmartLock) => {
     setSelectedLock(lock);
     try {
-      const response = await fetch(`${API_BASE}/locks/${lock.id || lock.lock_id}/logs?limit=20`);
+      const deviceId = (lock as any)?.device_id || lock.id || lock.lock_id;
+      const response = await fetch(`${API_BASE}/locks?view=activity&device_id=${deviceId}`);
       if (response.ok) {
         const data = await response.json();
-        setActivityLog(data.activities || []);
+        setActivityLog(data.activity || []);
       }
     } catch (error) {
       console.error('Failed to fetch activity:', error);
@@ -184,7 +195,8 @@ export default function LocksPage() {
   const handleViewCodes = async (lock: SmartLock) => {
     setSelectedLock(lock);
     try {
-      const response = await fetch(`${API_BASE}/locks/${lock.id || lock.lock_id}/codes`);
+      const deviceId = (lock as any)?.device_id || lock.id || lock.lock_id;
+      const response = await fetch(`${API_BASE}/locks?view=codes&device_id=${deviceId}`);
       if (response.ok) {
         const data = await response.json();
         setAccessCodes(data.codes || []);
@@ -195,6 +207,7 @@ export default function LocksPage() {
   };
 
   return (
+    <DashboardShell>
     <div className="min-h-screen bg-[#F5F5F0]">
       {/* Header */}
       <header className="bg-white border-b border-[#2D2D2D]/10 sticky top-0 z-40">
@@ -361,6 +374,7 @@ export default function LocksPage() {
         )}
       </AnimatePresence>
     </div>
+    </DashboardShell>
   );
 }
 
@@ -616,10 +630,15 @@ function GenerateCodeModal({
     setIsSubmitting(true);
 
     try {
-      const response = await fetch(`${API_BASE}/locks/${selectedLockId}/generate-code`, {
+      const selectedLock = locks.find(l => l.id === selectedLockId || l.lock_id === selectedLockId);
+      const deviceId = (selectedLock as any)?.device_id || selectedLockId;
+      const response = await fetch(`${API_BASE}/locks`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          action: 'generate_guest_code',
+          device_id: deviceId,
+          lock_id: selectedLockId,
           guest_name: guestName,
           check_in: new Date(checkIn).toISOString(),
           check_out: new Date(checkOut).toISOString(),
