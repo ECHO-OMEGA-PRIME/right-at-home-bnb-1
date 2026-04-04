@@ -118,7 +118,8 @@ const PLATFORM_NAMES: Record<string, string> = {
   other: 'Other',
 };
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+// Use local Next.js API routes (not external worker)
+const API_BASE = '';
 
 // ============================================================================
 // HOOKS
