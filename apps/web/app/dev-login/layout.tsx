@@ -1,14 +1,8 @@
 /**
- * Dev Login Layout — Server-side production gate
- * Redirects to /login in production. Only accessible in development.
+ * Dev Login Layout — Password-protected developer access
+ * Accessible in all environments (password gate is on the page itself)
  */
 
-import { redirect } from 'next/navigation';
-
 export default function DevLoginLayout({ children }: { children: React.ReactNode }) {
-  if (process.env.NODE_ENV === 'production') {
-    redirect('/login');
-  }
-
   return <>{children}</>;
 }
