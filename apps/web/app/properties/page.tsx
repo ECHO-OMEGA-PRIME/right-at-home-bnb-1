@@ -21,6 +21,7 @@ import { useProperties, Property } from '@/lib/api';
 import { PropertyCard, PropertyWithPhotos } from '@/components/PropertyCard';
 import { PropertyGallery, PropertyPhoto } from '@/components/PropertyGallery';
 import { getPhotosForProperty } from '@/lib/property-photos';
+import DashboardShell from '@/components/layout/DashboardShell';
 
 type ViewMode = 'grid' | 'list' | 'featured';
 type StatusFilter = 'all' | 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE';
@@ -182,19 +183,22 @@ export default function PropertiesPage() {
   // Error state
   if (error) {
     return (
-      <div className="min-h-screen bg-[#F5F5F0] flex items-center justify-center">
-        <div className="text-center">
-          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-['Playfair_Display'] text-[#2D2D2D]">
-            Failed to load properties
-          </h2>
-          <p className="text-[#2D2D2D]/60 mt-2">Please try refreshing the page</p>
+      <DashboardShell>
+        <div className="min-h-screen bg-[#F5F5F0] flex items-center justify-center">
+          <div className="text-center">
+            <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+            <h2 className="text-2xl font-['Playfair_Display'] text-[#2D2D2D]">
+              Failed to load properties
+            </h2>
+            <p className="text-[#2D2D2D]/60 mt-2">Please try refreshing the page</p>
+          </div>
         </div>
-      </div>
+      </DashboardShell>
     );
   }
 
   return (
+    <DashboardShell>
     <div className="min-h-screen bg-[#F5F5F0]">
       {/* Header */}
       <header className="bg-white border-b border-[#2D2D2D]/10 sticky top-0 z-40">
@@ -593,6 +597,7 @@ export default function PropertiesPage() {
         )}
       </AnimatePresence>
     </div>
+    </DashboardShell>
   );
 }
 
