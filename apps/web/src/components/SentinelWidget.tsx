@@ -1,8 +1,8 @@
 'use client';
 
 /**
- * SENTINEL V2 Chat Widget - Right at Home BnB (Steven Personality)
- * Connects to SENTINEL Omnichannel API for unified AI chat
+ * Chat Widget - Right at Home BnB (Steven Concierge)
+ * Connects to Echo Chat API for AI-powered guest assistance
  * @author ECHO OMEGA PRIME | Authority 11.0
  */
 
@@ -20,32 +20,32 @@ interface Message {
   timestamp: Date;
 }
 
-// SENTINEL Omni API Configuration
-const SENTINEL_API_URL = process.env.NEXT_PUBLIC_SENTINEL_API_URL || 'https://sentinel-omni-249995513427.us-central1.run.app';
-const PLATFORM = 'rah-midland.com';
+// Echo Chat API Configuration
+const CHAT_API_URL = 'https://echo-chat.bmcii1976.workers.dev';
+const SITE_ID = 'rah-midland';
 
 function getUserId(): string {
   if (typeof window === 'undefined') return 'server';
-  let visitorId = localStorage.getItem('sentinel_user_id');
+  let visitorId = localStorage.getItem('rah_user_id');
   if (!visitorId) {
-    visitorId = 'user_' + Date.now().toString(36) + Math.random().toString(36).slice(2);
-    localStorage.setItem('sentinel_user_id', visitorId);
+    visitorId = 'rah_' + Date.now().toString(36) + Math.random().toString(36).slice(2);
+    localStorage.setItem('rah_user_id', visitorId);
   }
   return visitorId;
 }
 
-interface SentinelWidgetProps {
+interface ChatWidgetProps {
   mode?: 'widget' | 'fullscreen';
   propertyId?: string;
 }
 
-export default function SentinelWidget({ mode = 'widget', propertyId }: SentinelWidgetProps) {
+export default function SentinelWidget({ mode = 'widget', propertyId }: ChatWidgetProps) {
   const [isOpen, setIsOpen] = useState(mode === 'fullscreen');
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [voiceEnabled, setVoiceEnabled] = useState(true);
+  const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [userId, setUserId] = useState<string>('');
   const [sessionId, setSessionId] = useState<string>('');
 
@@ -74,7 +74,7 @@ export default function SentinelWidget({ mode = 'widget', propertyId }: Sentinel
       setMessages([{
         id: 'welcome',
         role: 'assistant',
-        content: "Hey there! I'm Steven, your personal concierge for Right at Home BnB. Need restaurant tips, WiFi info, check-in details, or anything about your stay? Just ask! 🏠",
+        content: "Hey there! I'm Steven, your personal concierge for Right at Home BnB. Need restaurant tips, WiFi info, check-in details, or anything about your stay? Just ask!",
         timestamp: new Date(),
       }]);
     }
@@ -90,29 +90,26 @@ export default function SentinelWidget({ mode = 'widget', propertyId }: Sentinel
       timestamp: new Date(),
     };
 
-    // Build conversation history for context (exclude welcome message, limit to last 10)
-    const conversationHistory = [...messages, userMessage]
-      .filter(m => m.id !== 'welcome')
-      .slice(-10)
-      .map(m => ({ role: m.role, content: m.content }));
-
     setMessages(prev => [...prev, userMessage]);
     setInputValue('');
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${SENTINEL_API_URL}/chat`, {
+      const response = await fetch(`${CHAT_API_URL}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: userMessage.content,
           user_id: userId,
-          platform: PLATFORM,
+          site_id: SITE_ID,
           session_id: sessionId,
-          include_voice: voiceEnabled,
-          conversation_history: conversationHistory,
+          enable_voice: voiceEnabled,
         }),
       });
+
+      if (!response.ok) {
+        throw new Error(`API returned ${response.status}`);
+      }
 
       const data = await response.json();
 
@@ -125,11 +122,11 @@ export default function SentinelWidget({ mode = 'widget', propertyId }: Sentinel
 
       setMessages(prev => [...prev, assistantMessage]);
 
-      // Play voice if enabled
+      // Play voice if enabled and audio returned
       if (voiceEnabled && data.audio_base64) {
         try {
           setIsSpeaking(true);
-          const audio = new Audio(`data:audio/mp3;base64,${data.audio_base64}`);
+          const audio = new Audio(`data:audio/mpeg;base64,${data.audio_base64}`);
           audioRef.current = audio;
           audio.onended = () => setIsSpeaking(false);
           audio.onerror = () => setIsSpeaking(false);
@@ -140,7 +137,7 @@ export default function SentinelWidget({ mode = 'widget', propertyId }: Sentinel
       }
 
     } catch (error) {
-      console.error('SENTINEL chat error:', error);
+      console.error('Chat error:', error);
       setMessages(prev => [...prev, {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
@@ -160,10 +157,10 @@ export default function SentinelWidget({ mode = 'widget', propertyId }: Sentinel
   };
 
   const quickActions = [
-    { label: '🏠 Properties', message: "Show me available properties" },
-    { label: '📅 Check-In Info', message: "What are the check-in details?" },
-    { label: '🍽️ Restaurant Tips', message: "Best restaurants nearby?" },
-    { label: '📞 Contact Host', message: "How do I contact the host?" },
+    { label: 'Properties', message: "Show me available properties" },
+    { label: 'Check-In Info', message: "What are the check-in details?" },
+    { label: 'Restaurant Tips', message: "Best restaurants nearby?" },
+    { label: 'Contact Host', message: "How do I contact the host?" },
   ];
 
   if (mode === 'widget') {
@@ -212,7 +209,7 @@ export default function SentinelWidget({ mode = 'widget', propertyId }: Sentinel
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center text-2xl">
-                      🏠
+                      S
                     </div>
                     <div>
                       <h3 className="font-bold text-lg">Steven</h3>
@@ -224,11 +221,12 @@ export default function SentinelWidget({ mode = 'widget', propertyId }: Sentinel
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => setVoiceEnabled(!voiceEnabled)}
-                      className="p-2 hover:bg-white/20 rounded-full"
+                      className="p-2 hover:bg-white/20 rounded-full transition-colors"
+                      title={voiceEnabled ? 'Mute voice' : 'Enable voice'}
                     >
                       {voiceEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
                     </button>
-                    <button onClick={() => setIsOpen(false)} className="p-2 hover:bg-white/20 rounded-full">
+                    <button onClick={() => setIsOpen(false)} className="p-2 hover:bg-white/20 rounded-full transition-colors">
                       <X className="w-5 h-5" />
                     </button>
                   </div>
@@ -273,7 +271,7 @@ export default function SentinelWidget({ mode = 'widget', propertyId }: Sentinel
                       <button
                         key={action.label}
                         onClick={() => setInputValue(action.message)}
-                        className="px-3 py-1.5 text-xs bg-[#500000]/20 text-[#ff6b6b] rounded-full hover:bg-[#500000]/40 border border-[#500000]/30"
+                        className="px-3 py-1.5 text-xs bg-[#500000]/20 text-[#ff6b6b] rounded-full hover:bg-[#500000]/40 border border-[#500000]/30 transition-colors"
                       >
                         {action.label}
                       </button>
@@ -290,7 +288,7 @@ export default function SentinelWidget({ mode = 'widget', propertyId }: Sentinel
                     type="text"
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
-                    onKeyPress={handleKeyPress}
+                    onKeyDown={handleKeyPress}
                     placeholder="Ask Steven anything..."
                     className="flex-1 px-4 py-3 bg-[#1a0a0a] rounded-full text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#500000] border border-[#500000]/30"
                     disabled={isLoading}
@@ -306,7 +304,7 @@ export default function SentinelWidget({ mode = 'widget', propertyId }: Sentinel
                   </motion.button>
                 </div>
                 <p className="text-center text-xs text-gray-500 mt-2">
-                  Powered by SENTINEL V2 • Right at Home BnB
+                  Right at Home BnB Concierge
                 </p>
               </div>
             </motion.div>
