@@ -23,8 +23,10 @@ import {
   Loader2, Plus, ExternalLink, Settings, Filter,
   Moon, Sun
 } from 'lucide-react';
+import DashboardShell from '@/components/layout/DashboardShell';
 import AddFeedModal from '@/components/bookings/AddFeedModal';
 import ConflictsModal from '@/components/bookings/ConflictsModal';
+import { properties as propertyKnowledge } from '@/lib/property-knowledge';
 import {
   format, startOfMonth, endOfMonth, startOfWeek, endOfWeek,
   eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths,
@@ -221,19 +223,8 @@ function useConflicts() {
           setConflicts(await response.json());
         }
       } catch {
-        // Demo conflicts
-        setConflicts([
-          {
-            property_id: 'prop-1',
-            booking1_platform: 'airbnb',
-            booking1_start: new Date().toISOString(),
-            booking1_end: addDays(new Date(), 3).toISOString(),
-            booking2_platform: 'vrbo',
-            booking2_start: addDays(new Date(), 2).toISOString(),
-            booking2_end: addDays(new Date(), 5).toISOString(),
-            overlap_days: 1,
-          },
-        ]);
+        // No demo conflicts - return empty array
+        setConflicts([]);
       }
     }
     fetch();
@@ -246,51 +237,9 @@ function useConflicts() {
 // SAMPLE DATA GENERATOR
 // ============================================================================
 
-function generateSampleEvents(month: number, year: number): CalendarEvent[] {
-  const events: CalendarEvent[] = [];
-  const properties = [
-    { id: 'prop-1', name: '2501 Stanolind Ave' },
-    { id: 'prop-2', name: '3109 Princeton Ave' },
-    { id: 'prop-3', name: '4205 Monty Dr' },
-    { id: 'prop-4', name: '2710 Gulf Ave' },
-  ];
-
-  const firstNames = ['John', 'Sarah', 'Mike', 'Emily', 'David', 'Lisa', 'James', 'Emma'];
-  const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Davis', 'Miller'];
-  const platforms: Array<'airbnb' | 'vrbo' | 'direct'> = ['airbnb', 'vrbo', 'direct'];
-
-  // Generate 8-12 bookings spread across the month
-  const numBookings = 8 + Math.floor(Math.random() * 5);
-  const startDate = new Date(year, month - 1, 1);
-
-  for (let i = 0; i < numBookings; i++) {
-    const property = properties[Math.floor(Math.random() * properties.length)];
-    const platform = platforms[Math.floor(Math.random() * platforms.length)];
-    const guestName = `${firstNames[Math.floor(Math.random() * firstNames.length)]} ${lastNames[Math.floor(Math.random() * lastNames.length)]}`;
-
-    const dayOffset = Math.floor(Math.random() * 25);
-    const checkIn = addDays(startDate, dayOffset);
-    const nights = 2 + Math.floor(Math.random() * 5);
-    const checkOut = addDays(checkIn, nights);
-    const pricePerNight = 150 + Math.floor(Math.random() * 150);
-
-    events.push({
-      id: `booking-${i}`,
-      title: guestName,
-      start: checkIn.toISOString(),
-      end: checkOut.toISOString(),
-      platform,
-      guestName,
-      guestCount: 1 + Math.floor(Math.random() * 4),
-      confirmationCode: `HM${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
-      totalPrice: pricePerNight * nights,
-      color: PLATFORM_COLORS[platform],
-      propertyId: property.id,
-      propertyName: property.name,
-    });
-  }
-
-  return events;
+function generateSampleEvents(_month: number, _year: number): CalendarEvent[] {
+  // No mock data - return empty array; real data comes from the API
+  return [];
 }
 
 // ============================================================================
@@ -531,7 +480,62 @@ function BookingModal({
               </div>
             </div>
 
-            {/* Stats */}
+            {/* Settings Panel */}
+        {showSettingsPanel && (
+          <div className="bg-white rounded-2xl border border-[#2D2D2D]/10 p-6 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-['Playfair_Display'] font-bold text-[#2D2D2D]">
+                Calendar Settings
+              </h3>
+              <button
+                onClick={() => setShowSettingsPanel(false)}
+                className="p-1 hover:bg-[#F5F5F0] rounded-lg"
+              >
+                <X className="w-4 h-4 text-[#2D2D2D]/60" />
+              </button>
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-[#2D2D2D]/70 mb-2">
+                Filter by Property
+              </label>
+              <select
+                value={propertyFilter || ''}
+                onChange={(e) => setPropertyFilter(e.target.value || null)}
+                className="w-full px-4 py-2.5 border border-[#2D2D2D]/20 rounded-xl text-sm focus:ring-2 focus:ring-[#500000] focus:border-transparent bg-[#F5F5F0]"
+              >
+                <option value="">All Properties ({properties.length})</option>
+                {properties.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} - {p.address}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+              {properties.slice(0, 8).map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => setPropertyFilter(propertyFilter === p.id ? null : p.id)}
+                  className={`text-left p-3 rounded-xl border text-sm transition-colors ${
+                    propertyFilter === p.id
+                      ? 'border-[#500000] bg-[#500000]/5 text-[#500000]'
+                      : 'border-[#2D2D2D]/10 hover:bg-[#F5F5F0] text-[#2D2D2D]'
+                  }`}
+                >
+                  <div className="font-medium truncate">{p.name}</div>
+                  <div className="text-xs text-[#2D2D2D]/50 truncate">{p.bedrooms}BR / {p.maxGuests} guests</div>
+                </button>
+              ))}
+            </div>
+            {properties.length > 8 && (
+              <p className="text-xs text-[#2D2D2D]/50 mt-2">
+                + {properties.length - 8} more properties. Use the dropdown above to see all.
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Stats */}
             <div className="grid grid-cols-3 gap-4">
               <div className="text-center p-3 bg-[#500000]/5 rounded-xl">
                 <Moon className="w-5 h-5 mx-auto text-[#500000] mb-1" />
@@ -800,35 +804,20 @@ export default function BookingsPage() {
   const [propertyFilter, setPropertyFilter] = useState<string | null>(null);
   const [showAddFeedModal, setShowAddFeedModal] = useState(false);
   const [showConflictsModal, setShowConflictsModal] = useState(false);
+  const [showSettingsPanel, setShowSettingsPanel] = useState(false);
 
   const month = currentDate.getMonth() + 1;
   const year = currentDate.getFullYear();
 
-  // Demo properties list - in production, fetch from API
-  const properties = [
-    { id: 'prop-1', name: '2501 Stanolind Ave' },
-    { id: 'prop-2', name: '3109 Princeton Ave' },
-    { id: 'prop-3', name: '4205 Monty Dr' },
-    { id: 'prop-4', name: '2710 Gulf Ave' },
-    { id: 'prop-5', name: '4501 Princeton Ave' },
-    { id: 'prop-6', name: '3807 Humble Ave' },
-    { id: 'prop-7', name: '2614 Mariana St' },
-    { id: 'prop-8', name: '3911 Shell Ave' },
-    { id: 'prop-9', name: '4205 Monty Dr #B' },
-    { id: 'prop-10', name: '2306 W Louisiana Ave' },
-    { id: 'prop-11', name: '3704 Shell Ave' },
-    { id: 'prop-12', name: '2609 W Kentucky Ave' },
-    { id: 'prop-13', name: '2610 W Michigan Ave' },
-    { id: 'prop-14', name: '2405 Brunson Ave' },
-    { id: 'prop-15', name: '2503 Brunson Ave' },
-    { id: 'prop-16', name: '4503 Monty Dr' },
-    { id: 'prop-17', name: '3606 Humble Ave' },
-    { id: 'prop-18', name: '2308 W Louisiana Ave' },
-    { id: 'prop-19', name: '3505 W Golf Course Rd' },
-    { id: 'prop-20', name: '2601 Mariana St' },
-    { id: 'prop-21', name: '3709 Shell Ave' },
-    { id: 'prop-22', name: '4007 Monty Dr' },
-  ];
+  // Real properties from property-knowledge.ts
+  const properties = propertyKnowledge.map((p) => ({
+    id: p.id,
+    name: p.nickname || p.name,
+    address: p.address,
+    vrboId: p.vrboId,
+    bedrooms: p.bedrooms,
+    maxGuests: p.maxGuests,
+  }));
 
   const { events, loading, refetch } = useCalendarData(month, year, propertyFilter);
   const { loading: syncing, triggerSync } = useSyncStatus();
@@ -849,6 +838,7 @@ export default function BookingsPage() {
   }, [events]);
 
   return (
+    <DashboardShell>
     <div className="min-h-screen bg-[#F5F5F0]">
       {/* Header */}
       <header className="bg-white border-b border-[#2D2D2D]/10 px-6 py-4">
@@ -862,11 +852,19 @@ export default function BookingsPage() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <button className="p-2 hover:bg-[#F5F5F0] rounded-lg transition-colors">
-              <Filter className="w-5 h-5 text-[#2D2D2D]/60" />
+            <button
+              onClick={() => setPropertyFilter(propertyFilter ? null : properties[0]?.id || null)}
+              className={`p-2 rounded-lg transition-colors ${propertyFilter ? 'bg-[#500000]/10 text-[#500000]' : 'hover:bg-[#F5F5F0]'}`}
+              title="Filter by property"
+            >
+              <Filter className="w-5 h-5" />
             </button>
-            <button className="p-2 hover:bg-[#F5F5F0] rounded-lg transition-colors">
-              <Settings className="w-5 h-5 text-[#2D2D2D]/60" />
+            <button
+              onClick={() => setShowSettingsPanel(!showSettingsPanel)}
+              className={`p-2 rounded-lg transition-colors ${showSettingsPanel ? 'bg-[#500000]/10 text-[#500000]' : 'hover:bg-[#F5F5F0]'}`}
+              title="Calendar settings"
+            >
+              <Settings className="w-5 h-5" />
             </button>
           </div>
         </div>
@@ -975,5 +973,6 @@ export default function BookingsPage() {
         )}
       />
     </div>
+    </DashboardShell>
   );
 }
