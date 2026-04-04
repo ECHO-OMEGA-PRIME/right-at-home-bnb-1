@@ -26,7 +26,7 @@ import {
 import DashboardShell from '@/components/layout/DashboardShell';
 import AddFeedModal from '@/components/bookings/AddFeedModal';
 import ConflictsModal from '@/components/bookings/ConflictsModal';
-import { properties as propertyKnowledge } from '@/lib/property-knowledge';
+import { PROPERTIES as propertyData } from '@/lib/property-data';
 import {
   format, startOfMonth, endOfMonth, startOfWeek, endOfWeek,
   eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths,
@@ -810,15 +810,17 @@ export default function BookingsPage() {
   const month = currentDate.getMonth() + 1;
   const year = currentDate.getFullYear();
 
-  // Real properties from property-knowledge.ts
-  const properties = propertyKnowledge.map((p) => ({
-    id: p.id,
-    name: p.nickname || p.name,
-    address: p.address,
-    vrboId: p.vrboId,
-    bedrooms: p.bedrooms,
-    maxGuests: p.maxGuests,
-  }));
+  // Real properties from property-data.ts (matches IDs used across the site)
+  const properties = propertyData
+    .filter((p) => p.status === 'ACTIVE')
+    .map((p) => ({
+      id: p.id,
+      name: p.name,
+      address: p.address,
+      vrboId: p.vrboId,
+      bedrooms: p.bedrooms,
+      maxGuests: p.sleeps,
+    }));
 
   const { events, loading, refetch } = useCalendarData(month, year, propertyFilter);
   const { loading: syncing, triggerSync } = useSyncStatus();
