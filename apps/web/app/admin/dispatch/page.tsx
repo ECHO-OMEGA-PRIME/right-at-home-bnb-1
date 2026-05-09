@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   ClipboardList, Plus, Filter, ChevronRight, ChevronLeft,
   Clock, MapPin, User, CheckCircle2, Loader2, X, Search,
   Sparkles, Wrench, Eye, ShoppingBag, MessageSquare, Calendar,
 } from 'lucide-react';
+import { properties as propertyKnowledge } from '@/lib/property-knowledge';
 
 function formatMoney(cents: number): string {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100);
@@ -21,13 +22,37 @@ interface Task {
   notes: string; createdAt: string; estimatedMinutes: number;
 }
 
-// Properties and assignees loaded from database — empty until configured
-const PROPERTIES: string[] = [];
+// Real properties from property-knowledge.ts
+const PROPERTIES: string[] = propertyKnowledge.map(
+  (p) => p.nickname || p.name
+);
 
-const ASSIGNEES: string[] = [];
+const ASSIGNEES: string[] = [
+  'Steven Palma',
+  'Cleaning Crew A',
+  'Cleaning Crew B',
+  'Pool Service',
+  'Maintenance Team',
+  'Yard Crew',
+];
 
-// Dispatch tasks loaded from database — create tasks via the form
-const INITIAL_TASKS: Task[] = [];
+const STORAGE_KEY = 'rah_dispatch_tasks';
+
+function loadTasks(): Task[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) return JSON.parse(stored);
+  } catch {}
+  return [];
+}
+
+function saveTasks(tasks: Task[]) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+  } catch {}
+}
 
 const COLUMNS: { status: TaskStatus; color: string; bgColor: string; icon: typeof Clock }[] = [
   { status: 'Pending', color: 'text-gray-600', bgColor: 'bg-gray-100', icon: Clock },
@@ -40,7 +65,7 @@ const typeIcon = (type: TaskType) => { switch (type) { case 'Cleaning': return S
 const priorityBadge = (p: Priority) => { switch (p) { case 'Urgent': return 'bg-red-600 text-white'; case 'High': return 'bg-red-100 text-red-700'; case 'Medium': return 'bg-yellow-100 text-yellow-700'; case 'Low': return 'bg-gray-100 text-gray-600'; } };
 
 export default function DispatchPage() {
-  const [tasks, setTasks] = useState<Task[]>(INITIAL_TASKS);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [filterProperty, setFilterProperty] = useState('All');
   const [filterAssignee, setFilterAssignee] = useState('All');
   const [filterPriority, setFilterPriority] = useState('All');
@@ -49,12 +74,30 @@ export default function DispatchPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newType, setNewType] = useState<TaskType>('Cleaning');
-  const [newProperty, setNewProperty] = useState(PROPERTIES[0]);
-  const [newAssignee, setNewAssignee] = useState(ASSIGNEES[0]);
+  const [newProperty, setNewProperty] = useState(PROPERTIES[0] || '');
+  const [newAssignee, setNewAssignee] = useState(ASSIGNEES[0] || '');
   const [newPriority, setNewPriority] = useState<Priority>('Medium');
-  const [newDueDate, setNewDueDate] = useState('2026-03-18');
+  const [newDueDate, setNewDueDate] = useState(new Date().toISOString().split('T')[0]);
   const [newDueTime, setNewDueTime] = useState('10:00');
   const [newNotes, setNewNotes] = useState('');
+
+  // Load tasks from localStorage on mount
+  useEffect(() => {
+    setTasks(loadTasks());
+  }, []);
+
+  // Save tasks to localStorage whenever they change
+  useEffect(() => {
+    saveTasks(tasks);
+  }, [tasks]);
+
+  function deleteTask(taskId: string) {
+    setTasks((prev) => prev.filter((t) => t.id !== taskId));
+  }
+
+  function clearCompleted() {
+    setTasks((prev) => prev.filter((t) => t.status !== 'Completed'));
+  }
 
   const filtered = useMemo(() => tasks.filter((t) => {
     if (filterProperty !== 'All' && t.property !== filterProperty) return false;
@@ -76,7 +119,7 @@ export default function DispatchPage() {
 
   function addTask() {
     if (!newTitle.trim()) return;
-    const task: Task = { id: `T${String(tasks.length + 1).padStart(3, '0')}`, title: newTitle, type: newType, property: newProperty, assignee: newAssignee, priority: newPriority, dueDate: newDueDate, dueTime: newDueTime, status: 'Pending', notes: newNotes, createdAt: new Date().toISOString(), estimatedMinutes: 60 };
+    const task: Task = { id: `T${Date.now()}`, title: newTitle, type: newType, property: newProperty, assignee: newAssignee, priority: newPriority, dueDate: newDueDate, dueTime: newDueTime, status: 'Pending', notes: newNotes, createdAt: new Date().toISOString(), estimatedMinutes: 60 };
     setTasks((prev) => [...prev, task]);
     setShowAddForm(false);
     setNewTitle(''); setNewNotes('');
@@ -94,8 +137,11 @@ export default function DispatchPage() {
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-full mx-auto">
         <div className="flex items-center justify-between mb-6">
-          <div><h1 className="text-3xl font-bold text-[#500000]">Task Dispatch</h1><p className="text-gray-600 mt-1">Kanban board for property operations across 22 rentals</p></div>
+          <div><h1 className="text-3xl font-bold text-[#500000]">Task Dispatch</h1><p className="text-gray-600 mt-1">Kanban board for property operations across {PROPERTIES.length} rentals</p></div>
           <div className="flex items-center gap-3">
+            {tasks.some((t) => t.status === 'Completed') && (
+              <button onClick={clearCompleted} className="flex items-center gap-2 px-4 py-2.5 border border-green-300 text-green-700 rounded-lg text-sm font-medium hover:bg-green-50 transition-colors"><CheckCircle2 className="w-4 h-4" /> Clear Done</button>
+            )}
             <button onClick={() => setShowFilters(!showFilters)} className={`flex items-center gap-2 px-4 py-2.5 border rounded-lg text-sm font-medium transition-colors ${showFilters ? 'border-[#500000] text-[#500000] bg-red-50' : 'border-gray-300 text-gray-700 hover:bg-gray-50'}`}><Filter className="w-4 h-4" /> Filters</button>
             <button onClick={() => setShowAddForm(true)} className="flex items-center gap-2 px-5 py-2.5 bg-[#500000] text-white rounded-lg font-semibold hover:bg-[#3C1518] transition-colors"><Plus className="w-5 h-5" /> Add Task</button>
           </div>
@@ -138,7 +184,10 @@ export default function DispatchPage() {
                       <div key={task.id} className="bg-gray-50 rounded-lg border border-gray-200 p-3 hover:shadow-md transition-all">
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex items-center gap-1.5"><TypeIcon className="w-4 h-4 text-gray-500" /><span className="text-xs text-gray-500">{task.type}</span></div>
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${priorityBadge(task.priority)}`}>{task.priority}</span>
+                          <div className="flex items-center gap-1">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${priorityBadge(task.priority)}`}>{task.priority}</span>
+                            <button onClick={() => deleteTask(task.id)} className="ml-1 p-0.5 text-gray-300 hover:text-red-500 transition-colors" title="Delete task"><X className="w-3 h-3" /></button>
+                          </div>
                         </div>
                         <h4 className="font-semibold text-gray-900 text-sm mb-1">{task.title}</h4>
                         <div className="flex items-center gap-1 text-xs text-gray-500 mb-1"><MapPin className="w-3 h-3" /> {task.property}</div>

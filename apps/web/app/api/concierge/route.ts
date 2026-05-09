@@ -752,7 +752,31 @@ function detectIntent(query: string): string {
  * Call LLM (Groq primary, OpenAI fallback)
  */
 async function callLLM(messages: ConversationMessage[]): Promise<string> {
-  // Try Groq first (fast inference)
+  // Try Claude CLI Bridge first (OAuth, no API key needed)
+  const CLAUDE_BRIDGE_URL = process.env.CLAUDE_BRIDGE_URL;
+  if (CLAUDE_BRIDGE_URL) {
+    try {
+      const userMsg = messages[messages.length - 1]?.content || '';
+      const systemMsg = messages[0]?.content || '';
+      const response = await fetch(`${CLAUDE_BRIDGE_URL}/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: userMsg, system: systemMsg }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.response) {
+          console.log(`[Claude Bridge] Response in ${data.latency_ms}ms`);
+          return data.response;
+        }
+      }
+    } catch (error) {
+      console.error('Claude Bridge error:', error);
+    }
+  }
+
+  // Fallback: Groq (fast inference)
   if (GROQ_API_KEY) {
     try {
       const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {

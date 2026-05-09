@@ -20,9 +20,8 @@ interface Message {
   timestamp: Date;
 }
 
-// Echo Chat API Configuration
-const CHAT_API_URL = 'https://echo-chat.bmcii1976.workers.dev';
-const SITE_ID = 'rah-midland';
+// AI Concierge API (local Next.js route with Groq/OpenAI)
+const CHAT_API_URL = '/api/concierge';
 
 function getUserId(): string {
   if (typeof window === 'undefined') return 'server';
@@ -95,15 +94,15 @@ export default function SentinelWidget({ mode = 'widget', propertyId }: ChatWidg
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${CHAT_API_URL}/chat`, {
+      const response = await fetch(CHAT_API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: userMessage.content,
-          user_id: userId,
-          site_id: SITE_ID,
-          session_id: sessionId,
-          enable_voice: voiceEnabled,
+          query: userMessage.content,
+          sessionId: sessionId,
+          guestType: 'guest',
+          stream: false,
+          voice: voiceEnabled,
         }),
       });
 
@@ -123,10 +122,11 @@ export default function SentinelWidget({ mode = 'widget', propertyId }: ChatWidg
       setMessages(prev => [...prev, assistantMessage]);
 
       // Play voice if enabled and audio returned
-      if (voiceEnabled && data.audio_base64) {
+      if (voiceEnabled && (data.audio || data.audio_base64)) {
         try {
           setIsSpeaking(true);
-          const audio = new Audio(`data:audio/mpeg;base64,${data.audio_base64}`);
+          const audioData = data.audio || data.audio_base64;
+          const audio = new Audio(`data:audio/mpeg;base64,${audioData}`);
           audioRef.current = audio;
           audio.onended = () => setIsSpeaking(false);
           audio.onerror = () => setIsSpeaking(false);
@@ -141,7 +141,7 @@ export default function SentinelWidget({ mode = 'widget', propertyId }: ChatWidg
       setMessages(prev => [...prev, {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: "Oops! Something went wrong. Give me a sec and try again!",
+        content: "Sorry about that! I'm having a moment. Try again, or call Steven directly at (432) 559-1904.",
         timestamp: new Date(),
       }]);
     } finally {
