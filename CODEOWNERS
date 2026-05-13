@@ -1,0 +1,5 @@
+# Repo ownership — used by GitHub for review routing and branch protection.
+# See: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default — every change goes to the primary owner.
+*       @ECHO-OMEGA-PRIME
