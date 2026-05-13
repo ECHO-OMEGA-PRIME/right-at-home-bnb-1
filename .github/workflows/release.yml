@@ -1,0 +1,65 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+-*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag to release (e.g. v1.2.3)
+        required: true
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve tag
+        id: tag
+        run: |
+          if [ -n "${{ inputs.tag }}" ]; then
+            echo "tag=${{ inputs.tag }}" >>"$GITHUB_OUTPUT"
+          else
+            echo "tag=${GITHUB_REF#refs/tags/}" >>"$GITHUB_OUTPUT"
+          fi
+
+      - name: Extract release notes from CHANGELOG
+        id: notes
+        shell: bash
+        run: |
+          tag="${{ steps.tag.outputs.tag }}"
+          ver="${tag#v}"
+          if [ ! -f CHANGELOG.md ]; then
+            echo "body=Release ${tag}." >>"$GITHUB_OUTPUT"
+            exit 0
+          fi
+          awk -v v="$ver" '
+            $0 ~ "^## \\[" v "\\]" { capture=1; next }
+            capture && $0 ~ "^## \\[" { exit }
+            capture { print }
+          ' CHANGELOG.md > /tmp/release_body.md
+          if [ ! -s /tmp/release_body.md ]; then
+            echo "Release ${tag}." > /tmp/release_body.md
+          fi
+          {
+            echo 'body<<EOF'
+            cat /tmp/release_body.md
+            echo 'EOF'
+          } >>"$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${{ steps.tag.outputs.tag }}"
+          gh release create "$tag" \
+            --title "$tag" \
+            --notes "${{ steps.notes.outputs.body }}" \
+            --verify-tag
