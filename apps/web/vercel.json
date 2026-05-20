@@ -35,7 +35,7 @@
   "rewrites": [
     {
       "source": "/api/v1/:path*",
-      "destination": "https://rightathome-api.bmcii1976.workers.dev/:path*"
+      "destination": "https://api.rah-midland.com/:path*"
     }
   ]
 }

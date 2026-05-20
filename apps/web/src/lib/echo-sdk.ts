@@ -1,64 +1,95 @@
 /**
  * Right at Home BnB - ECHO SDK Gateway Client
- * Connects to the ECHO intelligence platform for AI operations,
- * engine queries, knowledge search, and shared brain memory.
+ *
+ * Talks to the Echo SDK gate on FORGE (192.168.1.137:8000) via the
+ * `echo-omega-bridge` cloudflared named tunnel — public hostname
+ * `sdk1.echo-op.com` (configurable via ECHO_SDK_GATE env var).
+ *
+ * Replaces the prior `echo-sdk-gateway.bmcii1976.workers.dev` Cloudflare
+ * Worker (doctrine-banned). Uses the canonical SDK envelope
+ *
+ *   POST /sdk/invoke
+ *   X-Echo-API-Key: <sovereign key>
+ *   body: { envelope_version:1, capability, params, context }
+ *
+ * Cap mapping (old REST path → new capability):
+ *   /engine/query     → echo.engine.query
+ *   /knowledge/search → echo.knowledge.search
+ *   /brain/ingest     → echo.context.remember
+ *   /brain/search     → echo.context.recall
+ *   /worker/call      → echo.claude.oauth   (via echo-llm.ts)
+ *
+ * For chat/LLM use, prefer importing `echoChat` from './echo-llm.ts' directly
+ * — `generateChatResponse` here remains for back-compat with the old shape.
  */
 
-const SDK_URL = 'https://echo-sdk-gateway.bmcii1976.workers.dev';
-const API_KEY = process.env.ECHO_API_KEY || '';
+import { echoChat } from './echo-llm';
 
-interface SDKRequestOptions {
-  method?: 'GET' | 'POST';
-  body?: Record<string, unknown>;
-  params?: Record<string, string>;
+const GATE = (process.env.ECHO_SDK_GATE || '').replace(/\/+$/, '');
+const KEY = process.env.ECHO_SOVEREIGN_KEY || process.env.ECHO_API_KEY || '';
+
+interface SDKInvokeOptions {
+  /** Per-call timeout (default 15s). */
   timeoutMs?: number;
+  /** Free-form context passed through to the gate for telemetry / audit. */
+  context?: Record<string, unknown>;
 }
 
 /**
- * Internal fetch wrapper with auth, timeout, and error handling.
+ * Universal /sdk/invoke wrapper. Throws on transport errors or unsuccessful
+ * HTTP status; returns the unwrapped `result.body` on success.
  */
-async function sdkFetch<T>(path: string, options: SDKRequestOptions = {}): Promise<T> {
-  const { method = 'GET', body, params, timeoutMs = 15000 } = options;
-
-  const url = new URL(`${SDK_URL}${path}`);
-  if (params) {
-    for (const [key, value] of Object.entries(params)) {
-      url.searchParams.set(key, value);
-    }
+async function sdkInvoke<T>(
+  capability: string,
+  params: Record<string, unknown>,
+  opts: SDKInvokeOptions = {}
+): Promise<T> {
+  if (!GATE) {
+    throw new Error('ECHO_SDK_GATE env var is not set');
   }
 
+  const envelope = {
+    envelope_version: 1,
+    capability,
+    params,
+    context: { source: 'rah-midland.com', component: 'echo-sdk.ts', ...(opts.context || {}) },
+  };
+
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  const timeout = setTimeout(() => controller.abort(), opts.timeoutMs ?? 15000);
 
   try {
-    const response = await fetch(url.toString(), {
-      method,
+    const res = await fetch(`${GATE}/sdk/invoke`, {
+      method: 'POST',
       headers: {
-        'X-Echo-API-Key': API_KEY,
         'Content-Type': 'application/json',
+        ...(KEY ? { 'X-Echo-API-Key': KEY } : {}),
       },
-      body: body ? JSON.stringify(body) : undefined,
+      body: JSON.stringify(envelope),
       signal: controller.signal,
     });
 
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => 'Unknown error');
-      throw new Error(`ECHO SDK error ${response.status}: ${errorText}`);
+    if (!res.ok) {
+      const txt = await res.text().catch(() => '');
+      throw new Error(`ECHO SDK error ${res.status} (${capability}): ${txt.slice(0, 240)}`);
     }
 
-    return (await response.json()) as T;
-  } catch (error: unknown) {
-    if (error instanceof Error && error.name === 'AbortError') {
-      throw new Error(`ECHO SDK request timed out after ${timeoutMs}ms: ${path}`);
+    const json = (await res.json()) as Record<string, unknown>;
+    const result = (json.result as Record<string, unknown>) || {};
+    // Gate convention: payload sits at result.body; some caps return at result directly.
+    return ((result.body as T) ?? (result as T)) as T;
+  } catch (err: unknown) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new Error(`ECHO SDK timed out after ${opts.timeoutMs ?? 15000}ms (${capability})`);
     }
-    throw error;
+    throw err;
   } finally {
     clearTimeout(timeout);
   }
 }
 
 // ============================================
-// ENGINE QUERIES
+// ENGINE QUERIES — echo.engine.query
 // ============================================
 
 export interface EngineQueryResult {
@@ -82,17 +113,15 @@ export async function queryEngine(
   domain: string,
   options?: { limit?: number }
 ): Promise<EngineQueryResult> {
-  return sdkFetch<EngineQueryResult>('/engine/query', {
-    params: {
-      q: query,
-      domain,
-      ...(options?.limit ? { limit: String(options.limit) } : {}),
-    },
+  return sdkInvoke<EngineQueryResult>('echo.engine.query', {
+    q: query,
+    domain,
+    ...(options?.limit ? { limit: options.limit } : {}),
   });
 }
 
 // ============================================
-// KNOWLEDGE FORGE
+// KNOWLEDGE FORGE — echo.knowledge.search
 // ============================================
 
 export interface KnowledgeSearchResult {
@@ -114,18 +143,15 @@ export async function searchKnowledge(
   query: string,
   options?: { category?: string; limit?: number }
 ): Promise<KnowledgeSearchResult> {
-  return sdkFetch<KnowledgeSearchResult>('/knowledge/search', {
-    method: 'POST',
-    body: {
-      query,
-      ...(options?.category ? { category: options.category } : {}),
-      limit: options?.limit ?? 5,
-    },
+  return sdkInvoke<KnowledgeSearchResult>('echo.knowledge.search', {
+    q: query,
+    ...(options?.category ? { category: options.category } : {}),
+    limit: options?.limit ?? 5,
   });
 }
 
 // ============================================
-// SHARED BRAIN
+// SHARED BRAIN — echo.context.remember / recall
 // ============================================
 
 export interface BrainIngestResult {
@@ -134,7 +160,7 @@ export interface BrainIngestResult {
 }
 
 /**
- * Store a memory in the ECHO Shared Brain.
+ * Store a memory in the ECHO Shared Brain (memory_spine).
  * Use for persisting decisions, events, and important interactions.
  */
 export async function ingestToBrain(
@@ -142,15 +168,12 @@ export async function ingestToBrain(
   importance: number,
   tags: string[]
 ): Promise<BrainIngestResult> {
-  return sdkFetch<BrainIngestResult>('/brain/ingest', {
-    method: 'POST',
-    body: {
-      instance_id: 'rah-midland-bnb',
-      role: 'assistant',
-      content,
-      importance: Math.min(10, Math.max(1, importance)),
-      tags,
-    },
+  return sdkInvoke<BrainIngestResult>('echo.context.remember', {
+    kind: 'episode',
+    content,
+    source_agent: 'rah-midland-bnb',
+    importance: Math.min(1, Math.max(0, importance / 10)), // legacy 1–10 → 0–1
+    tags,
   });
 }
 
@@ -172,17 +195,14 @@ export async function searchBrain(
   query: string,
   limit: number = 10
 ): Promise<BrainSearchResult> {
-  return sdkFetch<BrainSearchResult>('/brain/search', {
-    method: 'POST',
-    body: {
-      query,
-      limit,
-    },
+  return sdkInvoke<BrainSearchResult>('echo.context.recall', {
+    query,
+    limit,
   });
 }
 
 // ============================================
-// CHAT / AI GENERATION
+// CHAT / AI GENERATION — echo.claude.oauth
 // ============================================
 
 export interface ChatResponse {
@@ -192,25 +212,31 @@ export interface ChatResponse {
 }
 
 /**
- * Generate an AI response using ECHO Chat (14 personalities, multi-LLM).
- * Used by the Steven AI concierge and other AI features.
+ * Generate an AI response via the Echo Claude OAuth gateway (Max OAuth, $0).
+ * The `personality` field is preserved as a system prompt prefix for back-compat
+ * with the old `echo-chat` worker shape — under the hood, all flows now go
+ * through Claude (Anthropic Messages API).
+ *
+ * For new code, prefer `echoChat` from './echo-llm.ts' directly — it returns
+ * extraction telemetry and gives finer control over model/timeout.
  */
 export async function generateChatResponse(
   messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>,
   personality: string = 'echo_prime'
 ): Promise<ChatResponse> {
-  return sdkFetch<ChatResponse>('/worker/call', {
-    method: 'POST',
-    body: {
-      worker: 'echo-chat',
-      path: '/chat',
-      method: 'POST',
-      body: {
-        messages,
-        personality,
-        max_tokens: 1024,
-      },
-    },
+  const systemPrefix = personality && personality !== 'echo_prime'
+    ? `[Personality profile: ${personality}]\n\n`
+    : '';
+
+  const result = await echoChat(messages, {
+    system: systemPrefix || undefined,
+    maxTokens: 1024,
     timeoutMs: 30000,
   });
+
+  return {
+    text: result.text,
+    model: process.env.LLM_MODEL || 'claude-haiku-4-5-20251001',
+    tokens_used: 0, // gate doesn't surface this today; left at 0 for API stability
+  };
 }

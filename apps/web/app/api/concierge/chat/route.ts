@@ -1,16 +1,15 @@
 /**
  * AI Concierge Chat API
  * Right at Home BnB - Real AI-powered guest assistant
- * Uses Cloudflare Workers AI for actual conversational responses
+ * Uses the Echo SDK gate (echo.claude.oauth, $0 Max-OAuth) for conversational
+ * responses. Replaced Cloudflare Workers AI per NO-CLOUDFLARE doctrine.
  *
  * POST /api/concierge/chat
  * @author ECHO OMEGA PRIME
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-
-const CF_API_TOKEN = process.env.CF_AI_TOKEN || process.env.CLOUDFLARE_API_TOKEN || '';
-const CF_ACCOUNT_ID = process.env.CF_ACCOUNT_ID || 'b9af3a4bf161132bb7e5d3d365fb8bb0';
+import { echoChat, isEchoLLMConfigured } from '@/lib/echo-llm';
 
 // In-memory conversation history per session (last 10 messages)
 const conversations = new Map<string, Array<{ role: string; content: string }>>();
@@ -106,32 +105,20 @@ RULES:
 async function generateAiResponse(
   messages: Array<{ role: string; content: string }>
 ): Promise<string> {
-  if (!CF_API_TOKEN) {
+  // If the Echo LLM path isn't configured (no gate URL / no sovereign key),
+  // fall through to the static keyword-driven concierge responses.
+  if (!isEchoLLMConfigured()) {
     return getFallbackResponse(messages[messages.length - 1]?.content || '');
   }
 
   try {
-    const response = await fetch(
-      `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/ai/run/@cf/meta/llama-3.1-8b-instruct`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${CF_API_TOKEN}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...messages],
-          max_tokens: 300,
-          temperature: 0.7,
-        }),
-      }
-    );
-
-    if (response.ok) {
-      const data = (await response.json()) as any;
-      const text = data?.result?.response?.trim();
-      if (text) return text;
-    }
+    const result = await echoChat(messages, {
+      system: SYSTEM_PROMPT,
+      maxTokens: 300,
+      temperature: 0.7,
+    });
+    if (result.text) return result.text;
+    console.warn('[Concierge Chat] Echo SDK returned empty text; source=', result.source);
   } catch (err) {
     console.error('[Concierge Chat] AI error:', err);
   }

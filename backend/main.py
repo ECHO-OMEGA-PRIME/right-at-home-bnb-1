@@ -6,6 +6,8 @@ FastAPI backend for property management, guest CRM,
 cleaner tracking, and AI concierge services.
 """
 
+import os
+
 from fastapi import FastAPI, HTTPException, Depends, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -78,10 +80,21 @@ app = FastAPI(
 # CORS middleware for web/mobile access
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure for production
+    # CORS allowlist — driven by CORS_ALLOWED_ORIGINS (comma-separated). Falls
+    # back to a permissive default in dev so local Next.js + Expo can hit the
+    # API without ceremony. Production deployments MUST set the env var
+    # (e.g. "https://rah-midland.com,https://www.rah-midland.com").
+    allow_origins=[
+        o.strip()
+        for o in os.environ.get(
+            "CORS_ALLOWED_ORIGINS",
+            "http://localhost:3000,http://localhost:19006,https://rah-midland.com,https://www.rah-midland.com",
+        ).split(",")
+        if o.strip()
+    ],
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"]
+    allow_headers=["*"],
 )
 
 # Import routers - Core API
@@ -292,10 +305,13 @@ async def get_stats():
     }
 
 if __name__ == "__main__":
+    # Port defaults to 8001 on FORGE so we don't collide with the SDK gate
+    # at :8000. Dev usually keeps PORT unset and uses the legacy 8000 default
+    # via launchers. Reload is off unless RAH_DEV_RELOAD=1 (systemd path).
     uvicorn.run(
         "main:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=True,
-        log_level="info"
+        host=os.environ.get("RAH_HOST", "0.0.0.0"),
+        port=int(os.environ.get("PORT", "8001")),
+        reload=os.environ.get("RAH_DEV_RELOAD", "0") == "1",
+        log_level=os.environ.get("LOG_LEVEL", "info").lower(),
     )

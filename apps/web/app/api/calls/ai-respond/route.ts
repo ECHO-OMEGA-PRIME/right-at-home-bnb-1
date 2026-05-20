@@ -14,10 +14,11 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { echoChat, isEchoLLMConfigured } from '@/lib/echo-llm';
 
 const STEVEN_PHONE = process.env.STEVEN_PHONE || '+14325591904';
-const CF_API_TOKEN = process.env.CF_AI_TOKEN || process.env.CLOUDFLARE_API_TOKEN || '';
-const CF_ACCOUNT_ID = process.env.CF_ACCOUNT_ID || 'b9af3a4bf161132bb7e5d3d365fb8bb0';
+// CF Workers AI was the primary AI provider; replaced by Echo SDK gate
+// (echo.claude.oauth) per NO-CLOUDFLARE doctrine. GROQ remains as fallback.
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const BASE_URL = process.env.NEXT_PUBLIC_URL || 'https://rah-midland.com';
 const VOICE = 'voice="Polly.Matthew-Neural" language="en-US"';
@@ -156,44 +157,33 @@ Remember: You are on a phone call. Speak naturally, avoid lists or special chara
 
 /**
  * Call AI API to generate a response.
- * Priority: Cloudflare Workers AI (free) -> GROQ -> fallback
+ * Priority: Echo SDK gate (echo.claude.oauth, $0 Max-OAuth) -> GROQ -> static fallback.
+ * Replaced direct Cloudflare Workers AI calls per NO-CLOUDFLARE doctrine.
  */
 async function generateAiResponse(userMessage: string, systemPrompt: string): Promise<{ text: string; shouldEscalate: boolean }> {
-  // Try Cloudflare Workers AI first (free, reliable)
-  if (CF_API_TOKEN) {
+  const escalationPhrases = ['connect you with steven', 'transfer you to steven', 'let me get steven', 'put you through to steven', 'connect you directly'];
+
+  // Primary: Echo SDK gate (FORGE) via cloudflared tunnel — $0 Max-OAuth path.
+  if (isEchoLLMConfigured()) {
     try {
-      const cfResponse = await fetch(
-        `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/ai/run/@cf/meta/llama-3.1-8b-instruct`,
+      const result = await echoChat(
+        [{ role: 'user', content: userMessage }],
         {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${CF_API_TOKEN}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            messages: [
-              { role: 'system', content: systemPrompt },
-              { role: 'user', content: userMessage },
-            ],
-            max_tokens: 200,
-            temperature: 0.7,
-          }),
+          system: systemPrompt,
+          maxTokens: 200,
+          temperature: 0.7,
+          // Phone calls are latency-sensitive; cap waits short and fall through to GROQ if slow.
+          timeoutMs: 12000,
         }
       );
-
-      if (cfResponse.ok) {
-        const cfData = await cfResponse.json() as any;
-        const aiText = cfData?.result?.response?.trim() || '';
-        if (aiText) {
-          const escalationPhrases = ['connect you with steven', 'transfer you to steven', 'let me get steven', 'put you through to steven', 'connect you directly'];
-          const shouldEscalate = escalationPhrases.some(p => aiText.toLowerCase().includes(p));
-          return { text: aiText, shouldEscalate };
-        }
-      } else {
-        console.error('[AI Respond] CF Workers AI error:', cfResponse.status);
+      const aiText = (result.text || '').trim();
+      if (aiText) {
+        const shouldEscalate = escalationPhrases.some((p) => aiText.toLowerCase().includes(p));
+        return { text: aiText, shouldEscalate };
       }
-    } catch (cfErr) {
-      console.error('[AI Respond] CF Workers AI exception:', cfErr);
+      console.warn('[AI Respond] Echo SDK returned empty text; source=', result.source);
+    } catch (echoErr) {
+      console.error('[AI Respond] Echo SDK exception:', echoErr);
     }
   }
 
@@ -222,7 +212,6 @@ async function generateAiResponse(userMessage: string, systemPrompt: string): Pr
         const data = await response.json();
         const aiText = data.choices?.[0]?.message?.content?.trim() || '';
         if (aiText) {
-          const escalationPhrases = ['connect you with steven', 'transfer you to steven', 'let me get steven', 'put you through to steven', 'connect you directly'];
           const shouldEscalate = escalationPhrases.some(p => aiText.toLowerCase().includes(p));
           return { text: aiText, shouldEscalate };
         }
@@ -233,7 +222,7 @@ async function generateAiResponse(userMessage: string, systemPrompt: string): Pr
   }
 
   // No AI provider available
-  console.error('[AI Respond] No AI provider available (CF_AI_TOKEN and GROQ_API_KEY both failed)');
+  console.error('[AI Respond] No AI provider available (Echo SDK gate and GROQ both failed)');
   return { text: 'I apologize, but I am having a technical issue right now. Let me connect you with Steven.', shouldEscalate: true };
 }
 

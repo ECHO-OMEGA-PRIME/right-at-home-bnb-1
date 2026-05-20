@@ -23,12 +23,14 @@
 | Database | Prisma ORM + Supabase PostgreSQL | ✅ PRODUCTION |
 | Auth | Firebase Authentication | CONFIGURED |
 | Real-time | Firebase Firestore | CONFIGURED |
-| Backend API | Next.js API Routes + Cloudflare Worker fallback | PARTIAL |
+| Backend API | Next.js API Routes + FastAPI on FORGE (`api.rah-midland.com` via cloudflared tunnel) | ✅ CODE READY — deploy via `backend/deploy/install-forge.sh` |
 | Mobile App | React Native + Expo | UI BUILT, NOT DEPLOYED |
 | Desktop App | Electron + React | UI BUILT, NOT DEPLOYED |
 | Smart Locks | Tuya Cloud API (ARPHA D280W WiFi) | API LIVE, 3 LOCKS CONNECTED |
 | Channel Manager | OwnerRez (free trial) — decision pending | PENDING |
 | Voice/Calls | Twilio (calls + SMS) | ✅ CREDENTIALS SET |
+| AI / LLM | Echo SDK gate → `echo.claude.oauth` ($0 Max-OAuth, primary) + GROQ fallback. Replaced Cloudflare Workers AI 2026-05-20. | ✅ CODE READY |
+| Object Storage | MinIO on ANVIL `192.168.1.96:9000` (S3-compatible). Replaced Cloudflare R2 2026-05-20. | ✅ CODE READY |
 | AI Concierge | Groq + fallback to SENTINEL-OMNI | CODE READY |
 | TTS | ElevenLabs v3 | CODE READY |
 | Payments | Stripe + Square | CODE EXISTS, NOT CONFIGURED |
