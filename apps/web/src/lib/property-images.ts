@@ -1,10 +1,12 @@
 /**
  * Property Images Configuration
- * Maps all Right At Home BnB properties to their VRBO image URLs
+ * Pulls real property photos from Prisma PropertyPhoto table
+ * Falls back to VRBO listing URLs for properties without DB photos
  *
- * VRBO Image URL Pattern: https://images.trvl-media.com/lodging/{expedia_id}
- * Or use VRBO listing pages for scraping
+ * @author ECHO OMEGA PRIME
  */
+
+import prisma from '@/lib/prisma';
 
 export interface PropertyImage {
   id: string;
@@ -26,8 +28,8 @@ export interface PropertyImages {
 const VRBO_BASE = 'https://www.vrbo.com';
 const getVrboUrl = (id: string) => `${VRBO_BASE}/${id}`;
 
-// Placeholder image for properties without photos
-const PLACEHOLDER = 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800&h=600&fit=crop';
+// Default placeholder — only used when DB has no photos AND no VRBO ID
+const PLACEHOLDER = '/images/property-placeholder.jpg';
 
 /**
  * All 25 Right At Home BnB Properties with VRBO IDs and image configuration
@@ -350,38 +352,87 @@ export const propertyImages: PropertyImages[] = [
 ];
 
 /**
- * Get images for a specific property by ID
+ * Get images for a specific property from DB, falling back to static VRBO data
  */
-export function getPropertyImages(propertyId: string): PropertyImages | undefined {
+export function getPropertyImagesStatic(propertyId: string): PropertyImages | undefined {
   return propertyImages.find(p => p.propertyId === propertyId);
 }
 
 /**
- * Get cover image URL for a property
+ * Get property images from Prisma DB (preferred — real photos)
  */
-export function getCoverImage(propertyId: string): string {
-  const property = getPropertyImages(propertyId);
-  return property?.coverImage || PLACEHOLDER;
+export async function getPropertyImagesFromDB(propertyId: string): Promise<PropertyImage[]> {
+  try {
+    const photos = await prisma.propertyPhoto.findMany({
+      where: { propertyId },
+      orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }],
+    });
+
+    if (photos.length > 0) {
+      return photos.map((p) => ({
+        id: p.id,
+        url: p.url,
+        alt: p.caption || 'Property photo',
+        isPrimary: p.isPrimary,
+      }));
+    }
+  } catch {
+    // DB not available — fall through to static
+  }
+
+  // Fallback to static VRBO data
+  const staticProp = propertyImages.find(p => p.propertyId === propertyId);
+  return staticProp?.images || [];
 }
 
 /**
- * Get all images for a property
+ * Get cover image URL — DB first, then static fallback
  */
-export function getAllImages(propertyId: string): PropertyImage[] {
-  const property = getPropertyImages(propertyId);
-  return property?.images || [];
+export async function getCoverImage(propertyId: string): Promise<string> {
+  try {
+    const primary = await prisma.propertyPhoto.findFirst({
+      where: { propertyId, isPrimary: true },
+    });
+    if (primary) return primary.url;
+
+    const first = await prisma.propertyPhoto.findFirst({
+      where: { propertyId },
+      orderBy: { sortOrder: 'asc' },
+    });
+    if (first) return first.url;
+  } catch {
+    // DB not available
+  }
+
+  const staticProp = propertyImages.find(p => p.propertyId === propertyId);
+  return staticProp?.coverImage || PLACEHOLDER;
+}
+
+/**
+ * Synchronous cover image from static data (for non-async contexts)
+ */
+export function getCoverImageSync(propertyId: string): string {
+  const staticProp = propertyImages.find(p => p.propertyId === propertyId);
+  return staticProp?.coverImage || PLACEHOLDER;
+}
+
+/**
+ * Get all images for a property (async, DB-backed)
+ */
+export async function getAllImages(propertyId: string): Promise<PropertyImage[]> {
+  return getPropertyImagesFromDB(propertyId);
 }
 
 /**
  * Get VRBO URL for a property
  */
 export function getVrboListingUrl(propertyId: string): string | undefined {
-  const property = getPropertyImages(propertyId);
+  const property = propertyImages.find(p => p.propertyId === propertyId);
   return property?.vrboUrl;
 }
 
 /**
- * Property image map for quick lookup
+ * Property image map for quick lookup (static fallback)
  */
 export const propertyImageMap: Record<string, string> = propertyImages.reduce((acc, p) => {
   acc[p.propertyId] = p.coverImage;

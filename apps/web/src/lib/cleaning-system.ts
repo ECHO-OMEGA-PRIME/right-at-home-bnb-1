@@ -135,58 +135,8 @@ export interface ServiceProvider {
   notes?: string;
 }
 
-export const serviceProviders: ServiceProvider[] = [
-  {
-    id: 'yard-1',
-    name: 'Midland Lawn Care',
-    company: 'Midland Lawn & Landscape',
-    type: 'yard',
-    phone: '(432) 555-LAWN',
-    email: 'service@midlandlawn.com',
-    notes: 'Regular yard service. Can usually come within 24-48 hours.'
-  },
-  {
-    id: 'handy-1',
-    name: 'Miguel Rodriguez',
-    company: 'Independent Handyman',
-    type: 'handyman',
-    phone: '(432) 555-0147',
-    notes: 'On-call handyman. Great with door handles, minor repairs, drywall, painting.'
-  },
-  {
-    id: 'plumb-1',
-    name: 'West Texas Plumbing',
-    company: 'West Texas Plumbing Co.',
-    type: 'plumber',
-    phone: '(432) 555-PIPE',
-    email: 'dispatch@wtxplumbing.com',
-    notes: '24/7 emergency service available.'
-  },
-  {
-    id: 'elec-1',
-    name: 'Permian Electric',
-    company: 'Permian Basin Electric',
-    type: 'electrician',
-    phone: '(432) 555-VOLT',
-    notes: 'Licensed electrician. Call for any electrical issues.'
-  },
-  {
-    id: 'hvac-1',
-    name: 'Basin Air & Heat',
-    company: 'Basin Air Conditioning',
-    type: 'hvac',
-    phone: '(432) 555-COOL',
-    notes: 'HVAC specialists. Emergency service for AC down in summer.'
-  },
-  {
-    id: 'appl-1',
-    name: 'Appliance Pros',
-    company: 'Appliance Repair Pros',
-    type: 'appliance',
-    phone: '(432) 555-0199',
-    notes: 'Repairs for washers, dryers, dishwashers, refrigerators.'
-  }
-];
+// Service providers — add real vendor contacts here
+export const serviceProviders: ServiceProvider[] = [];
 
 // ============================================
 // MASTER CHECKLIST (Same for all properties)

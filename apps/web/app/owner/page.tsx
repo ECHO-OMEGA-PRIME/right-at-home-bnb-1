@@ -13,7 +13,7 @@
  * @owner Right at Home BnB - Midland, TX
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import {
@@ -28,6 +28,7 @@ import {
 } from 'recharts';
 import DashboardShell from '@/components/layout/DashboardShell';
 import { useAuth } from '@/context/AuthContext';
+import { useOwnerDashboard } from '@/lib/api';
 import toast from 'react-hot-toast';
 
 // Brand Colors
@@ -63,91 +64,44 @@ interface DashboardData {
   occupancy_change_percent: number;
 }
 
-// Mock data generator
-const generateMockData = (): DashboardData => ({
-  owner_id: 'owner_1',
-  owner_name: 'Property Owner',
-  properties_count: 3,
-  total_properties: [
-    { id: 'prop_1', name: 'Castleford Estate', status: 'ACTIVE', current_booking: { guest: 'John Smith', check_out: '2026-01-20' } },
-    { id: 'prop_2', name: 'Basin View Cottage', status: 'ACTIVE', current_booking: null },
-    { id: 'prop_3', name: 'Desert Rose Villa', status: 'MAINTENANCE', current_booking: null },
-  ],
-  monthly_earnings: 18500,
-  monthly_expenses: 6200,
-  monthly_net_payout: 12300,
-  ytd_revenue: 185000,
-  ytd_expenses: 62000,
-  ytd_net_payout: 123000,
-  avg_occupancy_rate: 0.78,
-  avg_nightly_rate: 245,
-  avg_guest_rating: 4.85,
-  upcoming_bookings: [
-    { id: 'book_1', property: 'Castleford Estate', guest_name: 'Sarah Johnson', check_in: '2026-01-22', check_out: '2026-01-25', total: 1250, platform: 'VRBO' },
-    { id: 'book_2', property: 'Basin View Cottage', guest_name: 'Michael Chen', check_in: '2026-01-24', check_out: '2026-01-27', total: 980, platform: 'Airbnb' },
-    { id: 'book_3', property: 'Castleford Estate', guest_name: 'Emily Davis', check_in: '2026-01-28', check_out: '2026-02-02', total: 2100, platform: 'Direct' },
-  ],
-  recent_expenses: [
-    { id: 'exp_1', property: 'Castleford Estate', category: 'Cleaning', amount: 150, date: '2026-01-17', vendor: "Maria's Cleaning" },
-    { id: 'exp_2', property: 'Basin View Cottage', category: 'Maintenance', amount: 275, date: '2026-01-15', vendor: 'ABC Plumbing' },
-    { id: 'exp_3', property: 'Desert Rose Villa', category: 'Supplies', amount: 89.50, date: '2026-01-14', vendor: 'Costco' },
-  ],
-  pending_maintenance: [
-    { id: 'maint_1', property: 'Desert Rose Villa', issue: 'HVAC not cooling properly', priority: 'HIGH', reported_at: '2026-01-16', status: 'SCHEDULED' },
-    { id: 'maint_2', property: 'Castleford Estate', issue: 'Garbage disposal making noise', priority: 'MEDIUM', reported_at: '2026-01-17', status: 'PENDING' },
-  ],
-  revenue_change_percent: 8.5,
-  occupancy_change_percent: 3.2,
-});
-
-// Revenue chart data
-const generateRevenueChartData = () => {
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  return months.map((month, i) => ({
-    month,
-    revenue: 12000 + Math.floor(Math.random() * 8000) + (i * 500),
-    expenses: 3500 + Math.floor(Math.random() * 2000),
-    net: 8500 + Math.floor(Math.random() * 6000) + (i * 400),
-  }));
+// Default empty data (shown while loading)
+const EMPTY_DATA: DashboardData = {
+  owner_id: '',
+  owner_name: '',
+  properties_count: 0,
+  total_properties: [],
+  monthly_earnings: 0,
+  monthly_expenses: 0,
+  monthly_net_payout: 0,
+  ytd_revenue: 0,
+  ytd_expenses: 0,
+  ytd_net_payout: 0,
+  avg_occupancy_rate: 0,
+  avg_nightly_rate: 0,
+  avg_guest_rating: 0,
+  upcoming_bookings: [],
+  recent_expenses: [],
+  pending_maintenance: [],
+  revenue_change_percent: 0,
+  occupancy_change_percent: 0,
 };
-
-// Expense breakdown data
-const generateExpenseBreakdown = () => [
-  { name: 'Cleaning', value: 2400, color: '#500000' },
-  { name: 'Maintenance', value: 1800, color: '#C4A777' },
-  { name: 'Utilities', value: 1200, color: '#722F37' },
-  { name: 'Supplies', value: 450, color: '#8B4513' },
-  { name: 'Other', value: 350, color: '#6B7280' },
-];
 
 export default function OwnerDashboardPage() {
   const { appUser, isOwner } = useAuth();
-  const [loading, setLoading] = useState(true);
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [revenueData] = useState(generateRevenueChartData);
-  const [expenseData] = useState(generateExpenseBreakdown);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const { data: apiData, isLoading: loading, refetch, isRefetching } = useOwnerDashboard();
 
-  useEffect(() => {
-    // Simulate API call
-    const fetchData = async () => {
-      setLoading(true);
-      await new Promise(resolve => setTimeout(resolve, 500));
-      setData(generateMockData());
-      setLoading(false);
-    };
-    fetchData();
-  }, []);
+  const data: DashboardData = apiData || EMPTY_DATA;
+  const revenueData: { month: string; revenue: number; expenses: number; net: number }[] = apiData?.revenue_chart || [];
+  const expenseData: { name: string; value: number; color: string }[] = apiData?.expense_breakdown || [];
 
   const handleRefresh = async () => {
-    setIsRefreshing(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setData(generateMockData());
-    setIsRefreshing(false);
+    await refetch();
     toast.success('Dashboard refreshed');
   };
 
-  if (loading || !data) {
+  const isRefreshing = isRefetching;
+
+  if (loading && !apiData) {
     return (
       <DashboardShell>
         <div className="flex items-center justify-center min-h-screen">
@@ -218,7 +172,7 @@ export default function OwnerDashboardPage() {
               icon={TrendingUp}
               color="text-[#500000]"
               bgColor="bg-[#500000]/10"
-              subtext={`After ${((data.monthly_expenses / data.monthly_earnings) * 100).toFixed(0)}% expenses`}
+              subtext={`After ${data.monthly_earnings > 0 ? ((data.monthly_expenses / data.monthly_earnings) * 100).toFixed(0) : 0}% expenses`}
             />
             <MetricCard
               label="Occupancy Rate"

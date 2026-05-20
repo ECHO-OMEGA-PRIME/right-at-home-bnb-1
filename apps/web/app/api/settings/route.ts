@@ -1,116 +1,111 @@
 /**
  * Right at Home BnB - Settings API
  * Stores owner preferences including AI call routing settings
+ * Uses Prisma Setting model for persistent storage
  * @author ECHO OMEGA PRIME
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
+import { prisma } from '@/lib/prisma';
 
-// In production, this would be stored in Firebase/PostgreSQL
-// For now, using a simple in-memory store that persists via cookies
-interface OwnerSettings {
-  callRouting: {
-    aiCallsEnabled: boolean;
-    availabilityMode: 'always' | 'scheduled' | 'manual';
-    quietHoursEnabled: boolean;
-    quietHoursStart: string;
-    quietHoursEnd: string;
-    emergencyBypass: boolean;
-    emergencyKeywords: string[];
-    voicemailEnabled: boolean;
-    callForwardNumber: string;
-    maxRingsBeforeAI: number;
-    aiGreeting: string;
-    notifyOnAICall: boolean;
-    callTranscriptionEnabled: boolean;
-  };
-  updatedAt: string;
-}
-
-const DEFAULT_SETTINGS: OwnerSettings = {
-  callRouting: {
-    aiCallsEnabled: false,
-    availabilityMode: 'scheduled',
-    quietHoursEnabled: true,
-    quietHoursStart: '22:00',
-    quietHoursEnd: '07:00',
-    emergencyBypass: true,
-    emergencyKeywords: ['emergency', 'urgent', 'help', 'fire', 'flood', 'locked out', 'police'],
-    voicemailEnabled: true,
-    callForwardNumber: '(432) 559-1904',
-    maxRingsBeforeAI: 4,
-    aiGreeting: "Hello! You've reached Right at Home BnB. I'm the AI concierge assistant. How can I help you today?",
-    notifyOnAICall: true,
-    callTranscriptionEnabled: true,
-  },
-  updatedAt: new Date().toISOString(),
+// Default call routing settings
+const DEFAULT_CALL_ROUTING = {
+  aiCallsEnabled: false,
+  aiAssistantEnabled: true,
+  availabilityMode: 'scheduled',
+  quietHoursEnabled: true,
+  quietHoursStart: '22:00',
+  quietHoursEnd: '07:00',
+  emergencyBypass: true,
+  emergencyKeywords: ['emergency', 'urgent', 'help', 'fire', 'flood', 'locked out', 'police'],
+  voicemailEnabled: true,
+  callForwardNumber: '(432) 559-1904',
+  maxRingsBeforeAI: 4,
+  aiGreeting: "Hello! You've reached Right at Home BnB. I'm the AI concierge assistant. How can I help you today?",
+  notifyOnAICall: true,
+  callTranscriptionEnabled: true,
+  aiEscalateKeywords: ['speak to someone', 'talk to steven', 'real person', 'human', 'manager', 'complaint', 'refund'],
+  maxAiTurns: 3,
 };
 
-// In-memory storage (in production, use Firebase)
-let settingsStore: OwnerSettings = { ...DEFAULT_SETTINGS };
+async function getSettings() {
+  const rows = await prisma.setting.findMany({
+    where: {
+      key: { startsWith: 'callRouting.' },
+    },
+  });
 
-export async function GET(request: NextRequest) {
-  try {
-    // Try to load from cookie first
-    const cookieStore = await cookies();
-    const savedSettings = cookieStore.get('rah_settings');
+  if (rows.length === 0) {
+    return { callRouting: DEFAULT_CALL_ROUTING, updatedAt: new Date().toISOString() };
+  }
 
-    if (savedSettings) {
-      try {
-        const parsed = JSON.parse(savedSettings.value);
-        settingsStore = { ...DEFAULT_SETTINGS, ...parsed };
-      } catch {
-        // Invalid cookie, use defaults
-      }
+  // Build settings from individual keys
+  const callRouting: Record<string, any> = { ...DEFAULT_CALL_ROUTING };
+  let updatedAt = new Date().toISOString();
+
+  for (const row of rows) {
+    const field = row.key.replace('callRouting.', '');
+    try {
+      callRouting[field] = JSON.parse(row.value);
+    } catch {
+      callRouting[field] = row.value;
     }
+    updatedAt = row.updatedAt.toISOString();
+  }
 
-    return NextResponse.json(settingsStore);
-  } catch (error) {
-    console.error('Error fetching settings:', error);
-    return NextResponse.json(DEFAULT_SETTINGS);
+  return { callRouting, updatedAt };
+}
+
+export async function GET() {
+  try {
+    const settings = await getSettings();
+    return NextResponse.json(settings);
+  } catch (error: any) {
+    console.error('[Settings GET]', error);
+    // Return defaults on error so the app doesn't break
+    return NextResponse.json({
+      callRouting: DEFAULT_CALL_ROUTING,
+      updatedAt: new Date().toISOString(),
+    });
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+    const callRouting = body.callRouting || body;
 
-    // Merge with existing settings
-    settingsStore = {
-      ...settingsStore,
-      ...body,
-      updatedAt: new Date().toISOString(),
-    };
+    // Save each setting as a key-value pair in Prisma
+    for (const [key, value] of Object.entries(callRouting)) {
+      const settingKey = `callRouting.${key}`;
+      const settingValue = typeof value === 'string' ? value : JSON.stringify(value);
 
-    // Create response with cookie
-    const response = NextResponse.json({
+      await prisma.setting.upsert({
+        where: { key: settingKey },
+        update: { value: settingValue },
+        create: { key: settingKey, value: settingValue },
+      });
+    }
+
+    const settings = await getSettings();
+
+    return NextResponse.json({
       success: true,
-      settings: settingsStore,
+      settings,
     });
-
-    // Save to cookie (in production, save to database)
-    response.cookies.set('rah_settings', JSON.stringify(settingsStore), {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 60 * 60 * 24 * 365, // 1 year
-    });
-
-    return response;
-  } catch (error) {
-    console.error('Error saving settings:', error);
-    return NextResponse.json({ error: 'Failed to save settings' }, { status: 500 });
+  } catch (error: any) {
+    console.error('[Settings POST]', error);
+    return NextResponse.json({ error: error.message || 'Failed to save settings' }, { status: 500 });
   }
 }
 
-// API to check current AI status (used by phone system)
+// Check current AI status (used by phone system)
 export async function PUT(request: NextRequest) {
   try {
     const { action } = await request.json();
 
     if (action === 'check-ai-status') {
-      const settings = settingsStore.callRouting;
+      const { callRouting: settings } = await getSettings();
 
       if (!settings.aiCallsEnabled) {
         return NextResponse.json({
@@ -120,7 +115,6 @@ export async function PUT(request: NextRequest) {
         });
       }
 
-      // Check if currently in quiet hours
       if (settings.availabilityMode === 'scheduled' && settings.quietHoursEnabled) {
         const now = new Date();
         const currentMinutes = now.getHours() * 60 + now.getMinutes();
@@ -162,8 +156,8 @@ export async function PUT(request: NextRequest) {
     }
 
     return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
-  } catch (error) {
-    console.error('Error checking AI status:', error);
-    return NextResponse.json({ error: 'Failed to check AI status' }, { status: 500 });
+  } catch (error: any) {
+    console.error('[Settings PUT]', error);
+    return NextResponse.json({ error: error.message || 'Failed to check AI status' }, { status: 500 });
   }
 }

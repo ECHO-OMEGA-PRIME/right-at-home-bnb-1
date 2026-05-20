@@ -707,7 +707,7 @@ async def upload_photo(
     # For now, return a placeholder URL
     timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
     filename = f"pool_{photo_type}_{job_id or 'new'}_{timestamp}.{file.filename.split('.')[-1]}"
-    placeholder_url = f"https://storage.rightathomebnb.com/pool-photos/{filename}"
+    placeholder_url = f"https://storage.rah-midland.com/pool-photos/{filename}"
 
     logger.info(f"Photo uploaded: {filename} (type: {photo_type}, job: {job_id})")
 

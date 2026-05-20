@@ -116,7 +116,7 @@ class EmailService:
     
     def __init__(self, api_key: str = None):
         self.api_key = api_key
-        self.from_email = "reservations@rightathomebnb.com"
+        self.from_email = "reservations@rah-midland.com"
         
     async def send_email(self, to: str, subject: str, html: str) -> bool:
         try:

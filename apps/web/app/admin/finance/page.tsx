@@ -19,6 +19,7 @@
 
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAdminFinance } from '@/lib/api';
 import {
   DollarSign, TrendingUp, TrendingDown, BarChart3, PieChart,
   Calendar, Download, Filter, ArrowUpRight, ArrowDownRight,
@@ -97,155 +98,7 @@ interface WeeklyPayout {
 type SortField = 'propertyName' | 'grossRevenue' | 'expenses' | 'netProfit' | 'occupancyPercent' | 'profitMarginPercent';
 type SortDirection = 'asc' | 'desc';
 
-// ============================================
-// MOCK DATA
-// ============================================
-
-const MOCK_PROPERTIES: Property[] = [
-  { id: 'prop_1', name: 'Castleford Estate', address: '123 Main St', bedrooms: 4, nightlyRate: 225 },
-  { id: 'prop_2', name: 'Basin View Cottage', address: '456 Oak Ave', bedrooms: 3, nightlyRate: 195 },
-  { id: 'prop_3', name: 'Desert Rose Villa', address: '789 Palm Dr', bedrooms: 3, nightlyRate: 185 },
-  { id: 'prop_4', name: 'Petroleum Plaza Suite', address: '321 Energy Blvd', bedrooms: 2, nightlyRate: 165 },
-  { id: 'prop_5', name: 'Lone Star Luxury', address: '555 Texas Way', bedrooms: 4, nightlyRate: 245 },
-  { id: 'prop_6', name: 'Midland Manor', address: '777 Heritage Ln', bedrooms: 3, nightlyRate: 195 },
-  { id: 'prop_7', name: 'Permian Paradise', address: '888 Basin Rd', bedrooms: 5, nightlyRate: 285 },
-  { id: 'prop_8', name: 'West Texas Retreat', address: '999 Sunset Dr', bedrooms: 2, nightlyRate: 155 },
-  { id: 'prop_9', name: 'Oil Field Oasis', address: '111 Drill Ave', bedrooms: 3, nightlyRate: 175 },
-  { id: 'prop_10', name: "Wildcatter's Rest", address: '222 Pioneer St', bedrooms: 4, nightlyRate: 215 },
-  { id: 'prop_11', name: 'Lincoln Green Ranch', address: '333 Lincoln Way', bedrooms: 5, nightlyRate: 295 },
-  { id: 'prop_12', name: 'Odessa Gateway', address: '444 Gateway Blvd', bedrooms: 2, nightlyRate: 145 },
-  { id: 'prop_13', name: 'Big Spring Haven', address: '555 Spring St', bedrooms: 3, nightlyRate: 185 },
-  { id: 'prop_14', name: 'Andrews Avenue', address: '666 Andrews Ave', bedrooms: 2, nightlyRate: 155 },
-  { id: 'prop_15', name: 'Seminole Suite', address: '777 Seminole Rd', bedrooms: 3, nightlyRate: 175 },
-  { id: 'prop_16', name: 'Crane Country', address: '888 Crane Dr', bedrooms: 4, nightlyRate: 225 },
-  { id: 'prop_17', name: 'Monahans Mesa', address: '999 Mesa Blvd', bedrooms: 3, nightlyRate: 195 },
-  { id: 'prop_18', name: 'Pecos Place', address: '101 Pecos Ave', bedrooms: 2, nightlyRate: 165 },
-  { id: 'prop_19', name: 'Fort Stockton Retreat', address: '202 Stockton St', bedrooms: 4, nightlyRate: 235 },
-  { id: 'prop_20', name: 'Alpine Escape', address: '303 Alpine Way', bedrooms: 3, nightlyRate: 205 },
-  { id: 'prop_21', name: 'Marfa Modern', address: '404 Marfa Rd', bedrooms: 2, nightlyRate: 175 },
-  { id: 'prop_22', name: 'Garfield Getaway', address: '505 Garfield Ln', bedrooms: 2, nightlyRate: 145 },
-];
-
-// Generate property financials with realistic data
-const generatePropertyFinancials = (): PropertyFinancials[] => {
-  return MOCK_PROPERTIES.map((prop, index) => {
-    const baseOccupancy = 65 + Math.random() * 30; // 65-95%
-    const bookedNights = Math.round((baseOccupancy / 100) * 31); // Days in month
-    const totalNights = 31;
-    const avgDailyRate = prop.nightlyRate * (0.9 + Math.random() * 0.2);
-    const grossRevenue = bookedNights * avgDailyRate;
-    const expenseRate = 0.18 + Math.random() * 0.12; // 18-30% expense ratio
-    const expenses = grossRevenue * expenseRate;
-    const netProfit = grossRevenue - expenses;
-    const profitMargin = (netProfit / grossRevenue) * 100;
-    const revPAR = grossRevenue / totalNights;
-
-    return {
-      propertyId: prop.id,
-      propertyName: prop.name,
-      grossRevenue: Math.round(grossRevenue),
-      expenses: Math.round(expenses),
-      netProfit: Math.round(netProfit),
-      occupancyPercent: Math.round(baseOccupancy),
-      profitMarginPercent: Math.round(profitMargin),
-      totalNights,
-      bookedNights,
-      avgDailyRate: Math.round(avgDailyRate),
-      revPAR: Math.round(revPAR),
-    };
-  });
-};
-
-// Generate monthly trend data (last 12 months)
-const generateMonthlyData = (): MonthlyData[] => {
-  const months = [
-    'Feb 2025', 'Mar 2025', 'Apr 2025', 'May 2025', 'Jun 2025',
-    'Jul 2025', 'Aug 2025', 'Sep 2025', 'Oct 2025', 'Nov 2025', 'Dec 2025', 'Jan 2026'
-  ];
-
-  return months.map((monthLabel, index) => {
-    const baseRevenue = 85000 + Math.sin(index / 2) * 15000 + Math.random() * 10000;
-    const expenses = baseRevenue * (0.22 + Math.random() * 0.08);
-    return {
-      month: `2025-${String(index + 2).padStart(2, '0')}`,
-      monthLabel: monthLabel.split(' ')[0],
-      revenue: Math.round(baseRevenue),
-      expenses: Math.round(expenses),
-      netProfit: Math.round(baseRevenue - expenses),
-    };
-  });
-};
-
-// Generate expense breakdown by tax category
-const generateExpenseBreakdown = (totalExpenses: number): ExpenseCategory[] => {
-  const categories = [
-    { category: 'Cleaning & Turnover', taxCategory: 'Line 7 - Cleaning/Maintenance', percent: 0.32 },
-    { category: 'Utilities', taxCategory: 'Line 17 - Utilities', percent: 0.18 },
-    { category: 'Maintenance & Repairs', taxCategory: 'Line 14 - Repairs', percent: 0.15 },
-    { category: 'Supplies', taxCategory: 'Line 15 - Supplies', percent: 0.12 },
-    { category: 'Insurance', taxCategory: 'Line 9 - Insurance', percent: 0.10 },
-    { category: 'Property Tax', taxCategory: 'Line 16 - Taxes', percent: 0.08 },
-    { category: 'Marketing & Advertising', taxCategory: 'Line 5 - Advertising', percent: 0.03 },
-    { category: 'Other', taxCategory: 'Line 19 - Other', percent: 0.02 },
-  ];
-
-  return categories.map(cat => ({
-    category: cat.category,
-    amount: Math.round(totalExpenses * cat.percent),
-    percentage: Math.round(cat.percent * 100),
-    taxCategory: cat.taxCategory,
-  }));
-};
-
-// Generate booking gaps
-const generateBookingGaps = (): BookingGap[] => {
-  const gaps: BookingGap[] = [];
-  const today = new Date();
-
-  MOCK_PROPERTIES.slice(0, 8).forEach((prop, index) => {
-    if (Math.random() > 0.4) { // 60% chance of having a gap
-      const startOffset = 3 + Math.floor(Math.random() * 10);
-      const gapDays = 3 + Math.floor(Math.random() * 5);
-      const startDate = new Date(today);
-      startDate.setDate(startDate.getDate() + startOffset);
-      const endDate = new Date(startDate);
-      endDate.setDate(endDate.getDate() + gapDays);
-
-      gaps.push({
-        propertyId: prop.id,
-        propertyName: prop.name,
-        startDate: startDate.toISOString().split('T')[0],
-        endDate: endDate.toISOString().split('T')[0],
-        gapDays,
-        suggestedDiscount: gapDays >= 5 ? 20 : gapDays >= 4 ? 15 : 10,
-        potentialRevenue: prop.nightlyRate * gapDays * 0.85,
-      });
-    }
-  });
-
-  return gaps.sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
-};
-
-// Generate weekly payout report
-const generateWeeklyPayouts = (): WeeklyPayout[] => {
-  return MOCK_PROPERTIES.slice(0, 10).map(prop => {
-    const grossBookings = Math.round(prop.nightlyRate * (5 + Math.random() * 3) * (2 + Math.random() * 2));
-    const platformFees = Math.round(grossBookings * 0.03);
-    const cleaningCosts = Math.round(85 + Math.random() * 50) * Math.ceil(Math.random() * 3);
-    const ownerPayout = grossBookings - platformFees;
-    const netToOwner = ownerPayout - cleaningCosts;
-
-    return {
-      propertyId: prop.id,
-      propertyName: prop.name,
-      grossBookings,
-      platformFees,
-      ownerPayout,
-      cleaningCosts,
-      netToOwner,
-    };
-  });
-};
+// Data loaded from API via useAdminFinance hook
 
 // ============================================
 // CHART COLORS
@@ -349,41 +202,24 @@ export default function AdminFinanceDashboard() {
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [showAllProperties, setShowAllProperties] = useState(false);
   const [selectedGap, setSelectedGap] = useState<string | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
 
-  // Data
-  const propertyFinancials = useMemo(() => generatePropertyFinancials(), []);
-  const monthlyData = useMemo(() => generateMonthlyData(), []);
-  const bookingGaps = useMemo(() => generateBookingGaps(), []);
-  const weeklyPayouts = useMemo(() => generateWeeklyPayouts(), []);
+  // API Data
+  const { data: apiData, isLoading, refetch, isRefetching } = useAdminFinance(dateRange);
 
-  // Calculate totals
-  const totals = useMemo(() => {
-    const totalRevenue = propertyFinancials.reduce((sum, p) => sum + p.grossRevenue, 0);
-    const totalExpenses = propertyFinancials.reduce((sum, p) => sum + p.expenses, 0);
-    const netProfit = totalRevenue - totalExpenses;
-    const avgOccupancy = Math.round(propertyFinancials.reduce((sum, p) => sum + p.occupancyPercent, 0) / propertyFinancials.length);
-    const avgRevPAR = Math.round(propertyFinancials.reduce((sum, p) => sum + p.revPAR, 0) / propertyFinancials.length);
-    const profitMargin = ((netProfit / totalRevenue) * 100).toFixed(1);
+  const propertyFinancials = apiData?.propertyFinancials || [];
+  const monthlyData = apiData?.monthlyData || [];
+  const bookingGaps = apiData?.bookingGaps || [];
+  const weeklyPayouts = apiData?.weeklyPayouts || [];
+  const expenseBreakdown = apiData?.expenseBreakdown || [];
 
-    // YTD multiplier based on selection
-    const multiplier = dateRange === 'mtd' ? 1 : dateRange === 'qtd' ? 3 : 12;
-
-    return {
-      totalRevenue: totalRevenue * multiplier,
-      totalExpenses: totalExpenses * multiplier,
-      netProfit: netProfit * multiplier,
-      avgOccupancy,
-      avgRevPAR,
-      profitMargin,
-    };
-  }, [propertyFinancials, dateRange]);
-
-  // Expense breakdown
-  const expenseBreakdown = useMemo(
-    () => generateExpenseBreakdown(totals.totalExpenses),
-    [totals.totalExpenses]
-  );
+  const totals = apiData?.totals || {
+    totalRevenue: 0,
+    totalExpenses: 0,
+    netProfit: 0,
+    avgOccupancy: 0,
+    avgRevPAR: 0,
+    profitMargin: 0,
+  };
 
   // Sorted properties
   const sortedProperties = useMemo(() => {
@@ -410,9 +246,7 @@ export default function AdminFinanceDashboard() {
 
   // Handle refresh
   const handleRefresh = async () => {
-    setRefreshing(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setRefreshing(false);
+    await refetch();
   };
 
   // Export handlers
@@ -453,6 +287,16 @@ export default function AdminFinanceDashboard() {
     return sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />;
   };
 
+  if (isLoading && !apiData) {
+    return (
+      <DashboardShell>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-2 border-[#500000]/30 border-t-[#500000]" />
+        </div>
+      </DashboardShell>
+    );
+  }
+
   return (
     <DashboardShell>
       <div className="p-6 lg:p-8 max-w-[1800px] mx-auto">
@@ -489,9 +333,9 @@ export default function AdminFinanceDashboard() {
             <button
               onClick={handleRefresh}
               className="p-2.5 bg-white rounded-xl border border-[#2D2D2D]/10 hover:border-[#500000]/30 transition-colors"
-              disabled={refreshing}
+              disabled={isRefetching}
             >
-              <RefreshCw className={`w-5 h-5 text-[#500000] ${refreshing ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-5 h-5 text-[#500000] ${isRefetching ? 'animate-spin' : ''}`} />
             </button>
 
             {/* Export Dropdown */}
@@ -538,7 +382,7 @@ export default function AdminFinanceDashboard() {
             title="Total Expenses"
             value={totals.totalExpenses}
             prefix="$"
-            subValue={`${((totals.totalExpenses / totals.totalRevenue) * 100).toFixed(1)}% of revenue`}
+            subValue={`${totals.totalRevenue > 0 ? ((totals.totalExpenses / totals.totalRevenue) * 100).toFixed(1) : '0.0'}% of revenue`}
             change="+5.2% vs last period"
             changeType="negative"
             icon={TrendingDown}

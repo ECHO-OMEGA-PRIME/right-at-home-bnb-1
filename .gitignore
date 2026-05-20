@@ -1,6 +1,9 @@
 # Right At Home BnB - Git Ignore
 # Texas A&M Aggies Maroon & White
 
+# Vercel
+.vercel/
+
 # Dependencies
 node_modules/
 .pnp
@@ -96,3 +99,12 @@ firebase-adminsdk*.json
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+.vercel
+.env*.local
+
+.vercel
+tools/.edge-vrbo-profile/
+tools/vrbo-screenshots/
+tools/.vrbo-chrome-profile/
+tools/.edge-vrbo-profile/
+tools/vrbo-screenshots/

@@ -168,9 +168,9 @@ export function generateWelcomeEmail(data: BookingEmailData): string {
       <p><strong>Right at Home BnB</strong></p>
       <p>Premium Short-Term Rentals in Midland, Texas</p>
       <p style="margin-top: 20px;">
-        <a href="https://rightathomebnb.com">Website</a> &nbsp;|&nbsp;
-        <a href="https://rightathomebnb.com/properties">Properties</a> &nbsp;|&nbsp;
-        <a href="https://rightathomebnb.com/contact">Contact</a>
+        <a href="https://rah-midland.com">Website</a> &nbsp;|&nbsp;
+        <a href="https://rah-midland.com/properties">Properties</a> &nbsp;|&nbsp;
+        <a href="https://rah-midland.com/contact">Contact</a>
       </p>
       <p style="margin-top: 20px; color: #666;">
         This email was sent to ${data.guestEmail} regarding your reservation.
@@ -297,7 +297,7 @@ export function generateReviewRequestEmail(data: BookingEmailData): string {
       <p>Your feedback helps us improve and helps future guests find great stays in Midland.</p>
       <div class="stars">⭐⭐⭐⭐⭐</div>
       <p>Would you take a moment to share your experience?</p>
-      <a href="https://rightathomebnb.com/review/${data.confirmationNumber}" class="cta-button">Leave a Review</a>
+      <a href="https://rah-midland.com/review/${data.confirmationNumber}" class="cta-button">Leave a Review</a>
       <p style="margin-top: 40px; color: #666;">Thank you for choosing Right at Home BnB. We hope to host you again!</p>
     </div>
     <div class="footer">
@@ -345,7 +345,7 @@ We look forward to hosting you!
 ---
 Right at Home BnB
 Premium Short-Term Rentals in Midland, Texas
-https://rightathomebnb.com
+https://rah-midland.com
   `.trim();
 }
 

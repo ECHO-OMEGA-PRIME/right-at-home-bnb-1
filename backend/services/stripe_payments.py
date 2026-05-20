@@ -80,7 +80,7 @@ class StripePaymentService:
 
         # Business info
         self.business_name = "Right At Home BnB"
-        self.business_email = os.getenv("BUSINESS_EMAIL", "payments@rightathomebnb.com")
+        self.business_email = os.getenv("BUSINESS_EMAIL", "payments@rah-midland.com")
         self.steven_account_id = os.getenv("STRIPE_STEVEN_ACCOUNT_ID")
 
     # =========================================================================

@@ -564,7 +564,7 @@ class UltimateConciergeService:
         
         # Steven's contact info
         self.steven_phone = os.getenv("STEVEN_PHONE", "+14329006300")
-        self.steven_email = os.getenv("STEVEN_EMAIL", "steven@rightathomebnb.com")
+        self.steven_email = os.getenv("STEVEN_EMAIL", "steven@rah-midland.com")
         
         # OpenWeatherMap
         self.weather_api_key = os.getenv("OPENWEATHER_API_KEY")

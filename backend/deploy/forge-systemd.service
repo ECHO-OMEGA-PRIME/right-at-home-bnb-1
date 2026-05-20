@@ -1,0 +1,22 @@
+[Unit]
+Description=Right at Home BnB - FastAPI backend (rah-midland.com)
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=forge
+Group=forge
+WorkingDirectory=/home/forge/services/rah-midland-api
+EnvironmentFile=/home/forge/services/rah-midland-api/.env
+# CORS_ALLOWED_ORIGINS, DATABASE_URL, etc. come from the EnvironmentFile.
+ExecStart=/home/forge/services/rah-midland-api/.venv/bin/python -m uvicorn main:app --host 0.0.0.0 --port 8001 --log-level info
+Restart=on-failure
+RestartSec=3
+StandardOutput=journal
+StandardError=journal
+# Tunneled via cloudflared `echo-omega-bridge` → api.rah-midland.com
+# Replaces the prior CF Worker rightathome-api.bmcii1976.workers.dev
+
+[Install]
+WantedBy=multi-user.target

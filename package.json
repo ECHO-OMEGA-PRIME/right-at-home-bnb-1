@@ -44,8 +44,7 @@
     "backend": "cd backend && python -m uvicorn main:app --reload --port 8000",
     "backend:prod": "cd backend && python -m uvicorn main:app --host 0.0.0.0 --port 8000",
 
-    "prepare": "npm run db:generate && npm run packages:build",
-    "postinstall": "npm run db:generate"
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@prisma/client": "^5.9.0"
@@ -61,6 +60,16 @@
   "prisma": {
     "seed": "node prisma/seed.js"
   },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@prisma/client",
+      "@prisma/engines",
+      "prisma",
+      "esbuild",
+      "sharp"
+    ]
+  },
+  "packageManager": "pnpm@10.33.0",
   "engines": {
     "node": ">=18.0.0"
   }

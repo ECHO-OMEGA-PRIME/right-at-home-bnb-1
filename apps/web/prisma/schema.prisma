@@ -7,8 +7,9 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // ============================================
@@ -34,9 +35,9 @@ model User {
   // Performance indexes
   @@index([email])
   @@index([role])
-  @@index([isActive])
-  @@index([role, isActive])
-  @@index([createdAt])
+  @@index([isActive])                     // Filter active users
+  @@index([role, isActive])               // Composite: active users by role
+  @@index([createdAt])                    // Sort by creation date
 }
 
 // ============================================
@@ -92,17 +93,18 @@ model Property {
   smartLock       SmartLock?
   expenses        Expense[]
   photos          PropertyPhoto[]
+  vrboSync        VrboSync?
 
   // Performance indexes
   @@index([status])
   @@index([city])
-  @@index([status, city])
-  @@index([propertyType])
-  @@index([bedrooms])
-  @@index([nightlyRate])
-  @@index([airbnbId])
-  @@index([vrboId])
-  @@index([createdAt])
+  @@index([status, city])             // Composite: filter by status and city
+  @@index([propertyType])             // Filter by property type
+  @@index([bedrooms])                 // Filter by bedroom count
+  @@index([nightlyRate])              // Sort/filter by price
+  @@index([airbnbId])                 // Lookup by external ID
+  @@index([vrboId])                   // Lookup by external ID
+  @@index([createdAt])                // Sort by creation date
 }
 
 model PropertyPhoto {
@@ -164,14 +166,14 @@ model Guest {
   // Performance indexes
   @@index([email])
   @@index([isVip])
-  @@index([platform])
-  @@index([platform, platformId])
-  @@index([totalStays])
-  @@index([totalSpent])
-  @@index([lastStay])
-  @@index([isVip, totalSpent])
-  @@index([createdAt])
-  @@index([birthday])
+  @@index([platform])                     // Filter by booking platform
+  @@index([platform, platformId])         // Lookup by platform ID
+  @@index([totalStays])                   // Sort by stay count (loyalty)
+  @@index([totalSpent])                   // Sort by revenue (VIP identification)
+  @@index([lastStay])                     // Filter by recency
+  @@index([isVip, totalSpent])            // Composite: VIP ranking
+  @@index([createdAt])                    // Sort by registration date
+  @@index([birthday])                     // Birthday campaign targeting
 }
 
 // ============================================
@@ -225,13 +227,13 @@ model Booking {
   @@index([checkIn])
   @@index([checkOut])
   @@index([status])
-  @@index([propertyId, checkIn])
-  @@index([propertyId, status])
-  @@index([propertyId, checkIn, checkOut])
-  @@index([platform, status])
-  @@index([platform])
-  @@index([createdAt])
-  @@index([confirmCode])
+  @@index([propertyId, checkIn])          // Composite: property availability queries
+  @@index([propertyId, status])           // Composite: property bookings by status
+  @@index([propertyId, checkIn, checkOut]) // Composite: date range availability
+  @@index([platform, status])             // Filter by platform and status
+  @@index([platform])                     // Filter by booking source
+  @@index([createdAt])                    // Sort by creation date
+  @@index([confirmCode])                  // Lookup by confirmation code
 }
 
 // ============================================
@@ -289,13 +291,13 @@ model CleaningJob {
   @@index([cleanerId])
   @@index([status])
   @@index([scheduledAt])
-  @@index([propertyId, scheduledAt])
-  @@index([cleanerId, status])
-  @@index([cleanerId, scheduledAt])
-  @@index([scheduledAt, status])
-  @@index([jobType, status])
-  @@index([createdAt])
-  @@index([completedAt])
+  @@index([propertyId, scheduledAt])      // Composite: property cleaning schedule
+  @@index([cleanerId, status])            // Composite: cleaner's active jobs
+  @@index([cleanerId, scheduledAt])       // Composite: cleaner's schedule
+  @@index([scheduledAt, status])          // Composite: upcoming jobs by status
+  @@index([jobType, status])              // Filter by job type and status
+  @@index([createdAt])                    // Sort by creation date
+  @@index([completedAt])                  // Query completed jobs
 }
 
 // ============================================
@@ -374,12 +376,12 @@ model Message {
   @@index([bookingId])
   @@index([status])
   @@index([type])
-  @@index([channel])
-  @@index([guestId, type])
-  @@index([status, scheduledFor])
-  @@index([sentAt])
-  @@index([createdAt])
-  @@index([sentiment])
+  @@index([channel])                      // Filter by message channel
+  @@index([guestId, type])                // Composite: guest messages by type
+  @@index([status, scheduledFor])         // Composite: scheduled messages queue
+  @@index([sentAt])                       // Query sent messages
+  @@index([createdAt])                    // Sort by creation date
+  @@index([sentiment])                    // Filter by sentiment analysis
 }
 
 // ============================================
@@ -425,14 +427,14 @@ model Expense {
   @@index([propertyId])
   @@index([category])
   @@index([date])
-  @@index([propertyId, date])
-  @@index([propertyId, category])
-  @@index([category, date])
-  @@index([status])
-  @@index([isTaxDeductible])
-  @@index([isTaxDeductible, taxCategory])
-  @@index([vendor])
-  @@index([createdAt])
+  @@index([propertyId, date])             // Composite: property expenses by date
+  @@index([propertyId, category])         // Composite: property expenses by category
+  @@index([category, date])               // Composite: expenses report
+  @@index([status])                       // Filter by approval status
+  @@index([isTaxDeductible])              // Filter for tax reports
+  @@index([isTaxDeductible, taxCategory]) // Composite: tax category reports
+  @@index([vendor])                       // Group by vendor
+  @@index([createdAt])                    // Sort by creation date
 }
 
 // ============================================
@@ -490,10 +492,10 @@ model AuditLog {
   @@index([userId])
   @@index([entity])
   @@index([createdAt])
-  @@index([entity, entityId])
-  @@index([action])
-  @@index([userId, createdAt])
-  @@index([entity, action])
+  @@index([entity, entityId])             // Composite: lookup entity history
+  @@index([action])                       // Filter by action type
+  @@index([userId, createdAt])            // Composite: user activity history
+  @@index([entity, action])               // Composite: entity action reports
 }
 
 model Setting {
@@ -502,4 +504,45 @@ model Setting {
   value         String
   description   String?
   updatedAt     DateTime  @updatedAt
+}
+
+// ============================================
+// VRBO DIRECT INTEGRATION (No PMS needed)
+// ============================================
+
+model VrboSync {
+  id              String    @id @default(cuid())
+  propertyId      String
+  vrboListingId   String
+  icalUrl         String?
+  lastIcalSync    DateTime?
+  lastScrapeSync  DateTime?
+  syncEnabled     Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  property        Property  @relation(fields: [propertyId], references: [id])
+
+  @@unique([propertyId])
+  @@unique([vrboListingId])
+  @@index([syncEnabled])
+}
+
+model SyncLog {
+  id              String    @id @default(cuid())
+  propertyId      String?
+  syncType        String    // ical_import, ical_export, scrape_bookings, scrape_messages, rate_push
+  source          String    // vrbo, airbnb, booking
+  status          String    // success, partial, failed
+  itemsProcessed  Int       @default(0)
+  itemsCreated    Int       @default(0)
+  itemsUpdated    Int       @default(0)
+  errorMessage    String?
+  durationMs      Int?
+  metadata        String?
+  createdAt       DateTime  @default(now())
+
+  @@index([propertyId, createdAt])
+  @@index([syncType, createdAt])
+  @@index([status])
 }

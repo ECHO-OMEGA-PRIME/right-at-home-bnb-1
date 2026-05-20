@@ -172,8 +172,8 @@ P:\SOVEREIGN_APPS\RightAtHomeBnB\
 
 | Platform | Host | Domain |
 |----------|------|--------|
-| Website | Vercel | rightathomebnb.com |
-| API | Cloud Run | api.rightathomebnb.com |
+| Website | Vercel | rah-midland.com |
+| API | Cloud Run | api.rah-midland.com |
 | Mobile | App Store / Play Store | Right at Home BnB |
 | Desktop | Direct Download | Steven's machines |
 

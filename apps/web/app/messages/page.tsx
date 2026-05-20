@@ -9,6 +9,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast, { Toaster } from 'react-hot-toast';
+import DashboardShell from '@/components/layout/DashboardShell';
 import {
   MessageSquare, Send, Check, X, Clock, Sparkles, Mail,
   Phone, Bell, Filter, Search, Edit, Eye, RefreshCw,
@@ -109,201 +110,11 @@ type TabView = 'inbox' | 'pending' | 'scheduled' | 'templates' | 'flows' | 'anal
 // MOCK DATA
 // ============================================================================
 
-const mockConversations: Conversation[] = [
-  {
-    id: 'conv1',
-    guestId: 'guest1',
-    guestName: 'Michael Thompson',
-    guestPhone: '(512) 555-0134',
-    guestEmail: 'mike.thompson@email.com',
-    propertyId: 'prop1',
-    propertyName: '2300 Princeton Ave',
-    checkIn: new Date('2026-01-15'),
-    checkOut: new Date('2026-01-20'),
-    lastMessage: 'Perfect, thank you so much! Looking forward to our stay.',
-    lastMessageTime: new Date(Date.now() - 1000 * 60 * 15),
-    unreadCount: 0,
-    sentiment: 'positive',
-    isPinned: true,
-    isArchived: false,
-    tags: ['VIP', 'Returning'],
-    messages: [
-      { id: 'm1', conversationId: 'conv1', sender: 'guest', content: 'Hi, what time can we check in?', timestamp: new Date(Date.now() - 1000 * 60 * 120), status: 'read', channel: 'sms' },
-      { id: 'm2', conversationId: 'conv1', sender: 'host', content: 'Hi Michael! Check-in is at 3 PM. Your door code will be texted an hour before. Let me know if you need early check-in!', timestamp: new Date(Date.now() - 1000 * 60 * 100), status: 'read', channel: 'sms', aiGenerated: true },
-      { id: 'm3', conversationId: 'conv1', sender: 'guest', content: 'Perfect, thank you so much! Looking forward to our stay.', timestamp: new Date(Date.now() - 1000 * 60 * 15), status: 'read', channel: 'sms', sentiment: 'positive' },
-    ],
-  },
-  {
-    id: 'conv2',
-    guestId: 'guest2',
-    guestName: 'Sarah Williams',
-    guestPhone: '(432) 555-0189',
-    guestEmail: 'sarah.w@company.com',
-    propertyId: 'prop2',
-    propertyName: '4014 Monty Dr',
-    checkIn: new Date('2026-01-14'),
-    checkOut: new Date('2026-01-17'),
-    lastMessage: 'The hot water isn\'t working properly. Can someone look at it?',
-    lastMessageTime: new Date(Date.now() - 1000 * 60 * 5),
-    unreadCount: 1,
-    sentiment: 'negative',
-    isPinned: false,
-    isArchived: false,
-    tags: ['Issue'],
-    messages: [
-      { id: 'm4', conversationId: 'conv2', sender: 'guest', content: 'The hot water isn\'t working properly. Can someone look at it?', timestamp: new Date(Date.now() - 1000 * 60 * 5), status: 'delivered', channel: 'sms', sentiment: 'negative' },
-    ],
-  },
-  {
-    id: 'conv3',
-    guestId: 'guest3',
-    guestName: 'Robert Chen',
-    guestPhone: '(713) 555-0156',
-    guestEmail: 'r.chen@tech.io',
-    propertyId: 'prop3',
-    propertyName: '1903 Sandalwood',
-    checkIn: new Date('2026-01-16'),
-    checkOut: new Date('2026-01-25'),
-    lastMessage: 'Thanks for the WiFi info!',
-    lastMessageTime: new Date(Date.now() - 1000 * 60 * 60 * 2),
-    unreadCount: 0,
-    sentiment: 'neutral',
-    isPinned: false,
-    isArchived: false,
-    tags: ['Business'],
-    messages: [
-      { id: 'm5', conversationId: 'conv3', sender: 'guest', content: 'What\'s the WiFi password?', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 3), status: 'read', channel: 'email' },
-      { id: 'm6', conversationId: 'conv3', sender: 'ai', content: 'Hi Robert! The WiFi password is RightAtHome2024. Network name is the property address. Let me know if you have any trouble connecting!', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2.5), status: 'read', channel: 'email', aiGenerated: true },
-      { id: 'm7', conversationId: 'conv3', sender: 'guest', content: 'Thanks for the WiFi info!', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2), status: 'read', channel: 'email', sentiment: 'positive' },
-    ],
-  },
-  {
-    id: 'conv4',
-    guestId: 'guest4',
-    guestName: 'Jennifer Martinez',
-    guestPhone: '(214) 555-0178',
-    guestEmail: 'jmartinez@email.com',
-    propertyId: 'prop4',
-    propertyName: '2505 Kessler Ave',
-    checkIn: new Date('2026-01-18'),
-    checkOut: new Date('2026-01-21'),
-    lastMessage: 'Can\'t wait! Is there parking available?',
-    lastMessageTime: new Date(Date.now() - 1000 * 60 * 60 * 5),
-    unreadCount: 1,
-    sentiment: 'positive',
-    isPinned: false,
-    isArchived: false,
-    tags: [],
-    messages: [
-      { id: 'm8', conversationId: 'conv4', sender: 'system', content: 'Booking confirmed for Jan 18-21', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24), status: 'read', channel: 'email' },
-      { id: 'm9', conversationId: 'conv4', sender: 'guest', content: 'Can\'t wait! Is there parking available?', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 5), status: 'delivered', channel: 'sms', sentiment: 'positive' },
-    ],
-  },
-];
+const mockConversations: Conversation[] = [];
 
-const mockAutomatedFlows: AutomatedFlow[] = [
-  {
-    id: 'flow1',
-    name: 'Pre-Arrival Sequence',
-    description: 'Welcome message, check-in instructions, and local tips',
-    trigger: 'check_in_24h',
-    isActive: true,
-    messagesSent: 234,
-    openRate: 0.94,
-    steps: [
-      { id: 's1', type: 'message', channel: 'sms', content: 'Hi {{guest_name}}! Your stay at {{property_name}} is tomorrow...' },
-      { id: 's2', type: 'delay', delay: { value: 2, unit: 'hours' } },
-      { id: 's3', type: 'message', channel: 'email', content: 'Here are your check-in instructions...' },
-    ],
-  },
-  {
-    id: 'flow2',
-    name: 'Post-Checkout Review',
-    description: 'Thank you message and review request',
-    trigger: 'check_out',
-    isActive: true,
-    messagesSent: 189,
-    openRate: 0.87,
-    steps: [
-      { id: 's4', type: 'message', channel: 'sms', content: 'Thanks for staying with us, {{guest_name}}!' },
-      { id: 's5', type: 'delay', delay: { value: 24, unit: 'hours' } },
-      { id: 's6', type: 'message', channel: 'email', content: 'We hope you enjoyed your stay. Would you mind leaving a review?' },
-    ],
-  },
-  {
-    id: 'flow3',
-    name: 'Mid-Stay Check-in',
-    description: 'Check if guest needs anything during their stay',
-    trigger: 'check_in',
-    isActive: false,
-    messagesSent: 78,
-    openRate: 0.76,
-    steps: [
-      { id: 's7', type: 'delay', delay: { value: 1, unit: 'days' } },
-      { id: 's8', type: 'message', channel: 'sms', content: 'How\'s everything going? Let us know if you need anything!' },
-    ],
-  },
-];
+const mockAutomatedFlows: AutomatedFlow[] = [];
 
-const mockTemplates: MessageTemplate[] = [
-  {
-    id: 'tmpl1',
-    name: 'Welcome Message',
-    category: 'Check-in',
-    channel: 'sms',
-    content: 'Hi {{guest_name}}! Welcome to Right at Home BnB. Your check-in is at 3 PM at {{property_address}}. Door code: {{door_code}}. WiFi: RightAtHome2024. Questions? Text Steven at (432) 559-1904.',
-    variables: ['guest_name', 'property_address', 'door_code'],
-    useCount: 156,
-    lastUsed: new Date(Date.now() - 1000 * 60 * 60 * 2),
-  },
-  {
-    id: 'tmpl2',
-    name: 'Check-out Instructions',
-    category: 'Check-out',
-    channel: 'sms',
-    content: 'Hi {{guest_name}}! Reminder: checkout is at 11 AM. Before you go: 1) Start a load of towels 2) Take out trash 3) Lock all doors 4) Leave keys on counter. Safe travels!',
-    variables: ['guest_name'],
-    useCount: 143,
-    lastUsed: new Date(Date.now() - 1000 * 60 * 60 * 24),
-  },
-  {
-    id: 'tmpl3',
-    name: 'Review Request',
-    category: 'Follow-up',
-    channel: 'email',
-    subject: 'How was your stay at {{property_name}}?',
-    content: 'Hi {{guest_name}},\n\nThank you for choosing Right at Home BnB! We hope you had a wonderful stay at {{property_name}}.\n\nWould you mind taking a moment to leave us a review? Your feedback helps other travelers and helps us improve.\n\n[Leave a Review]\n\nWe\'d love to host you again!\n\nBest,\nSteven Palma\nRight at Home BnB',
-    variables: ['guest_name', 'property_name'],
-    useCount: 89,
-  },
-  {
-    id: 'tmpl4',
-    name: 'Issue Response',
-    category: 'Support',
-    channel: 'sms',
-    content: 'Hi {{guest_name}}, I\'m so sorry to hear about {{issue}}. I\'m sending someone to help right now. In the meantime, please {{interim_solution}}. I\'ll follow up shortly. -Steven',
-    variables: ['guest_name', 'issue', 'interim_solution'],
-    useCount: 34,
-  },
-  {
-    id: 'tmpl5',
-    name: 'WiFi Information',
-    category: 'Info',
-    channel: 'sms',
-    content: 'WiFi at {{property_name}}:\nNetwork: {{property_address}}\nPassword: RightAtHome2024\n\nIf you have issues, try restarting the router in the living room.',
-    variables: ['property_name', 'property_address'],
-    useCount: 67,
-  },
-  {
-    id: 'tmpl6',
-    name: 'Early Check-in Offer',
-    category: 'Upsell',
-    channel: 'sms',
-    content: 'Hi {{guest_name}}! Good news - early check-in is available at {{property_name}}! You can arrive as early as 12 PM for just $25. Reply YES to add this to your booking.',
-    variables: ['guest_name', 'property_name'],
-    useCount: 45,
-  },
-];
+const mockTemplates: MessageTemplate[] = [];
 
 // ============================================================================
 // CONFIG
@@ -905,6 +716,7 @@ export default function MessagesPage() {
   ];
 
   return (
+    <DashboardShell>
     <div className="min-h-screen bg-[#F5F5F0]">
       <Toaster position="top-center" />
 
@@ -1237,5 +1049,6 @@ export default function MessagesPage() {
         )}
       </AnimatePresence>
     </div>
+    </DashboardShell>
   );
 }

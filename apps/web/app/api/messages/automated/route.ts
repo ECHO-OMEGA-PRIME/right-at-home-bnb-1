@@ -1,13 +1,15 @@
 /**
  * Right at Home BnB - Automated Messages API
- * Endpoint for managing and sending automated guest messages
+ * Manages and sends automated guest messages
+ * Uses Prisma for persistent storage (replaces in-memory Map)
  * @author ECHO OMEGA PRIME
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { sendSMS } from '@/lib/twilio';
 import {
   AutomatedMessaging,
-  AutomatedMessage,
   GuestInfo,
   BookingInfo,
   PropertyAccessInfo,
@@ -15,9 +17,6 @@ import {
   MessageChannel,
   MessageStatus,
 } from '@/lib/automated-messages';
-
-// In-memory storage for demo (replace with database in production)
-const messageStore: Map<string, AutomatedMessage[]> = new Map();
 
 // ============================================================================
 // GET - List messages or get specific message
@@ -28,71 +27,49 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const bookingId = searchParams.get('bookingId');
     const messageId = searchParams.get('messageId');
-    const status = searchParams.get('status') as MessageStatus | null;
-    const type = searchParams.get('type') as MessageType | null;
+    const status = searchParams.get('status');
+    const type = searchParams.get('type');
 
     // Get specific message by ID
     if (messageId) {
-      for (const messages of Array.from(messageStore.values())) {
-        const message = messages.find((m) => m.id === messageId);
-        if (message) {
-          return NextResponse.json({ success: true, message });
-        }
-      }
-      return NextResponse.json(
-        { success: false, error: 'Message not found' },
-        { status: 404 }
-      );
-    }
-
-    // Get messages for a booking
-    if (bookingId) {
-      const messages = messageStore.get(bookingId) || [];
-      let filtered = messages;
-
-      if (status) {
-        filtered = filtered.filter((m) => m.status === status);
-      }
-      if (type) {
-        filtered = filtered.filter((m) => m.type === type);
-      }
-
-      return NextResponse.json({
-        success: true,
-        bookingId,
-        messages: filtered,
-        total: filtered.length,
+      const message = await prisma.message.findUnique({
+        where: { id: messageId },
+        include: {
+          guest: { select: { name: true, email: true, phone: true } },
+          booking: { select: { id: true, checkIn: true, checkOut: true } },
+        },
       });
+
+      if (!message) {
+        return NextResponse.json({ success: false, error: 'Message not found' }, { status: 404 });
+      }
+
+      return NextResponse.json({ success: true, message });
     }
 
-    // Get all messages (admin view)
-    const allMessages: AutomatedMessage[] = [];
-    for (const messages of Array.from(messageStore.values())) {
-      allMessages.push(...messages);
-    }
+    // Build filter
+    const where: any = {};
+    if (bookingId) where.bookingId = bookingId;
+    if (status) where.status = status;
+    if (type) where.type = type;
 
-    let filtered = allMessages;
-    if (status) {
-      filtered = filtered.filter((m) => m.status === status);
-    }
-    if (type) {
-      filtered = filtered.filter((m) => m.type === type);
-    }
-
-    // Sort by scheduled time
-    filtered.sort((a, b) => a.scheduledFor.getTime() - b.scheduledFor.getTime());
+    const messages = await prisma.message.findMany({
+      where,
+      include: {
+        guest: { select: { name: true, email: true } },
+      },
+      orderBy: { scheduledFor: 'asc' },
+      take: 100,
+    });
 
     return NextResponse.json({
       success: true,
-      messages: filtered.slice(0, 100), // Limit to 100 messages
-      total: filtered.length,
+      messages,
+      total: messages.length,
     });
   } catch (error: any) {
-    console.error('[Automated Messages API] GET Error:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to fetch messages' },
-      { status: 500 }
-    );
+    console.error('[Automated Messages GET]', error);
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
 
@@ -105,7 +82,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { action } = body;
 
-    // Handle different actions
     switch (action) {
       case 'schedule':
         return handleScheduleMessages(body);
@@ -116,15 +92,11 @@ export async function POST(request: NextRequest) {
       case 'process_queue':
         return handleProcessQueue();
       default:
-        // Default action: schedule messages
         return handleScheduleMessages(body);
     }
   } catch (error: any) {
-    console.error('[Automated Messages API] POST Error:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to process request' },
-      { status: 500 }
-    );
+    console.error('[Automated Messages POST]', error);
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
 
@@ -135,62 +107,27 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    const { messageId, bookingId, updates } = body;
+    const { messageId, updates } = body;
 
-    if (!messageId || !bookingId) {
-      return NextResponse.json(
-        { success: false, error: 'messageId and bookingId are required' },
-        { status: 400 }
-      );
+    if (!messageId) {
+      return NextResponse.json({ success: false, error: 'messageId required' }, { status: 400 });
     }
 
-    const messages = messageStore.get(bookingId);
-    if (!messages) {
-      return NextResponse.json(
-        { success: false, error: 'Booking not found' },
-        { status: 404 }
-      );
-    }
+    const data: any = {};
+    if (updates.status) data.status = updates.status;
+    if (updates.scheduledFor) data.scheduledFor = new Date(updates.scheduledFor);
+    if (updates.body) data.body = updates.body;
+    if (updates.channel) data.channel = updates.channel;
 
-    const messageIndex = messages.findIndex((m) => m.id === messageId);
-    if (messageIndex === -1) {
-      return NextResponse.json(
-        { success: false, error: 'Message not found' },
-        { status: 404 }
-      );
-    }
-
-    const message = messages[messageIndex];
-
-    // Apply updates
-    if (updates.status) {
-      message.status = updates.status;
-    }
-    if (updates.scheduledFor) {
-      message.scheduledFor = new Date(updates.scheduledFor);
-    }
-    if (updates.content) {
-      message.content = updates.content;
-    }
-    if (updates.channel) {
-      message.channel = updates.channel;
-    }
-
-    message.updatedAt = new Date();
-    messages[messageIndex] = message;
-    messageStore.set(bookingId, messages);
-
-    return NextResponse.json({
-      success: true,
-      message: 'Message updated successfully',
-      data: message,
+    const message = await prisma.message.update({
+      where: { id: messageId },
+      data,
     });
+
+    return NextResponse.json({ success: true, message: 'Updated', data: message });
   } catch (error: any) {
-    console.error('[Automated Messages API] PUT Error:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to update message' },
-      { status: 500 }
-    );
+    console.error('[Automated Messages PUT]', error);
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
 
@@ -204,49 +141,25 @@ export async function DELETE(request: NextRequest) {
     const messageId = searchParams.get('messageId');
     const bookingId = searchParams.get('bookingId');
 
-    if (!bookingId) {
-      return NextResponse.json(
-        { success: false, error: 'bookingId is required' },
-        { status: 400 }
-      );
-    }
-
-    const messages = messageStore.get(bookingId);
-    if (!messages) {
-      return NextResponse.json(
-        { success: false, error: 'Booking not found' },
-        { status: 404 }
-      );
-    }
-
     if (messageId) {
-      // Delete specific message
-      const filtered = messages.filter((m) => m.id !== messageId);
-      if (filtered.length === messages.length) {
-        return NextResponse.json(
-          { success: false, error: 'Message not found' },
-          { status: 404 }
-        );
-      }
-      messageStore.set(bookingId, filtered);
-      return NextResponse.json({
-        success: true,
-        message: 'Message deleted successfully',
+      await prisma.message.delete({ where: { id: messageId } });
+      return NextResponse.json({ success: true, message: 'Message deleted' });
+    }
+
+    if (bookingId) {
+      const result = await prisma.message.deleteMany({
+        where: { bookingId, status: { in: ['DRAFT', 'SCHEDULED'] } },
       });
-    } else {
-      // Delete all messages for booking
-      messageStore.delete(bookingId);
       return NextResponse.json({
         success: true,
-        message: 'All messages for booking deleted successfully',
+        message: `Deleted ${result.count} scheduled messages for booking`,
       });
     }
+
+    return NextResponse.json({ success: false, error: 'messageId or bookingId required' }, { status: 400 });
   } catch (error: any) {
-    console.error('[Automated Messages API] DELETE Error:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to delete message' },
-      { status: 500 }
-    );
+    console.error('[Automated Messages DELETE]', error);
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
 
@@ -255,35 +168,48 @@ export async function DELETE(request: NextRequest) {
 // ============================================================================
 
 async function handleScheduleMessages(body: any) {
-  const { bookingId, guest, booking, propertyId, channel = 'email' } = body;
+  const { bookingId, guest, booking, propertyId, channel = 'EMAIL' } = body;
 
-  // Validate required fields
   if (!bookingId || !guest || !booking) {
     return NextResponse.json(
-      { success: false, error: 'bookingId, guest, and booking are required' },
+      { success: false, error: 'bookingId, guest, and booking required' },
       { status: 400 }
     );
   }
 
-  // Get property access info
+  // Resolve property access info
   let access: PropertyAccessInfo | null = null;
   if (propertyId) {
     access = AutomatedMessaging.getPropertyAccess(propertyId);
   }
-
   if (!access) {
-    // Use booking info to construct access (fallback)
+    // Get from booking's property in DB
+    const dbBooking = await prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: { property: true },
+    });
+    if (dbBooking?.property) {
+      access = {
+        doorCode: dbBooking.accessCode || '****',
+        wifiName: dbBooking.property.wifiNetwork || 'RightAtHome_Guest',
+        wifiPassword: dbBooking.property.wifiPassword || '',
+        address: dbBooking.property.address,
+        parkingInfo: dbBooking.property.parkingInfo || 'Free parking available on-site.',
+        emergencyContact: '(432) 559-1904',
+      };
+    }
+  }
+  if (!access) {
     access = {
       doorCode: booking.doorCode || '****',
       wifiName: booking.wifiName || 'RightAtHome_Guest',
-      wifiPassword: booking.wifiPassword || 'Welcome2Midland',
+      wifiPassword: booking.wifiPassword || '',
       address: booking.propertyAddress || booking.propertyName,
-      parkingInfo: booking.parkingInfo || 'Free parking available on-site.',
+      parkingInfo: 'Free parking available on-site.',
       emergencyContact: '(432) 559-1904',
     };
   }
 
-  // Parse dates
   const bookingInfo: BookingInfo = {
     ...booking,
     checkInDate: new Date(booking.checkInDate),
@@ -295,8 +221,8 @@ async function handleScheduleMessages(body: any) {
     firstName: guest.firstName || guest.name.split(' ')[0],
   };
 
-  // Create scheduled messages
-  const messages = AutomatedMessaging.createScheduledMessages(
+  // Generate message content using the messaging system
+  const scheduledMessages = AutomatedMessaging.createScheduledMessages(
     bookingId,
     guestInfo,
     bookingInfo,
@@ -304,129 +230,133 @@ async function handleScheduleMessages(body: any) {
     channel as MessageChannel
   );
 
-  // Store messages
-  messageStore.set(bookingId, messages);
-
-  return NextResponse.json({
-    success: true,
-    message: `Scheduled ${messages.length} automated messages`,
-    bookingId,
-    messages: messages.map((m) => ({
-      id: m.id,
-      type: m.type,
-      scheduledFor: m.scheduledFor,
-      status: m.status,
-      channel: m.channel,
-    })),
+  // Ensure guest exists in DB
+  let dbGuest = await prisma.guest.findFirst({
+    where: { email: guest.email },
   });
-}
-
-async function handleSendNow(body: any) {
-  const { messageId, bookingId, messageType, guest, booking, propertyId, channel = 'email' } = body;
-
-  // If messageId provided, send that specific message
-  if (messageId && bookingId) {
-    const messages = messageStore.get(bookingId);
-    if (!messages) {
-      return NextResponse.json(
-        { success: false, error: 'Booking not found' },
-        { status: 404 }
-      );
-    }
-
-    const message = messages.find((m) => m.id === messageId);
-    if (!message) {
-      return NextResponse.json(
-        { success: false, error: 'Message not found' },
-        { status: 404 }
-      );
-    }
-
-    // Simulate sending (replace with actual email/SMS sending)
-    const sendResult = await simulateSendMessage(message);
-
-    message.status = sendResult.success ? 'sent' : 'failed';
-    message.sentAt = sendResult.success ? new Date() : undefined;
-    message.lastError = sendResult.error;
-    message.updatedAt = new Date();
-
-    return NextResponse.json({
-      success: sendResult.success,
-      message: sendResult.success ? 'Message sent successfully' : 'Failed to send message',
-      error: sendResult.error,
+  if (!dbGuest) {
+    dbGuest = await prisma.guest.create({
       data: {
-        id: message.id,
-        type: message.type,
-        status: message.status,
-        sentAt: message.sentAt,
+        email: guest.email,
+        name: guest.name,
+        phone: guest.phone || null,
+        platform: guest.platform || 'DIRECT',
       },
     });
   }
 
-  // Generate and send a single message without storing
-  if (messageType && guest && booking) {
-    let access: PropertyAccessInfo | null = null;
-    if (propertyId) {
-      access = AutomatedMessaging.getPropertyAccess(propertyId);
-    }
-
-    if (!access) {
-      access = {
-        doorCode: booking.doorCode || '****',
-        wifiName: booking.wifiName || 'RightAtHome_Guest',
-        wifiPassword: booking.wifiPassword || 'Welcome2Midland',
-        address: booking.propertyAddress || booking.propertyName,
-        parkingInfo: booking.parkingInfo || 'Free parking available on-site.',
-        emergencyContact: '(432) 559-1904',
-      };
-    }
-
-    const bookingInfo: BookingInfo = {
-      ...booking,
-      checkInDate: new Date(booking.checkInDate),
-      checkOutDate: new Date(booking.checkOutDate),
-    };
-
-    const guestInfo: GuestInfo = {
-      ...guest,
-      firstName: guest.firstName || guest.name.split(' ')[0],
-    };
-
-    const messageContent = AutomatedMessaging.getSingleMessage(
-      messageType as MessageType,
-      guestInfo,
-      bookingInfo,
-      access,
-      channel as MessageChannel
-    );
-
-    // Simulate sending
-    const sendResult = await simulateSendMessage({
-      channel,
-      content: messageContent.body,
-      guest: guestInfo,
-    } as any);
-
-    return NextResponse.json({
-      success: sendResult.success,
-      message: sendResult.success ? 'Message sent successfully' : 'Failed to send message',
-      error: sendResult.error,
-      content: messageContent,
+  // Store each message in Prisma
+  const created = [];
+  for (const msg of scheduledMessages) {
+    const dbMsg = await prisma.message.create({
+      data: {
+        guestId: dbGuest.id,
+        bookingId,
+        type: msg.type.toUpperCase(),
+        channel: channel.toUpperCase(),
+        subject: msg.content?.subject || `${msg.type} message`,
+        body: msg.content?.body || msg.content?.smsBody || '',
+        status: 'SCHEDULED',
+        scheduledFor: msg.scheduledFor,
+      },
+    });
+    created.push({
+      id: dbMsg.id,
+      type: dbMsg.type,
+      scheduledFor: dbMsg.scheduledFor,
+      status: dbMsg.status,
+      channel: dbMsg.channel,
     });
   }
 
-  return NextResponse.json(
-    { success: false, error: 'Invalid request parameters' },
-    { status: 400 }
-  );
+  return NextResponse.json({
+    success: true,
+    message: `Scheduled ${created.length} automated messages`,
+    bookingId,
+    messages: created,
+  });
+}
+
+async function handleSendNow(body: any) {
+  const { messageId } = body;
+
+  if (!messageId) {
+    return NextResponse.json({ success: false, error: 'messageId required' }, { status: 400 });
+  }
+
+  const message = await prisma.message.findUnique({
+    where: { id: messageId },
+    include: { guest: true },
+  });
+
+  if (!message) {
+    return NextResponse.json({ success: false, error: 'Message not found' }, { status: 404 });
+  }
+
+  // Send via real channel (Twilio SMS or Email API)
+  let sendError: string | null = null;
+
+  try {
+    if (message.channel === 'SMS' && message.guest.phone) {
+      const smsResult = await sendSMS(message.guest.phone, message.body);
+      if (!smsResult.success) {
+        sendError = smsResult.error || 'SMS send failed';
+      }
+    } else if (message.channel === 'EMAIL' && message.guest.email) {
+      const emailRes = await fetch(new URL('/api/email/send', process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: message.guest.email,
+          subject: message.subject || `Right at Home BnB - ${message.type}`,
+          html: message.body,
+          from: 'Right at Home BnB <noreply@rah-midland.com>',
+        }),
+      });
+      if (!emailRes.ok) {
+        const errData = await emailRes.json().catch(() => ({}));
+        sendError = errData.error || `Email API returned ${emailRes.status}`;
+      }
+    } else {
+      sendError = `No ${message.channel === 'SMS' ? 'phone' : 'email'} for guest ${message.guest.name}`;
+    }
+  } catch (e: any) {
+    sendError = e.message || 'Send failed';
+  }
+
+  const updated = await prisma.message.update({
+    where: { id: messageId },
+    data: {
+      status: sendError ? 'FAILED' : 'SENT',
+      sentAt: sendError ? undefined : new Date(),
+    },
+  });
+
+  if (sendError) {
+    console.error(`[Automated Messages] Failed to send ${message.type} to ${message.guest.email}: ${sendError}`);
+    return NextResponse.json({ success: false, error: sendError, data: { id: updated.id, status: updated.status } }, { status: 500 });
+  }
+
+  console.log(`[Automated Messages] Sent ${message.type} to ${message.guest.email} via ${message.channel}`);
+
+  return NextResponse.json({
+    success: true,
+    message: 'Message sent',
+    data: {
+      id: updated.id,
+      type: updated.type,
+      status: updated.status,
+      sentAt: updated.sentAt,
+    },
+  });
 }
 
 async function handlePreview(body: any) {
-  const { messageType, guest, booking, propertyId, channel = 'email' } = body;
+  const { messageType, guest, booking, propertyId, channel = 'EMAIL' } = body;
 
   if (!messageType || !guest || !booking) {
     return NextResponse.json(
-      { success: false, error: 'messageType, guest, and booking are required' },
+      { success: false, error: 'messageType, guest, and booking required' },
       { status: 400 }
     );
   }
@@ -435,22 +365,21 @@ async function handlePreview(body: any) {
   if (propertyId) {
     access = AutomatedMessaging.getPropertyAccess(propertyId);
   }
-
   if (!access) {
     access = {
       doorCode: booking.doorCode || '1234',
       wifiName: booking.wifiName || 'RightAtHome_Guest',
-      wifiPassword: booking.wifiPassword || 'Welcome2Midland',
-      address: booking.propertyAddress || booking.propertyName || '123 Main St, Midland, TX',
-      parkingInfo: booking.parkingInfo || 'Free parking available on-site.',
+      wifiPassword: booking.wifiPassword || '',
+      address: booking.propertyAddress || '123 Main St, Midland, TX',
+      parkingInfo: 'Free parking available on-site.',
       emergencyContact: '(432) 559-1904',
     };
   }
 
   const bookingInfo: BookingInfo = {
     ...booking,
-    checkInDate: new Date(booking.checkInDate || Date.now() + 3 * 24 * 60 * 60 * 1000),
-    checkOutDate: new Date(booking.checkOutDate || Date.now() + 5 * 24 * 60 * 60 * 1000),
+    checkInDate: new Date(booking.checkInDate || Date.now() + 3 * 86400000),
+    checkOutDate: new Date(booking.checkOutDate || Date.now() + 5 * 86400000),
   };
 
   const guestInfo: GuestInfo = {
@@ -485,54 +414,68 @@ async function handlePreview(body: any) {
 }
 
 async function handleProcessQueue() {
-  const allMessages: AutomatedMessage[] = [];
-  for (const messages of Array.from(messageStore.values())) {
-    allMessages.push(...messages);
-  }
+  // Find all scheduled messages that are due
+  const dueMessages = await prisma.message.findMany({
+    where: {
+      status: 'SCHEDULED',
+      scheduledFor: { lte: new Date() },
+    },
+    include: { guest: true },
+    take: 50,
+  });
 
-  const result = await AutomatedMessaging.processQueue(
-    allMessages,
-    simulateSendMessage
-  );
+  let sent = 0;
+  let failed = 0;
+
+  for (const msg of dueMessages) {
+    try {
+      console.log(`[Queue] Sending ${msg.type} to ${msg.guest.email || msg.guest.phone}`);
+
+      let sendOk = false;
+
+      if (msg.channel === 'SMS' && msg.guest.phone) {
+        const result = await sendSMS(msg.guest.phone, msg.body);
+        sendOk = result.success;
+        if (!sendOk) console.error(`[Queue] SMS failed for ${msg.id}: ${result.error}`);
+      } else if (msg.channel === 'EMAIL' && msg.guest.email) {
+        const emailRes = await fetch(new URL('/api/email/send', process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: msg.guest.email,
+            subject: msg.subject || `Right at Home BnB - ${msg.type}`,
+            html: msg.body,
+            from: 'Right at Home BnB <noreply@rah-midland.com>',
+          }),
+        });
+        sendOk = emailRes.ok;
+        if (!sendOk) console.error(`[Queue] Email failed for ${msg.id}: ${emailRes.status}`);
+      } else {
+        // No valid channel/contact — mark failed
+        console.warn(`[Queue] No contact info for ${msg.id}, channel=${msg.channel}`);
+      }
+
+      await prisma.message.update({
+        where: { id: msg.id },
+        data: sendOk ? { status: 'SENT', sentAt: new Date() } : { status: 'FAILED' },
+      });
+      if (sendOk) sent++;
+      else failed++;
+    } catch (e: any) {
+      console.error(`[Queue] Failed to send ${msg.id}:`, e.message);
+      await prisma.message.update({
+        where: { id: msg.id },
+        data: { status: 'FAILED' },
+      });
+      failed++;
+    }
+  }
 
   return NextResponse.json({
     success: true,
-    message: `Processed ${result.sent + result.failed} messages`,
-    sent: result.sent,
-    failed: result.failed,
-    results: result.results,
+    message: `Processed ${sent + failed} messages`,
+    sent,
+    failed,
+    pending: dueMessages.length - sent - failed,
   });
-}
-
-// ============================================================================
-// HELPER FUNCTIONS
-// ============================================================================
-
-/**
- * Simulate sending a message (replace with actual email/SMS service in production)
- */
-async function simulateSendMessage(
-  message: AutomatedMessage
-): Promise<{ success: boolean; error?: string }> {
-  // Simulate network delay
-  await new Promise((resolve) => setTimeout(resolve, 100));
-
-  // In production, integrate with:
-  // - SendGrid/Resend for emails
-  // - Twilio for SMS
-  // - Platform APIs for Airbnb/VRBO messages
-
-  // Simulate 95% success rate
-  const success = Math.random() > 0.05;
-
-  if (!success) {
-    return {
-      success: false,
-      error: 'Simulated delivery failure (random)',
-    };
-  }
-
-  console.log(`[Automated Messages] Sent ${message.type} message to ${message.guest.email} via ${message.channel}`);
-
-  return { success: true };
 }

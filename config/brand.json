@@ -54,9 +54,9 @@
     "avoid": ["sports themes", "baseball", "casual/playful"]
   },
   "domains": {
-    "production": "rightathomebnb.com",
-    "api": "api.rightathomebnb.com",
-    "admin": "admin.rightathomebnb.com"
+    "production": "rah-midland.com",
+    "api": "api.rah-midland.com",
+    "admin": "admin.rah-midland.com"
   },
   "social": {
     "instagram": "@rightathomebnb",

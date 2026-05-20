@@ -393,7 +393,7 @@ YOUR VOICE:
 
 CONTACT INFO:
 - Steven Palma (Owner): (432) 559-1904
-- Email: steven@rightathomebnb.com
+- Email: steven@rah-midland.com
 - Emergency: 911
 
 `;

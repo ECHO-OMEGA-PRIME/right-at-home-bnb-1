@@ -7,11 +7,14 @@
  */
 
 import StevenAI from '@/components/StevenAI';
+import DashboardShell from '@/components/layout/DashboardShell';
 
 export default function StevenAIPage() {
   return (
-    <div className="p-6 h-[calc(100vh-2rem)]">
-      <StevenAI mode="fullscreen" />
-    </div>
+    <DashboardShell>
+      <div className="p-6 h-[calc(100vh-2rem)]">
+        <StevenAI mode="fullscreen" />
+      </div>
+    </DashboardShell>
   );
 }

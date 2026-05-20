@@ -1228,9 +1228,9 @@ export default function Settings() {
                     style={{ borderTop: '1px solid rgba(139, 0, 139, 0.2)' }}
                   >
                     {[
-                      { label: 'Documentation', url: 'https://docs.rightathomebnb.com' },
-                      { label: 'Contact Support', url: 'mailto:support@rightathomebnb.com' },
-                      { label: 'Privacy Policy', url: 'https://rightathomebnb.com/privacy' },
+                      { label: 'Documentation', url: 'https://docs.rah-midland.com' },
+                      { label: 'Contact Support', url: 'mailto:support@rah-midland.com' },
+                      { label: 'Privacy Policy', url: 'https://rah-midland.com/privacy' },
                     ].map((link) => (
                       <button
                         key={link.label}

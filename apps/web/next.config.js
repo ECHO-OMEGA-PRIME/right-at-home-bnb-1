@@ -56,7 +56,7 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "img-src 'self' data: blob: https://images.unsplash.com https://lh3.googleusercontent.com https://*.rah-midland.com",
               "font-src 'self' https://fonts.gstatic.com",
-              "connect-src 'self' https://*.firebaseio.com https://*.googleapis.com https://*.firebase.google.com https://api.stripe.com https://api.paypal.com wss://*.firebaseio.com https://*.bmcii1976.workers.dev",
+              "connect-src 'self' https://*.firebaseio.com https://*.googleapis.com https://*.firebase.google.com https://api.stripe.com https://api.paypal.com wss://*.firebaseio.com https://sdk1.echo-op.com https://api.rah-midland.com https://*.echo-op.com https://*.rah-midland.com",
               "frame-src 'self' https://accounts.google.com https://*.firebaseapp.com https://js.stripe.com https://www.paypal.com",
               "object-src 'none'",
               "base-uri 'self'",

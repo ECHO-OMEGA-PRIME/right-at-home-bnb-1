@@ -8,7 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ApiResponse, PaginatedResponse } from '../types';
 
 // API Configuration
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://api.rightathomebnb.com';
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://api.rah-midland.com';
 const API_TIMEOUT = 30000; // 30 seconds
 
 // Storage keys

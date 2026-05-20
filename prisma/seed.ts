@@ -197,10 +197,10 @@ async function main() {
   // Create admin user
   console.log('\nCreating admin user...');
   const admin = await prisma.user.upsert({
-    where: { email: 'steven@rightathomebnb.com' },
+    where: { email: 'steven@rah-midland.com' },
     update: {},
     create: {
-      email: 'steven@rightathomebnb.com',
+      email: 'steven@rah-midland.com',
       name: 'Steven Palma',
       phone: '+1-432-555-0100',
       role: 'ADMIN',

@@ -122,7 +122,7 @@ class AirbnbiCalSync:
         
         for booking in bookings:
             event = Event()
-            event.add('uid', f"rah-{booking['id']}@rightathomebnb.com")
+            event.add('uid', f"rah-{booking['id']}@rah-midland.com")
             event.add('dtstart', booking['check_in'])
             event.add('dtend', booking['check_out'])
             event.add('summary', 'Not available')  # Airbnb standard
@@ -165,7 +165,7 @@ class AirbnbiCalSync:
         ical_import_url: str
     ) -> AirbnbProperty:
         """Register a property for Airbnb sync"""
-        ical_export_url = f"https://api.rightathomebnb.com/ical/{property_id}/airbnb.ics"
+        ical_export_url = f"https://api.rah-midland.com/ical/{property_id}/airbnb.ics"
         
         prop = AirbnbProperty(
             property_id=property_id,

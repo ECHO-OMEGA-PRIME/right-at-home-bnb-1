@@ -28,7 +28,7 @@ describe('Input Validation', () => {
         'user+tag@example.com',
         'user123@sub.domain.com',
         'a@b.co',
-        'steven@rightathomebnb.com'
+        'steven@rah-midland.com'
       ];
 
       for (const email of validEmails) {

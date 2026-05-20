@@ -100,7 +100,7 @@ export async function registerVRBOProperty(
     maxGuests?: number;
   }
 ): Promise<VRBOListing> {
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.rightathomebnb.com';
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.rah-midland.com';
   const icalExportUrl = `${baseUrl}/ical/${propertyId}/vrbo.ics`;
   const vrboUrl = `https://www.vrbo.com/${vrboListingId}`;
 
@@ -331,7 +331,7 @@ export async function generateExportCalendar(propertyId: string): Promise<string
   for (const booking of bookings) {
     if (booking.source === 'vrbo') continue; // Skip VRBO bookings
 
-    const uid = `rah-${booking.id}@rightathomebnb.com`;
+    const uid = `rah-${booking.id}@rah-midland.com`;
     const dtstart = formatICalDate(new Date(booking.checkIn));
     const dtend = formatICalDate(new Date(booking.checkOut));
     const dtstamp = formatICalDateTime(new Date());

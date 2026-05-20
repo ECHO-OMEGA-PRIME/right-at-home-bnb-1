@@ -245,8 +245,8 @@ export interface AppUser {
 
 // Admin emails for automatic role assignment
 export const ADMIN_EMAILS = [
-  'steven@rightathomebnb.com',
-  'spalma@rightathomebnb.com',
+  'steven@rah-midland.com',
+  'spalma@rah-midland.com',
   'bobmcwilliams4@outlook.com', // Developer
   'bobmcwilliams4@gmail.com', // Developer
 ];

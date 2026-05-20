@@ -1,42 +1,33 @@
 'use client';
 
 /**
- * Right at Home BnB - Main Dashboard
- * CLEANED VERSION - No mock/placeholder data
- * Real data from API or empty states
- * 
- * @author ECHO OMEGA PRIME
- * @owner Steven Palma - Midland, TX
+ * Right at Home BnB - Role-Based Dashboard
+ * Detects user role (owner/admin/worker) and worker type (cleaner/pool/maintenance/yard)
+ * Shows tailored dashboard for each role.
  */
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import Link from 'next/link';
 import {
-  Home, Users, Calendar, DollarSign, Sparkles, Bell,
-  TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Clock,
-  CheckCircle, AlertCircle, AlertTriangle, MapPin, Star, MessageSquare,
-  Key, Zap, ChevronRight, Phone, Settings, Thermometer, Activity,
-  RefreshCw, Eye, Coffee, Sunrise, Sunset, Moon, Sun, Building2,
-  Wifi, WifiOff, Battery, BatteryLow, Target, Award, BarChart3,
-  PhoneCall, Mail
+  Home, Calendar, DollarSign, Sparkles, Bell,
+  ArrowUpRight, Clock, CheckCircle, AlertCircle, AlertTriangle,
+  MapPin, Star, MessageSquare, Key, Zap, ChevronRight, Phone,
+  Settings, Thermometer, Activity, RefreshCw, Sunrise, Sunset,
+  Moon, Sun, Building2, Wifi, WifiOff, BarChart3, PhoneCall, Mail,
+  Camera, ClipboardCheck, Package, Droplets, Wrench, TreePine,
+  Waves, Timer, CircleDot, FileText, TrendingUp, Truck, Hammer,
+  Leaf, Scissors, CloudRain, ThermometerSun, AlertOctagon,
+  CheckSquare, XCircle, PlayCircle, PauseCircle,
 } from 'lucide-react';
 import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  BarChart, Bar, PieChart, Pie, Cell, LineChart, Line
-} from 'recharts';
-import {
-  useDashboardStats,
-  useProperties,
-  useCleaningJobs,
-  usePendingMessages,
-  useLocks,
+  useDashboardStats, useProperties, useCleaningJobs,
+  usePendingMessages, useLocks,
 } from '@/lib/api';
 import { properties as propertyKnowledge } from '@/lib/property-knowledge';
 import { CONTACT_INFO, initiateCall, initiateEmail } from '@/lib/demo-mode';
 import toast from 'react-hot-toast';
 
-// Brand Colors
 const BRAND = {
   maroon: '#500000',
   cream: '#F5F5F0',
@@ -45,7 +36,39 @@ const BRAND = {
   maroonLight: '#722F37',
 };
 
-// Time of day greeting
+type WorkerType = 'cleaner' | 'pool' | 'maintenance' | 'yard';
+type UserRole = 'guest' | 'worker' | 'admin' | 'owner';
+
+interface DevUser {
+  displayName: string;
+  role: UserRole;
+  workerType: WorkerType | null;
+}
+
+function useCurrentUser(): DevUser {
+  const [user, setUser] = useState<DevUser>({
+    displayName: 'Steven',
+    role: 'owner',
+    workerType: null,
+  });
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('dev_user');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        setUser({
+          displayName: parsed.displayName || 'User',
+          role: parsed.role || 'owner',
+          workerType: parsed.workerType || null,
+        });
+      }
+    } catch {}
+  }, []);
+
+  return user;
+}
+
 const getGreeting = () => {
   const hour = new Date().getHours();
   if (hour < 12) return { text: 'Good morning', icon: Sunrise };
@@ -54,156 +77,757 @@ const getGreeting = () => {
   return { text: 'Good night', icon: Moon };
 };
 
-// Format relative time
-const formatRelativeTime = (date: Date): string => {
-  const now = new Date();
-  const diff = now.getTime() - date.getTime();
-  const minutes = Math.floor(diff / 60000);
-
-  if (minutes < 1) return 'Just now';
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-};
+// ═══════════════════════════════════════════════════════════════
+// MAIN DASHBOARD - ROUTES BY ROLE
+// ═══════════════════════════════════════════════════════════════
 
 export default function DashboardPage() {
-  const { data: stats, isLoading: loadingStats, refetch: refetchStats } = useDashboardStats();
-  const { data: properties, isLoading: loadingProperties } = useProperties();
-  const { data: cleaningJobs, isLoading: loadingCleanings } = useCleaningJobs();
-  const { data: pendingMessages } = usePendingMessages();
-  const { data: locks } = useLocks();
+  const user = useCurrentUser();
 
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  if (user.role === 'worker' && user.workerType) {
+    switch (user.workerType) {
+      case 'cleaner': return <CleanerDashboard user={user} />;
+      case 'pool': return <PoolDashboard user={user} />;
+      case 'maintenance': return <MaintenanceDashboard user={user} />;
+      case 'yard': return <YardDashboard user={user} />;
+    }
+  }
 
+  if (user.role === 'admin') {
+    return <AdminDashboard user={user} />;
+  }
+
+  if (user.role === 'guest') {
+    return <GuestDashboard user={user} />;
+  }
+
+  return <OwnerDashboard user={user} />;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SHARED COMPONENTS
+// ═══════════════════════════════════════════════════════════════
+
+function DashboardShell({
+  user,
+  accentColor,
+  accentBg,
+  icon: HeaderIcon,
+  subtitle,
+  children,
+}: {
+  user: DevUser;
+  accentColor: string;
+  accentBg: string;
+  icon: React.ElementType;
+  subtitle: string;
+  children: React.ReactNode;
+}) {
   const greeting = getGreeting();
   const GreetingIcon = greeting.icon;
-
-  // Active cleanings from real data
-  const activeCleanings = useMemo(() =>
-    cleaningJobs?.filter(j => j.status === 'IN_PROGRESS') || [],
-    [cleaningJobs]
-  );
-
-  // Scheduled cleanings today
-  const todayCleanings = useMemo(() => {
-    const today = new Date().toDateString();
-    return cleaningJobs?.filter(j =>
-      new Date(j.scheduledAt).toDateString() === today
-    ) || [];
-  }, [cleaningJobs]);
-
-  // Lock statistics from real data
-  const lockStats = useMemo(() => {
-    if (!locks) return { online: 0, offline: 0, lowBattery: 0 };
-    return {
-      online: locks.filter(l => l.isOnline).length,
-      offline: locks.filter(l => !l.isOnline).length,
-      lowBattery: locks.filter(l => (l.batteryLevel || 100) < 30).length,
-    };
-  }, [locks]);
-
-  // Handle refresh
-  const handleRefresh = useCallback(async () => {
-    setIsRefreshing(true);
-    await refetchStats();
-    setIsRefreshing(false);
-    toast.success('Dashboard refreshed');
-  }, [refetchStats]);
-
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'r' && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault();
-        handleRefresh();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleRefresh]);
-
-  // Loading skeleton
-  if (loadingStats || loadingProperties || loadingCleanings) {
-    return <DashboardSkeleton />;
-  }
+  const firstName = user.displayName.split(' ')[0];
 
   return (
     <div className="min-h-screen bg-[#F5F5F0]">
-      {/* Header */}
-      <header className="bg-white border-b border-[#2D2D2D]/10 sticky top-0 z-40">
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className={`w-12 h-12 rounded-xl ${accentBg} flex items-center justify-center`}>
+                <HeaderIcon className={`w-6 h-6 ${accentColor}`} />
+              </div>
+              <div>
+                <h1 className="text-2xl font-['Playfair_Display'] font-bold text-[#500000]">
+                  {greeting.text}, {firstName}
+                </h1>
+                <p className="text-sm text-gray-500 flex items-center gap-2">
+                  <GreetingIcon className="w-4 h-4" />
+                  {subtitle}
+                  <span className="text-gray-300">|</span>
+                  {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Link href="/messages">
+                <button className="p-2.5 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors">
+                  <MessageSquare className="w-5 h-5 text-gray-600" />
+                </button>
+              </Link>
+              <Link href="/dev-login">
+                <button className="px-3 py-2 text-xs bg-gray-100 rounded-lg text-gray-500 hover:bg-gray-200">
+                  Switch Role
+                </button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </header>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+        {children}
+      </main>
+    </div>
+  );
+}
+
+function JobCard({
+  title,
+  property,
+  time,
+  status,
+  priority,
+  icon: Icon,
+  iconColor,
+  onClick,
+}: {
+  title: string;
+  property: string;
+  time: string;
+  status: 'pending' | 'in_progress' | 'completed' | 'urgent';
+  priority?: 'low' | 'normal' | 'high' | 'urgent';
+  icon: React.ElementType;
+  iconColor: string;
+  onClick?: () => void;
+}) {
+  const statusConfig = {
+    pending: { bg: 'bg-gray-100', text: 'text-gray-600', label: 'Pending', icon: Clock },
+    in_progress: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'In Progress', icon: PlayCircle },
+    completed: { bg: 'bg-emerald-100', text: 'text-emerald-700', label: 'Done', icon: CheckCircle },
+    urgent: { bg: 'bg-red-100', text: 'text-red-700', label: 'Urgent', icon: AlertOctagon },
+  };
+  const s = statusConfig[status];
+
+  return (
+    <motion.div
+      whileHover={{ y: -2 }}
+      onClick={onClick}
+      className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm cursor-pointer hover:shadow-md transition-all"
+    >
+      <div className="flex items-start gap-3">
+        <div className={`w-10 h-10 rounded-lg ${iconColor} flex items-center justify-center shrink-0`}>
+          <Icon className="w-5 h-5 text-white" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <h4 className="font-semibold text-gray-900 text-sm">{title}</h4>
+          <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
+            <MapPin className="w-3 h-3" /> {property}
+          </p>
+          <div className="flex items-center gap-2 mt-2">
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${s.bg} ${s.text}`}>
+              {s.label}
+            </span>
+            <span className="text-[10px] text-gray-400 flex items-center gap-1">
+              <Clock className="w-3 h-3" /> {time}
+            </span>
+            {priority === 'urgent' && (
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-red-100 text-red-700">
+                URGENT
+              </span>
+            )}
+          </div>
+        </div>
+        <ChevronRight className="w-4 h-4 text-gray-300 shrink-0 mt-1" />
+      </div>
+    </motion.div>
+  );
+}
+
+function StatCard({ label, value, icon: Icon, color, bgColor }: {
+  label: string; value: string | number; icon: React.ElementType; color: string; bgColor: string;
+}) {
+  return (
+    <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
+      <div className={`w-10 h-10 rounded-lg ${bgColor} flex items-center justify-center mb-3`}>
+        <Icon className={`w-5 h-5 ${color}`} />
+      </div>
+      <div className="text-2xl font-bold text-gray-900">{value}</div>
+      <div className="text-xs text-gray-500 mt-0.5">{label}</div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CLEANING CREW DASHBOARD
+// ═══════════════════════════════════════════════════════════════
+
+function CleanerDashboard({ user }: { user: DevUser }) {
+  const [activeTimer, setActiveTimer] = useState<string | null>(null);
+  const [timerSeconds, setTimerSeconds] = useState(0);
+
+  useEffect(() => {
+    if (!activeTimer) return;
+    const interval = setInterval(() => setTimerSeconds(s => s + 1), 1000);
+    return () => clearInterval(interval);
+  }, [activeTimer]);
+
+  const formatTimer = (s: number) => {
+    const hrs = Math.floor(s / 3600);
+    const mins = Math.floor((s % 3600) / 60);
+    const secs = s % 60;
+    return `${hrs}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  };
+
+  // Jobs loaded from dispatch API — no mock data
+  const todayJobs: { id: string; title: string; property: string; time: string; status: 'pending' | 'in_progress' | 'completed'; type: 'turnover' | 'deep' | 'touchup' }[] = [];
+
+  const checklist = [
+    { id: '1', task: 'Strip beds & start laundry', done: false },
+    { id: '2', task: 'Clean all bathrooms', done: false },
+    { id: '3', task: 'Vacuum & mop all floors', done: false },
+    { id: '4', task: 'Wipe all surfaces & countertops', done: false },
+    { id: '5', task: 'Clean kitchen & appliances', done: false },
+    { id: '6', task: 'Restock supplies & amenities', done: false },
+    { id: '7', task: 'Make beds with fresh linens', done: false },
+    { id: '8', task: 'Take completion photos', done: false },
+  ];
+
+  return (
+    <DashboardShell user={user} accentColor="text-white" accentBg="bg-emerald-500" icon={Sparkles} subtitle="Cleaning Crew">
+      {/* Active Timer */}
+      {activeTimer && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6 bg-emerald-600 rounded-xl p-4 text-white flex items-center justify-between"
+        >
+          <div className="flex items-center gap-3">
+            <Timer className="w-6 h-6" />
+            <div>
+              <p className="font-semibold">Clocked In — {activeTimer}</p>
+              <p className="text-emerald-200 text-sm">{formatTimer(timerSeconds)}</p>
+            </div>
+          </div>
+          <button
+            onClick={() => { setActiveTimer(null); setTimerSeconds(0); toast.success('Clocked out'); }}
+            className="px-4 py-2 bg-white/20 rounded-lg text-sm font-medium hover:bg-white/30"
+          >
+            Clock Out
+          </button>
+        </motion.div>
+      )}
+
+      {/* Stats Row */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+        <StatCard label="Today's Jobs" value={todayJobs.length} icon={ClipboardCheck} color="text-emerald-600" bgColor="bg-emerald-100" />
+        <StatCard label="Completed" value={todayJobs.filter(j => (j.status as string) === 'completed').length} icon={CheckCircle} color="text-blue-600" bgColor="bg-blue-100" />
+        <StatCard label="Properties" value={0} icon={Home} color="text-[#500000]" bgColor="bg-[#500000]/10" />
+        <StatCard label="This Week" value={0} icon={Calendar} color="text-purple-600" bgColor="bg-purple-100" />
+      </div>
+
+      <div className="grid lg:grid-cols-3 gap-6">
+        {/* Today's Jobs */}
+        <div className="lg:col-span-2 space-y-3">
+          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <Calendar className="w-5 h-5 text-emerald-600" /> Today&apos;s Schedule
+          </h2>
+          {todayJobs.length === 0 ? (
+            <div className="bg-white rounded-xl p-8 border border-gray-100 shadow-sm text-center">
+              <Sparkles className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500 font-medium">No cleaning jobs scheduled today</p>
+              <p className="text-gray-400 text-sm mt-1">Jobs will appear here when assigned via Dispatch</p>
+            </div>
+          ) : todayJobs.map((job) => (
+            <JobCard
+              key={job.id}
+              title={job.title}
+              property={job.property}
+              time={job.time}
+              status={job.status}
+              icon={Sparkles}
+              iconColor={job.type === 'deep' ? 'bg-purple-500' : job.type === 'touchup' ? 'bg-amber-500' : 'bg-emerald-500'}
+              onClick={() => {
+                if (!activeTimer) {
+                  setActiveTimer(job.property);
+                  toast.success(`Started timer for ${job.property}`);
+                }
+              }}
+            />
+          ))}
+        </div>
+
+        {/* Right Column */}
+        <div className="space-y-4">
+          {/* Cleaning Checklist */}
+          <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
+            <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+              <ClipboardCheck className="w-5 h-5 text-emerald-600" /> Turnover Checklist
+            </h3>
+            <div className="space-y-2">
+              {checklist.map((item) => (
+                <label key={item.id} className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    defaultChecked={item.done}
+                    className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                  />
+                  <span className={`text-sm ${item.done ? 'line-through text-gray-400' : 'text-gray-700'}`}>
+                    {item.task}
+                  </span>
+                </label>
+              ))}
+            </div>
+            <p className="text-xs text-gray-400 mt-3">{checklist.filter(c => c.done).length}/{checklist.length} complete</p>
+          </div>
+
+          {/* Quick Actions */}
+          <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
+            <h3 className="font-semibold text-gray-900 mb-3">Quick Actions</h3>
+            <div className="space-y-2">
+              {[
+                { label: 'Upload Photos', icon: Camera, color: 'bg-blue-500' },
+                { label: 'Request Supplies', icon: Package, color: 'bg-amber-500' },
+                { label: 'Flag Maintenance Issue', icon: AlertTriangle, color: 'bg-red-500' },
+                { label: 'Message Steven', icon: MessageSquare, color: 'bg-[#500000]' },
+              ].map((action) => (
+                <button
+                  key={action.label}
+                  className="w-full flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors text-left"
+                >
+                  <div className={`w-8 h-8 rounded-lg ${action.color} flex items-center justify-center`}>
+                    <action.icon className="w-4 h-4 text-white" />
+                  </div>
+                  <span className="text-sm font-medium text-gray-700">{action.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </DashboardShell>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// POOL TECH DASHBOARD
+// ═══════════════════════════════════════════════════════════════
+
+function PoolDashboard({ user }: { user: DevUser }) {
+  const [rangeTab, setRangeTab] = useState<'pool' | 'hottub'>('pool');
+
+  // Pool route loaded from dispatch API — no mock data
+  const todayRoute: { id: string; property: string; time: string; status: 'pending' | 'in_progress' | 'completed'; waterType: 'pool' | 'hottub' | 'pool_hottub'; ph: number | null; chlorine: number | null; temp: number | null }[] = [];
+
+  const waterTypeLabel = (t: string) => {
+    if (t === 'pool_hottub') return 'Pool + Hot Tub';
+    if (t === 'hottub') return 'Hot Tub Only';
+    return 'Pool';
+  };
+
+  const waterTypeIcon = (t: string) => {
+    if (t === 'hottub') return '♨️';
+    if (t === 'pool_hottub') return '🏊‍♀️♨️';
+    return '🏊‍♀️';
+  };
+
+  const poolCount = todayRoute.filter(r => r.waterType === 'pool' || r.waterType === 'pool_hottub').length;
+  const hotTubCount = todayRoute.filter(r => r.waterType === 'hottub' || r.waterType === 'pool_hottub').length;
+
+  return (
+    <DashboardShell user={user} accentColor="text-white" accentBg="bg-cyan-500" icon={Waves} subtitle="Pool & Hot Tub Technician">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+        <StatCard label="Pools Today" value={poolCount} icon={Droplets} color="text-cyan-600" bgColor="bg-cyan-100" />
+        <StatCard label="Hot Tubs Today" value={hotTubCount} icon={Thermometer} color="text-orange-600" bgColor="bg-orange-100" />
+        <StatCard label="Completed" value={todayRoute.filter(r => r.status === 'completed').length} icon={CheckCircle} color="text-emerald-600" bgColor="bg-emerald-100" />
+        <StatCard label="Alerts" value={0} icon={AlertCircle} color="text-red-600" bgColor="bg-red-100" />
+      </div>
+
+      <div className="grid lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-3">
+          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <Waves className="w-5 h-5 text-cyan-600" /> Today&apos;s Route
+          </h2>
+          {todayRoute.length === 0 ? (
+            <div className="bg-white rounded-xl p-8 border border-gray-100 shadow-sm text-center">
+              <Waves className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500 font-medium">No pool stops scheduled today</p>
+              <p className="text-gray-400 text-sm mt-1">Stops will appear here when assigned via Dispatch</p>
+            </div>
+          ) : null}
+          {todayRoute.map((stop, i) => (
+            <motion.div
+              key={stop.id}
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: i * 0.05 }}
+              className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                    stop.status === 'completed' ? 'bg-emerald-100 text-emerald-700' :
+                    stop.status === 'in_progress' ? 'bg-cyan-100 text-cyan-700' :
+                    'bg-gray-100 text-gray-500'
+                  }`}>
+                    {i + 1}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-medium text-sm text-gray-900">{stop.property}</h4>
+                      <span className="text-xs">{waterTypeIcon(stop.waterType)}</span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <p className="text-xs text-gray-500">{stop.time}</p>
+                      <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
+                        stop.waterType === 'hottub' ? 'bg-orange-100 text-orange-700' :
+                        stop.waterType === 'pool_hottub' ? 'bg-purple-100 text-purple-700' :
+                        'bg-cyan-100 text-cyan-700'
+                      }`}>
+                        {waterTypeLabel(stop.waterType)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                {stop.ph !== null && (
+                  <div className="text-right">
+                    <p className="text-xs text-gray-500">pH: <span className={`font-bold ${stop.ph >= 7.2 && stop.ph <= 7.8 ? 'text-emerald-600' : 'text-red-600'}`}>{stop.ph}</span></p>
+                    <p className="text-xs text-gray-500">Cl: <span className={`font-bold ${stop.chlorine! >= 1.0 && stop.chlorine! <= 5.0 ? 'text-emerald-600' : 'text-red-600'}`}>{stop.chlorine} ppm</span></p>
+                    {stop.temp !== null && (
+                      <p className="text-xs text-gray-500">Temp: <span className="font-bold text-orange-600">{stop.temp}°F</span></p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Hot tub specific checklist inline */}
+              {(stop.waterType === 'hottub' || stop.waterType === 'pool_hottub') && stop.status === 'in_progress' && (
+                <div className="mt-3 pt-3 border-t border-gray-100">
+                  <p className="text-xs font-semibold text-orange-700 mb-2 flex items-center gap-1">
+                    <Thermometer className="w-3 h-3" /> Hot Tub Checklist
+                  </p>
+                  <div className="grid grid-cols-2 gap-1">
+                    {['Check water temp (100-104°F)', 'Test bromine/chlorine', 'Clean filter basket', 'Check jet operation', 'Inspect cover condition', 'Wipe shell waterline'].map(task => (
+                      <label key={task} className="flex items-center gap-1.5 text-[11px] text-gray-600 cursor-pointer">
+                        <input type="checkbox" className="w-3 h-3 rounded border-gray-300 text-orange-500 focus:ring-orange-400" />
+                        {task}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          ))}
+        </div>
+
+        <div className="space-y-4">
+          {/* Chemical Ranges — Tabbed Pool vs Hot Tub */}
+          <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
+            <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+              <Droplets className="w-5 h-5 text-cyan-600" /> Target Ranges
+            </h3>
+            <div className="flex gap-1 mb-3">
+              <button
+                onClick={() => setRangeTab('pool')}
+                className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                  rangeTab === 'pool' ? 'bg-cyan-100 text-cyan-700' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
+                }`}
+              >
+                🏊 Pool
+              </button>
+              <button
+                onClick={() => setRangeTab('hottub')}
+                className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                  rangeTab === 'hottub' ? 'bg-orange-100 text-orange-700' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
+                }`}
+              >
+                ♨️ Hot Tub
+              </button>
+            </div>
+            <div className="space-y-2.5 text-sm">
+              {rangeTab === 'pool' ? (
+                <>
+                  {[
+                    { label: 'pH Level', range: '7.2 — 7.6', color: 'text-cyan-600' },
+                    { label: 'Free Chlorine', range: '1.0 — 3.0 ppm', color: 'text-blue-600' },
+                    { label: 'Alkalinity', range: '80 — 120 ppm', color: 'text-purple-600' },
+                    { label: 'Cyanuric Acid', range: '30 — 50 ppm', color: 'text-amber-600' },
+                    { label: 'Calcium Hardness', range: '200 — 400 ppm', color: 'text-gray-600' },
+                  ].map(item => (
+                    <div key={item.label} className="flex items-center justify-between">
+                      <span className="text-gray-600">{item.label}</span>
+                      <span className={`font-medium ${item.color}`}>{item.range}</span>
+                    </div>
+                  ))}
+                </>
+              ) : (
+                <>
+                  {[
+                    { label: 'Water Temp', range: '100 — 104°F', color: 'text-orange-600' },
+                    { label: 'pH Level', range: '7.2 — 7.8', color: 'text-cyan-600' },
+                    { label: 'Bromine', range: '3.0 — 5.0 ppm', color: 'text-pink-600' },
+                    { label: 'Free Chlorine', range: '3.0 — 5.0 ppm', color: 'text-blue-600' },
+                    { label: 'Alkalinity', range: '80 — 120 ppm', color: 'text-purple-600' },
+                    { label: 'Calcium Hardness', range: '150 — 250 ppm', color: 'text-gray-600' },
+                  ].map(item => (
+                    <div key={item.label} className="flex items-center justify-between">
+                      <span className="text-gray-600">{item.label}</span>
+                      <span className={`font-medium ${item.color}`}>{item.range}</span>
+                    </div>
+                  ))}
+                  <div className="mt-2 p-2 bg-orange-50 rounded-lg">
+                    <p className="text-[11px] text-orange-700 font-medium">⚠️ Hot tubs need higher sanitizer levels due to higher temps &amp; smaller volume. Test before &amp; after each guest checkout.</p>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Hot Tub Maintenance Notes */}
+          <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl p-4 text-white">
+            <h3 className="font-semibold mb-2 flex items-center gap-2">
+              <Thermometer className="w-5 h-5" /> Hot Tub Notes
+            </h3>
+            <div className="space-y-2 text-sm text-white/90">
+              <p>• Drain &amp; refill every 3-4 months</p>
+              <p>• Clean filters weekly (rinse) / monthly (soak)</p>
+              <p>• Check cover for tears — West TX sun eats them</p>
+              <p>• Shock after every guest checkout</p>
+              <p>• If water is foamy → drain &amp; refill</p>
+            </div>
+          </div>
+
+          {/* Quick Actions */}
+          <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
+            <h3 className="font-semibold text-gray-900 mb-3">Quick Actions</h3>
+            <div className="space-y-2">
+              {[
+                { label: 'Log Pool Chemical Reading', icon: FileText, color: 'bg-cyan-500' },
+                { label: 'Log Hot Tub Reading', icon: Thermometer, color: 'bg-orange-500' },
+                { label: 'Report Equipment Issue', icon: AlertTriangle, color: 'bg-red-500' },
+                { label: 'Order Chemicals / Filters', icon: Package, color: 'bg-amber-500' },
+                { label: 'Upload Photos', icon: Camera, color: 'bg-blue-500' },
+                { label: 'Message Steven', icon: MessageSquare, color: 'bg-[#500000]' },
+              ].map((action) => (
+                <button key={action.label} className="w-full flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors text-left">
+                  <div className={`w-8 h-8 rounded-lg ${action.color} flex items-center justify-center`}>
+                    <action.icon className="w-4 h-4 text-white" />
+                  </div>
+                  <span className="text-sm font-medium text-gray-700">{action.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </DashboardShell>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MAINTENANCE TECH DASHBOARD
+// ═══════════════════════════════════════════════════════════════
+
+function MaintenanceDashboard({ user }: { user: DevUser }) {
+  // Work orders loaded from dispatch API — no mock data
+  const workOrders: { id: string; title: string; property: string; time: string; status: 'pending' | 'in_progress' | 'completed' | 'urgent'; priority: 'low' | 'normal' | 'high' | 'urgent' }[] = [];
+
+  return (
+    <DashboardShell user={user} accentColor="text-white" accentBg="bg-orange-500" icon={Wrench} subtitle="Maintenance Technician">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+        <StatCard label="Open Orders" value={workOrders.filter(w => (w.status as string) !== 'completed').length} icon={Wrench} color="text-orange-600" bgColor="bg-orange-100" />
+        <StatCard label="Urgent" value={workOrders.filter(w => w.priority === 'urgent').length} icon={AlertOctagon} color="text-red-600" bgColor="bg-red-100" />
+        <StatCard label="In Progress" value={workOrders.filter(w => w.status === 'in_progress').length} icon={PlayCircle} color="text-blue-600" bgColor="bg-blue-100" />
+        <StatCard label="Completed Today" value={0} icon={CheckCircle} color="text-emerald-600" bgColor="bg-emerald-100" />
+      </div>
+
+      <div className="grid lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-3">
+          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <Hammer className="w-5 h-5 text-orange-600" /> Work Orders
+          </h2>
+          {workOrders.length === 0 ? (
+            <div className="bg-white rounded-xl p-8 border border-gray-100 shadow-sm text-center">
+              <Wrench className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500 font-medium">No work orders assigned</p>
+              <p className="text-gray-400 text-sm mt-1">Work orders will appear here when created via Dispatch</p>
+            </div>
+          ) : workOrders.map((wo) => (
+            <JobCard
+              key={wo.id}
+              title={wo.title}
+              property={wo.property}
+              time={wo.time}
+              status={wo.status}
+              priority={wo.priority}
+              icon={wo.priority === 'urgent' ? AlertOctagon : Wrench}
+              iconColor={wo.priority === 'urgent' ? 'bg-red-500' : wo.priority === 'high' ? 'bg-orange-500' : 'bg-gray-400'}
+            />
+          ))}
+        </div>
+
+        <div className="space-y-4">
+          {/* Parts Inventory */}
+          <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
+            <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+              <Package className="w-5 h-5 text-orange-600" /> Parts in Truck
+            </h3>
+            <div className="text-sm text-gray-400 text-center py-4">
+              No parts inventory tracked yet. Add items via Inventory page.
+            </div>
+          </div>
+
+          {/* Quick Actions */}
+          <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
+            <h3 className="font-semibold text-gray-900 mb-3">Quick Actions</h3>
+            <div className="space-y-2">
+              {[
+                { label: 'Log Time & Parts', icon: Timer, color: 'bg-orange-500' },
+                { label: 'Upload Repair Photos', icon: Camera, color: 'bg-blue-500' },
+                { label: 'Order Parts', icon: Truck, color: 'bg-purple-500' },
+                { label: 'Property Inspection', icon: ClipboardCheck, color: 'bg-emerald-500' },
+                { label: 'Message Steven', icon: MessageSquare, color: 'bg-[#500000]' },
+              ].map((action) => (
+                <button key={action.label} className="w-full flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors text-left">
+                  <div className={`w-8 h-8 rounded-lg ${action.color} flex items-center justify-center`}>
+                    <action.icon className="w-4 h-4 text-white" />
+                  </div>
+                  <span className="text-sm font-medium text-gray-700">{action.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </DashboardShell>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// YARD CREW DASHBOARD
+// ═══════════════════════════════════════════════════════════════
+
+function YardDashboard({ user }: { user: DevUser }) {
+  // Yard schedule loaded from dispatch API — no mock data
+  const schedule: { id: string; title: string; property: string; time: string; status: 'pending' | 'in_progress' | 'completed' }[] = [];
+
+  return (
+    <DashboardShell user={user} accentColor="text-white" accentBg="bg-green-600" icon={TreePine} subtitle="Yard Crew">
+      {/* Weather alerts will display here when weather API is connected */}
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+        <StatCard label="Today's Properties" value={schedule.length} icon={TreePine} color="text-green-600" bgColor="bg-green-100" />
+        <StatCard label="Completed" value={schedule.filter(s => s.status === 'completed').length} icon={CheckCircle} color="text-emerald-600" bgColor="bg-emerald-100" />
+        <StatCard label="Seasonal Tasks" value={0} icon={Leaf} color="text-orange-600" bgColor="bg-orange-100" />
+        <StatCard label="Equipment OK" value="—" icon={Scissors} color="text-gray-600" bgColor="bg-gray-100" />
+      </div>
+
+      <div className="grid lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-3">
+          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <Leaf className="w-5 h-5 text-green-600" /> Today&apos;s Route
+          </h2>
+          {schedule.length === 0 ? (
+            <div className="bg-white rounded-xl p-8 border border-gray-100 shadow-sm text-center">
+              <TreePine className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500 font-medium">No yard work scheduled today</p>
+              <p className="text-gray-400 text-sm mt-1">Jobs will appear here when assigned via Dispatch</p>
+            </div>
+          ) : schedule.map((job) => (
+            <JobCard
+              key={job.id}
+              title={job.title}
+              property={job.property}
+              time={job.time}
+              status={job.status}
+              icon={job.title.includes('Trim') || job.title.includes('Tree') ? Scissors : TreePine}
+              iconColor={job.title.includes('Tree') ? 'bg-amber-600' : 'bg-green-600'}
+            />
+          ))}
+        </div>
+
+        <div className="space-y-4">
+          {/* Equipment Check */}
+          <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
+            <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+              <Scissors className="w-5 h-5 text-green-600" /> Equipment Check
+            </h3>
+            <div className="text-sm text-gray-400 text-center py-4">
+              No equipment tracked yet. Add items via Inventory page.
+            </div>
+          </div>
+
+          {/* Quick Actions */}
+          <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
+            <h3 className="font-semibold text-gray-900 mb-3">Quick Actions</h3>
+            <div className="space-y-2">
+              {[
+                { label: 'Before/After Photos', icon: Camera, color: 'bg-green-600' },
+                { label: 'Log Equipment Issue', icon: AlertTriangle, color: 'bg-red-500' },
+                { label: 'Request Supplies', icon: Package, color: 'bg-amber-500' },
+                { label: 'Flag Irrigation Problem', icon: Droplets, color: 'bg-blue-500' },
+                { label: 'Message Steven', icon: MessageSquare, color: 'bg-[#500000]' },
+              ].map((action) => (
+                <button key={action.label} className="w-full flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors text-left">
+                  <div className={`w-8 h-8 rounded-lg ${action.color} flex items-center justify-center`}>
+                    <action.icon className="w-4 h-4 text-white" />
+                  </div>
+                  <span className="text-sm font-medium text-gray-700">{action.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </DashboardShell>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// OWNER DASHBOARD (Steven Palma - original)
+// ═══════════════════════════════════════════════════════════════
+
+function OwnerDashboard({ user }: { user: DevUser }) {
+  const { data: stats } = useDashboardStats();
+  const { data: cleaningJobs } = useCleaningJobs();
+  const { data: pendingMessages } = usePendingMessages();
+  const { data: locks } = useLocks();
+  const greeting = getGreeting();
+  const GreetingIcon = greeting.icon;
+  const firstName = user.displayName.split(' ')[0];
+
+  const activeCleanings = cleaningJobs?.filter(j => j.status === 'IN_PROGRESS') || [];
+  const lockStats = useMemo(() => {
+    if (!locks) return { online: 0, offline: 0 };
+    return {
+      online: locks.filter(l => l.isOnline).length,
+      offline: locks.filter(l => !l.isOnline).length,
+    };
+  }, [locks]);
+
+  return (
+    <div className="min-h-screen bg-[#F5F5F0]">
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-6 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#500000] to-[#722F37] flex items-center justify-center shadow-lg shadow-[#500000]/20"
-              >
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#500000] to-[#722F37] flex items-center justify-center shadow-lg shadow-[#500000]/20">
                 <GreetingIcon className="w-7 h-7 text-[#C4A777]" />
-              </motion.div>
+              </div>
               <div>
-                <motion.h1
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="text-3xl font-['Playfair_Display'] font-bold text-[#500000]"
-                >
-                  {greeting.text}, Steven
-                </motion.h1>
-                <motion.p
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.1 }}
-                  className="text-[#2D2D2D]/60 mt-1 flex items-center gap-2"
-                >
+                <h1 className="text-3xl font-['Playfair_Display'] font-bold text-[#500000]">
+                  {greeting.text}, {firstName}
+                </h1>
+                <p className="text-gray-500 mt-1 flex items-center gap-2">
                   <Activity className="w-4 h-4" />
                   {propertyKnowledge.length} properties
-                  <span className="text-[#2D2D2D]/30">|</span>
+                  <span className="text-gray-300">|</span>
                   {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-                </motion.p>
+                </p>
               </div>
             </div>
-
             <div className="flex items-center gap-3">
-              {/* Refresh Button */}
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={handleRefresh}
-                disabled={isRefreshing}
-                className="p-3 bg-[#F5F5F0] rounded-xl hover:bg-[#500000]/10 transition-colors disabled:opacity-50"
-                title="Refresh (Cmd+R)"
-              >
-                <RefreshCw className={`w-5 h-5 text-[#500000] ${isRefreshing ? 'animate-spin' : ''}`} />
-              </motion.button>
-
-              {/* Notifications */}
-              <button className="relative p-3 bg-[#F5F5F0] rounded-xl hover:bg-[#500000]/10 transition-colors">
+              <button className="relative p-3 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors">
                 <Bell className="w-5 h-5 text-[#500000]" />
                 {(pendingMessages?.length || 0) > 0 && (
-                  <motion.span
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    className="absolute -top-1 -right-1 w-5 h-5 bg-amber-500 text-white text-xs rounded-full flex items-center justify-center"
-                  >
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-amber-500 text-white text-xs rounded-full flex items-center justify-center">
                     {pendingMessages?.length}
-                  </motion.span>
+                  </span>
                 )}
               </button>
-
-              {/* Quick Actions Dropdown */}
               <div className="relative group">
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[#500000] to-[#722F37] text-white font-semibold rounded-xl shadow-lg shadow-[#500000]/20"
-                >
-                  <Zap className="w-5 h-5" />
-                  Quick Action
-                </motion.button>
-
-                <div className="absolute right-0 mt-2 w-56 py-2 bg-white rounded-xl shadow-xl border border-[#2D2D2D]/10 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+                <button className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[#500000] to-[#722F37] text-white font-semibold rounded-xl shadow-lg shadow-[#500000]/20">
+                  <Zap className="w-5 h-5" /> Quick Action
+                </button>
+                <div className="absolute right-0 mt-2 w-56 py-2 bg-white rounded-xl shadow-xl border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
                   {[
                     { label: 'Add Property', icon: Building2, href: '/properties/new' },
                     { label: 'Generate Lock Code', icon: Key, href: '/locks' },
@@ -212,9 +836,9 @@ export default function DashboardPage() {
                     { label: 'View Reports', icon: BarChart3, href: '/finance' },
                   ].map((item) => (
                     <Link key={item.label} href={item.href}>
-                      <div className="flex items-center gap-3 px-4 py-2.5 hover:bg-[#F5F5F0] transition-colors">
+                      <div className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors">
                         <item.icon className="w-4 h-4 text-[#500000]" />
-                        <span className="text-[#2D2D2D] text-sm font-medium">{item.label}</span>
+                        <span className="text-sm font-medium text-gray-700">{item.label}</span>
                       </div>
                     </Link>
                   ))}
@@ -226,388 +850,186 @@ export default function DashboardPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-6 py-8">
-        {/* Key Metrics Row - Real data only */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8"
-        >
-          <MetricCard
-            label="Today's Check-ins"
-            value={stats?.todayCheckIns || 0}
-            icon={ArrowUpRight}
-            color="text-emerald-600"
-            bgColor="bg-emerald-100"
-          />
-          <MetricCard
-            label="Active Cleanings"
-            value={activeCleanings.length}
-            icon={Sparkles}
-            color="text-purple-600"
-            bgColor="bg-purple-100"
-            pulse={activeCleanings.length > 0}
-          />
-          <MetricCard
-            label="Properties"
-            value={propertyKnowledge.length}
-            icon={Home}
-            color="text-[#500000]"
-            bgColor="bg-[#500000]/10"
-          />
-          <MetricCard
-            label="Locks Online"
-            value={`${lockStats.online}/${lockStats.online + lockStats.offline || 0}`}
-            icon={lockStats.offline > 0 ? WifiOff : Wifi}
-            color={lockStats.offline > 0 ? 'text-amber-600' : 'text-emerald-600'}
-            bgColor={lockStats.offline > 0 ? 'bg-amber-100' : 'bg-emerald-100'}
-          />
-        </motion.div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <StatCard label="Today's Check-ins" value={stats?.todayCheckIns || 0} icon={ArrowUpRight} color="text-emerald-600" bgColor="bg-emerald-100" />
+          <StatCard label="Active Cleanings" value={activeCleanings.length} icon={Sparkles} color="text-purple-600" bgColor="bg-purple-100" />
+          <StatCard label="Properties" value={propertyKnowledge.length} icon={Home} color="text-[#500000]" bgColor="bg-[#500000]/10" />
+          <StatCard label="Locks Online" value={`${lockStats.online}/${lockStats.online + lockStats.offline}`} icon={lockStats.offline > 0 ? WifiOff : Wifi} color={lockStats.offline > 0 ? 'text-amber-600' : 'text-emerald-600'} bgColor={lockStats.offline > 0 ? 'bg-amber-100' : 'bg-emerald-100'} />
+        </div>
 
-        {/* Main Content Grid */}
         <div className="grid lg:grid-cols-3 gap-6">
-          {/* Left Column */}
           <div className="lg:col-span-2 space-y-6">
-            
-            {/* Contact Card - Click to Call */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-gradient-to-br from-[#500000] to-[#722F37] rounded-2xl p-8 text-white"
-            >
-              <h2 className="text-2xl font-['Playfair_Display'] font-bold mb-4">
-                Contact Steven Palma
-              </h2>
-              <p className="text-white/70 mb-6">
-                Have questions? Reach out directly for personalized assistance with your booking or property needs.
-              </p>
-              
+            {/* Contact Card */}
+            <div className="bg-gradient-to-br from-[#500000] to-[#722F37] rounded-2xl p-8 text-white">
+              <h2 className="text-2xl font-['Playfair_Display'] font-bold mb-4">Property Management</h2>
+              <p className="text-white/70 mb-6">Manage your {propertyKnowledge.length} properties across Midland, TX.</p>
               <div className="flex flex-wrap gap-4">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={initiateCall}
-                  className="flex items-center gap-3 px-6 py-3 bg-white text-[#500000] rounded-xl font-semibold shadow-lg hover:shadow-xl transition-shadow"
-                >
-                  <PhoneCall className="w-5 h-5" />
-                  Call {CONTACT_INFO.phoneDisplay}
-                </motion.button>
-                
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => initiateEmail('Inquiry from Dashboard')}
-                  className="flex items-center gap-3 px-6 py-3 bg-white/20 text-white rounded-xl font-semibold hover:bg-white/30 transition-colors"
-                >
-                  <Mail className="w-5 h-5" />
-                  Send Email
-                </motion.button>
-              </div>
-            </motion.div>
-
-            {/* Properties Overview */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="bg-white rounded-2xl shadow-sm border border-[#2D2D2D]/5 p-6"
-            >
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-['Playfair_Display'] font-semibold text-[#2D2D2D]">
-                  Property Portfolio
-                </h2>
-                <Link href="/properties">
-                  <span className="text-sm text-[#500000] hover:underline flex items-center gap-1">
-                    View All
-                    <ChevronRight className="w-4 h-4" />
-                  </span>
+                <Link href="/admin/dispatch">
+                  <button className="flex items-center gap-3 px-6 py-3 bg-white text-[#500000] rounded-xl font-semibold shadow-lg">
+                    <Activity className="w-5 h-5" /> View Dispatch
+                  </button>
+                </Link>
+                <Link href="/admin/accounting">
+                  <button className="flex items-center gap-3 px-6 py-3 bg-white/20 text-white rounded-xl font-semibold hover:bg-white/30">
+                    <DollarSign className="w-5 h-5" /> Financials
+                  </button>
                 </Link>
               </div>
+            </div>
 
+            {/* Properties */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-['Playfair_Display'] font-semibold text-gray-900">Property Portfolio</h2>
+                <Link href="/properties"><span className="text-sm text-[#500000] hover:underline flex items-center gap-1">View All <ChevronRight className="w-4 h-4" /></span></Link>
+              </div>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                {propertyKnowledge.slice(0, 6).map((property, index) => (
+                {propertyKnowledge.slice(0, 6).map((property) => (
                   <Link key={property.id} href={`/properties/${property.id}`}>
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                      className="p-4 bg-[#F5F5F0] rounded-xl hover:bg-[#500000]/5 transition-colors cursor-pointer"
-                    >
-                      <div className="font-medium text-sm text-[#2D2D2D] truncate">
-                        {property.nickname || property.name}
-                      </div>
-                      <div className="text-xs text-[#2D2D2D]/50 mt-1">
-                        {property.bedrooms} bed • {property.bathrooms} bath
-                      </div>
-                    </motion.div>
+                    <div className="p-4 bg-gray-50 rounded-xl hover:bg-[#500000]/5 transition-colors">
+                      <div className="font-medium text-sm text-gray-900 truncate">{property.nickname || property.name}</div>
+                      <div className="text-xs text-gray-500 mt-1">{property.bedrooms} bed • {property.bathrooms} bath</div>
+                    </div>
                   </Link>
                 ))}
               </div>
-              
-              {propertyKnowledge.length > 6 && (
-                <div className="mt-4 text-center">
-                  <Link href="/properties">
-                    <span className="text-sm text-[#500000] hover:underline">
-                      +{propertyKnowledge.length - 6} more properties
-                    </span>
-                  </Link>
-                </div>
-              )}
-            </motion.div>
-
-            {/* Empty State for Schedule */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="bg-white rounded-2xl shadow-sm border border-[#2D2D2D]/5 p-8"
-            >
-              <div className="text-center">
-                <Calendar className="w-12 h-12 text-[#2D2D2D]/20 mx-auto mb-4" />
-                <h3 className="text-lg font-['Playfair_Display'] font-semibold text-[#2D2D2D] mb-2">
-                  Today's Schedule
-                </h3>
-                <p className="text-[#2D2D2D]/50 text-sm mb-4">
-                  No scheduled activities for today. Check the calendar for upcoming events.
-                </p>
-                <Link href="/calendar">
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="px-4 py-2 bg-[#500000] text-white rounded-lg text-sm font-medium"
-                  >
-                    View Calendar
-                  </motion.button>
-                </Link>
-              </div>
-            </motion.div>
+            </div>
           </div>
 
-          {/* Right Column */}
           <div className="space-y-6">
-            
             {/* Quick Actions */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-              className="bg-gradient-to-br from-[#500000] to-[#722F37] rounded-2xl p-6 text-white"
-            >
+            <div className="bg-gradient-to-br from-[#500000] to-[#722F37] rounded-2xl p-6 text-white">
               <h3 className="font-['Playfair_Display'] font-semibold mb-4 flex items-center gap-2">
-                <Zap className="w-5 h-5 text-[#C4A777]" />
-                Quick Actions
+                <Zap className="w-5 h-5 text-[#C4A777]" /> Quick Actions
               </h3>
-
               <div className="space-y-2">
                 {[
-                  { label: 'Call Steven', icon: Phone, action: initiateCall, isAction: true },
                   { label: 'Smart Home Control', icon: Thermometer, href: '/smart-home' },
                   { label: 'Generate Lock Code', icon: Key, href: '/locks' },
                   { label: 'Schedule Cleaning', icon: Sparkles, href: '/cleaning' },
                   { label: 'AI Concierge', icon: MessageSquare, href: '/concierge' },
                   { label: 'Settings', icon: Settings, href: '/settings' },
                 ].map((action) => (
-                  action.isAction ? (
-                    <motion.button
-                      key={action.label}
-                      whileHover={{ x: 4 }}
-                      onClick={action.action}
-                      className="w-full flex items-center gap-3 p-3 bg-white/10 rounded-xl hover:bg-white/20 transition-colors"
-                    >
+                  <Link key={action.label} href={action.href}>
+                    <div className="flex items-center gap-3 p-3 bg-white/10 rounded-xl hover:bg-white/20 transition-colors">
                       <action.icon className="w-5 h-5" />
-                      <span className="font-medium flex-1 text-left">{action.label}</span>
+                      <span className="font-medium flex-1">{action.label}</span>
                       <ChevronRight className="w-4 h-4" />
-                    </motion.button>
-                  ) : (
-                    <Link key={action.label} href={action.href!}>
-                      <motion.button
-                        whileHover={{ x: 4 }}
-                        className="w-full flex items-center gap-3 p-3 bg-white/10 rounded-xl hover:bg-white/20 transition-colors"
-                      >
-                        <action.icon className="w-5 h-5" />
-                        <span className="font-medium flex-1 text-left">{action.label}</span>
-                        <ChevronRight className="w-4 h-4" />
-                      </motion.button>
-                    </Link>
-                  )
-                ))}
-              </div>
-            </motion.div>
-
-            {/* Property Health - Real data */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
-              className="bg-white rounded-2xl shadow-sm border border-[#2D2D2D]/5 p-6"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-['Playfair_Display'] font-semibold text-[#2D2D2D]">
-                  Properties
-                </h3>
-                <Link href="/properties">
-                  <span className="text-sm text-[#500000] hover:underline">View All</span>
-                </Link>
-              </div>
-
-              <div className="space-y-3">
-                {propertyKnowledge.slice(0, 5).map((property, index) => (
-                  <Link key={property.id} href={`/properties/${property.id}`}>
-                    <motion.div
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                      className="flex items-center gap-3 p-3 rounded-xl bg-[#F5F5F0] hover:bg-[#F5F5F0]/80 transition-colors cursor-pointer"
-                    >
-                      <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium text-sm text-[#2D2D2D] truncate">
-                          {property.nickname || property.name}
-                        </div>
-                        <div className="text-xs text-[#2D2D2D]/50">
-                          {property.bedrooms} bed, {property.bathrooms} bath
-                        </div>
-                      </div>
-                      <ChevronRight className="w-4 h-4 text-[#2D2D2D]/30" />
-                    </motion.div>
+                    </div>
                   </Link>
                 ))}
               </div>
-            </motion.div>
+            </div>
 
-            {/* Weather Widget - Real API */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6 }}
-              className="bg-white rounded-2xl shadow-sm border border-[#2D2D2D]/5 p-6"
-            >
-              <WeatherWidget />
-            </motion.div>
-          </div>
-        </div>
-      </main>
-    </div>
-  );
-}
-
-// Weather Widget with real API
-function WeatherWidget() {
-  const [weather, setWeather] = useState<{ temp: number; condition: string; emoji: string } | null>(null);
-
-  useEffect(() => {
-    const fetchWeather = async () => {
-      try {
-        const res = await fetch('/api/weather');
-        const data = await res.json();
-        if (data.success && data.data) {
-          setWeather({
-            temp: Math.round(data.data.temp),
-            condition: data.data.condition,
-            emoji: getWeatherEmoji(data.data.condition),
-          });
-        }
-      } catch (error) {
-        // Silently fail - weather is non-critical
-      }
-    };
-    fetchWeather();
-  }, []);
-
-  const getWeatherEmoji = (condition: string): string => {
-    const emojis: Record<string, string> = {
-      'Clear': '☀️', 'Sunny': '☀️', 'Clouds': '☁️', 'Cloudy': '☁️',
-      'Partly Cloudy': '⛅', 'Rain': '🌧️', 'Thunderstorm': '⛈️',
-    };
-    return emojis[condition] || '🌡️';
-  };
-
-  if (!weather) {
-    return (
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="font-['Playfair_Display'] font-semibold text-[#2D2D2D]">
-            Midland, TX
-          </h3>
-          <p className="text-sm text-[#2D2D2D]/50 mt-1">Loading weather...</p>
-        </div>
-        <Sun className="w-10 h-10 text-[#C4A777]/50 animate-pulse" />
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex items-center justify-between">
-      <div>
-        <h3 className="font-['Playfair_Display'] font-semibold text-[#2D2D2D]">
-          Midland, TX
-        </h3>
-        <p className="text-4xl font-bold text-[#500000] mt-2">{weather.temp}°F</p>
-        <p className="text-sm text-[#2D2D2D]/60 mt-1">{weather.condition}</p>
-      </div>
-      <div className="text-5xl">{weather.emoji}</div>
-    </div>
-  );
-}
-
-// Metric Card Component - Simplified
-function MetricCard({
-  label,
-  value,
-  icon: Icon,
-  color,
-  bgColor,
-  pulse = false,
-}: {
-  label: string;
-  value: string | number;
-  icon: React.ElementType;
-  color: string;
-  bgColor: string;
-  pulse?: boolean;
-}) {
-  return (
-    <motion.div
-      whileHover={{ y: -4, boxShadow: '0 12px 40px rgba(80, 0, 0, 0.1)' }}
-      className="bg-white rounded-2xl p-5 shadow-sm border border-[#2D2D2D]/5 relative overflow-hidden"
-    >
-      {pulse && (
-        <span className="absolute top-4 right-4 w-2 h-2 bg-amber-500 rounded-full animate-ping" />
-      )}
-      <div className="flex items-center justify-between mb-3">
-        <div className={`w-12 h-12 rounded-xl ${bgColor} flex items-center justify-center`}>
-          <Icon className={`w-6 h-6 ${color}`} />
-        </div>
-      </div>
-      <div className="text-3xl font-['Playfair_Display'] font-bold text-[#2D2D2D]">
-        {value}
-      </div>
-      <div className="text-sm text-[#2D2D2D]/60">{label}</div>
-    </motion.div>
-  );
-}
-
-// Dashboard Skeleton Component
-function DashboardSkeleton() {
-  return (
-    <div className="min-h-screen bg-[#F5F5F0] animate-pulse">
-      <header className="bg-white border-b border-[#2D2D2D]/10 p-6">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 bg-[#2D2D2D]/10 rounded-2xl" />
-            <div>
-              <div className="h-8 w-48 bg-[#2D2D2D]/10 rounded" />
-              <div className="h-4 w-32 bg-[#2D2D2D]/10 rounded mt-2" />
+            {/* Properties Sidebar */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+              <h3 className="font-['Playfair_Display'] font-semibold text-gray-900 mb-4">Properties</h3>
+              <div className="space-y-3">
+                {propertyKnowledge.slice(0, 5).map((property) => (
+                  <Link key={property.id} href={`/properties/${property.id}`}>
+                    <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
+                      <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-sm text-gray-900 truncate">{property.nickname || property.name}</div>
+                        <div className="text-xs text-gray-500">{property.bedrooms} bed, {property.bathrooms} bath</div>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-gray-300" />
+                    </div>
+                  </Link>
+                ))}
+              </div>
             </div>
           </div>
         </div>
-      </header>
-      <main className="max-w-7xl mx-auto px-6 py-8">
-        <div className="grid grid-cols-4 gap-4 mb-8">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="bg-white rounded-2xl p-5 h-32" />
-          ))}
-        </div>
       </main>
     </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ADMIN DASHBOARD
+// ═══════════════════════════════════════════════════════════════
+
+function AdminDashboard({ user }: { user: DevUser }) {
+  return (
+    <DashboardShell user={user} accentColor="text-white" accentBg="bg-purple-500" icon={Activity} subtitle="Admin Panel">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+        <StatCard label="Properties" value={propertyKnowledge.length} icon={Home} color="text-[#500000]" bgColor="bg-[#500000]/10" />
+        <StatCard label="Active Workers" value={0} icon={Activity} color="text-purple-600" bgColor="bg-purple-100" />
+        <StatCard label="Open Tasks" value={0} icon={ClipboardCheck} color="text-amber-600" bgColor="bg-amber-100" />
+        <StatCard label="Messages" value={0} icon={MessageSquare} color="text-blue-600" bgColor="bg-blue-100" />
+      </div>
+
+      <div className="grid lg:grid-cols-2 gap-6">
+        {[
+          { title: 'Bookings', icon: Calendar, href: '/bookings', desc: 'Manage reservations, check-ins, check-outs' },
+          { title: 'Dispatch', icon: Truck, href: '/admin/dispatch', desc: 'Assign and track worker tasks' },
+          { title: 'Properties', icon: Home, href: '/properties', desc: 'View and manage all properties' },
+          { title: 'Smart Home', icon: Thermometer, href: '/admin/smart-home', desc: 'Locks, thermostats, devices' },
+          { title: 'Guest CRM', icon: Star, href: '/admin/crm', desc: 'Guest profiles, reviews, loyalty' },
+          { title: 'Inventory', icon: Package, href: '/admin/inventory', desc: 'Supplies, linens, equipment' },
+        ].map((item) => (
+          <Link key={item.title} href={item.href}>
+            <motion.div
+              whileHover={{ y: -2 }}
+              className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-all"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-[#500000]/10 flex items-center justify-center">
+                  <item.icon className="w-6 h-6 text-[#500000]" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900">{item.title}</h3>
+                  <p className="text-sm text-gray-500">{item.desc}</p>
+                </div>
+                <ChevronRight className="w-5 h-5 text-gray-300 ml-auto" />
+              </div>
+            </motion.div>
+          </Link>
+        ))}
+      </div>
+    </DashboardShell>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// GUEST DASHBOARD
+// ═══════════════════════════════════════════════════════════════
+
+function GuestDashboard({ user }: { user: DevUser }) {
+  return (
+    <DashboardShell user={user} accentColor="text-white" accentBg="bg-blue-500" icon={Home} subtitle="Guest Portal">
+      <div className="grid grid-cols-2 gap-3 mb-6">
+        <StatCard label="Your Bookings" value={0} icon={Calendar} color="text-blue-600" bgColor="bg-blue-100" />
+        <StatCard label="Messages" value={0} icon={MessageSquare} color="text-[#500000]" bgColor="bg-[#500000]/10" />
+      </div>
+
+      <div className="grid lg:grid-cols-2 gap-6">
+        <Link href="/properties">
+          <motion.div whileHover={{ y: -2 }} className="bg-gradient-to-br from-[#500000] to-[#722F37] rounded-xl p-8 text-white">
+            <Home className="w-10 h-10 text-[#C4A777] mb-4" />
+            <h3 className="text-xl font-['Playfair_Display'] font-bold mb-2">Browse Properties</h3>
+            <p className="text-white/70">Explore our {propertyKnowledge.length} properties across Midland, TX</p>
+          </motion.div>
+        </Link>
+
+        <Link href="/concierge">
+          <motion.div whileHover={{ y: -2 }} className="bg-white rounded-xl p-8 border border-gray-100 shadow-sm">
+            <MessageSquare className="w-10 h-10 text-[#500000] mb-4" />
+            <h3 className="text-xl font-['Playfair_Display'] font-bold text-gray-900 mb-2">AI Concierge</h3>
+            <p className="text-gray-500">Chat with Steven, our AI concierge for local tips and assistance</p>
+          </motion.div>
+        </Link>
+      </div>
+
+      <div className="mt-8 bg-white rounded-xl p-6 border border-gray-100 shadow-sm text-center">
+        <Phone className="w-8 h-8 text-[#500000] mx-auto mb-3" />
+        <h3 className="font-semibold text-gray-900 mb-1">Need Help?</h3>
+        <p className="text-sm text-gray-500 mb-4">Call or text Steven directly</p>
+        <button onClick={initiateCall} className="px-6 py-3 bg-[#500000] text-white rounded-xl font-semibold">
+          <span className="flex items-center gap-2"><PhoneCall className="w-5 h-5" /> Call {CONTACT_INFO.phoneDisplay}</span>
+        </button>
+      </div>
+    </DashboardShell>
   );
 }

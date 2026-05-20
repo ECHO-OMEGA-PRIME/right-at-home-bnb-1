@@ -705,7 +705,7 @@ async def generate_magic_link(
     token = generate_magic_token(request.booking_id)
 
     # Create magic link
-    base_url = "https://rightathomebnb.com"  # Would use env var in production
+    base_url = "https://rah-midland.com"  # Would use env var in production
     magic_link = f"{base_url}/guest/{request.booking_id}?token={token}"
 
     # Calculate expiry

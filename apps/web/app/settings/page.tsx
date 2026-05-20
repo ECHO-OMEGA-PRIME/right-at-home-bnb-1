@@ -21,6 +21,7 @@ import {
   RefreshCw, AlertCircle, Info, HelpCircle, Wifi, X, Check, QrCode,
   Fingerprint, ShieldCheck, ShieldAlert, UserPlus, Crown, Star
 } from 'lucide-react';
+import DashboardShell from '@/components/layout/DashboardShell';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -133,17 +134,17 @@ interface BillingInfo {
 // ============================================================================
 
 const MOCK_PROFILE: UserProfile = {
-  id: 'owner-1',
-  firstName: 'Steven',
-  lastName: 'Palma',
-  email: 'steven@rightathomebnb.com',
-  phone: '(432) 559-1904',
+  id: '',
+  firstName: '',
+  lastName: '',
+  email: '',
+  phone: '',
   avatarUrl: '',
-  businessName: 'Right at Home BnB',
-  businessAddress: '123 Main Street',
-  city: 'Midland',
-  state: 'TX',
-  zip: '79701',
+  businessName: '',
+  businessAddress: '',
+  city: '',
+  state: '',
+  zip: '',
   timezone: 'America/Chicago',
   language: 'en',
   currency: 'USD',
@@ -151,150 +152,20 @@ const MOCK_PROFILE: UserProfile = {
 };
 
 const MOCK_INTEGRATIONS: Integration[] = [
-  {
-    id: 'airbnb',
-    name: 'Airbnb',
-    type: 'booking',
-    icon: '🏠',
-    status: 'connected',
-    lastSync: new Date(Date.now() - 5 * 60 * 1000),
-    properties: 15,
-  },
-  {
-    id: 'vrbo',
-    name: 'VRBO',
-    type: 'booking',
-    icon: '🏡',
-    status: 'connected',
-    lastSync: new Date(Date.now() - 10 * 60 * 1000),
-    properties: 12,
-  },
-  {
-    id: 'booking',
-    name: 'Booking.com',
-    type: 'booking',
-    icon: '🌐',
-    status: 'disconnected',
-    properties: 0,
-  },
-  {
-    id: 'august',
-    name: 'August Smart Locks',
-    type: 'smart_home',
-    icon: '🔐',
-    status: 'connected',
-    lastSync: new Date(Date.now() - 2 * 60 * 1000),
-    settings: { autoLock: true, lockDelay: 30 },
-  },
-  {
-    id: 'schlage',
-    name: 'Schlage Encode',
-    type: 'smart_home',
-    icon: '🔑',
-    status: 'connected',
-    lastSync: new Date(Date.now() - 15 * 60 * 1000),
-  },
-  {
-    id: 'nest',
-    name: 'Google Nest',
-    type: 'smart_home',
-    icon: '🌡️',
-    status: 'connected',
-    lastSync: new Date(Date.now() - 30 * 60 * 1000),
-    settings: { defaultTemp: 72, ecoMode: true },
-  },
-  {
-    id: 'ring',
-    name: 'Ring Doorbell',
-    type: 'smart_home',
-    icon: '🚪',
-    status: 'error',
-    lastSync: new Date(Date.now() - 24 * 60 * 60 * 1000),
-  },
-  {
-    id: 'twilio',
-    name: 'Twilio',
-    type: 'communication',
-    icon: '📱',
-    status: 'connected',
-    lastSync: new Date(Date.now() - 1 * 60 * 1000),
-  },
-  {
-    id: 'sendgrid',
-    name: 'SendGrid',
-    type: 'communication',
-    icon: '📧',
-    status: 'connected',
-    lastSync: new Date(Date.now() - 60 * 60 * 1000),
-  },
-  {
-    id: 'stripe',
-    name: 'Stripe',
-    type: 'payment',
-    icon: '💳',
-    status: 'connected',
-    lastSync: new Date(Date.now() - 5 * 60 * 1000),
-  },
-  {
-    id: 'quickbooks',
-    name: 'QuickBooks',
-    type: 'payment',
-    icon: '📊',
-    status: 'pending',
-  },
+  { id: 'airbnb', name: 'Airbnb', type: 'booking', icon: '🏠', status: 'disconnected', properties: 0 },
+  { id: 'vrbo', name: 'VRBO', type: 'booking', icon: '🏡', status: 'disconnected', properties: 0 },
+  { id: 'booking', name: 'Booking.com', type: 'booking', icon: '🌐', status: 'disconnected', properties: 0 },
+  { id: 'august', name: 'August Smart Locks', type: 'smart_home', icon: '🔐', status: 'disconnected' },
+  { id: 'schlage', name: 'Schlage Encode', type: 'smart_home', icon: '🔑', status: 'disconnected' },
+  { id: 'nest', name: 'Google Nest', type: 'smart_home', icon: '🌡️', status: 'disconnected' },
+  { id: 'ring', name: 'Ring Doorbell', type: 'smart_home', icon: '🚪', status: 'disconnected' },
+  { id: 'twilio', name: 'Twilio', type: 'communication', icon: '📱', status: 'disconnected' },
+  { id: 'sendgrid', name: 'SendGrid', type: 'communication', icon: '📧', status: 'disconnected' },
+  { id: 'stripe', name: 'Stripe', type: 'payment', icon: '💳', status: 'disconnected' },
+  { id: 'quickbooks', name: 'QuickBooks', type: 'payment', icon: '📊', status: 'disconnected' },
 ];
 
-const MOCK_TEAM: TeamMember[] = [
-  {
-    id: 'tm-1',
-    name: 'Steven Palma',
-    email: 'steven@rightathomebnb.com',
-    role: 'owner',
-    avatar: 'SP',
-    status: 'active',
-    lastActive: new Date(),
-    permissions: ['all'],
-  },
-  {
-    id: 'tm-2',
-    name: 'Maria Rodriguez',
-    email: 'maria@rightathomebnb.com',
-    role: 'admin',
-    avatar: 'MR',
-    status: 'active',
-    lastActive: new Date(Date.now() - 2 * 60 * 60 * 1000),
-    permissions: ['properties', 'guests', 'cleaning', 'messages'],
-  },
-  {
-    id: 'tm-3',
-    name: 'Carlos Martinez',
-    email: 'carlos@rightathomebnb.com',
-    role: 'manager',
-    avatar: 'CM',
-    status: 'active',
-    lastActive: new Date(Date.now() - 24 * 60 * 60 * 1000),
-    permissions: ['properties', 'cleaning'],
-  },
-  {
-    id: 'tm-4',
-    name: 'Ana Garcia',
-    email: 'ana@rightathomebnb.com',
-    role: 'cleaner',
-    avatar: 'AG',
-    status: 'active',
-    lastActive: new Date(Date.now() - 3 * 60 * 60 * 1000),
-    permissions: ['cleaning'],
-  },
-  {
-    id: 'tm-5',
-    name: 'John Smith',
-    email: 'john@example.com',
-    role: 'manager',
-    avatar: 'JS',
-    status: 'pending',
-    permissions: ['properties'],
-  },
-];
+const MOCK_TEAM: TeamMember[] = [];
 
 const MOCK_SESSIONS: Session[] = [
   {
@@ -953,13 +824,23 @@ export default function SettingsPage() {
   // Refs
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Load data
+  // Load data from API
   useEffect(() => {
     const loadSettings = async () => {
       setIsLoading(true);
-      // Simulating API call
-      await new Promise(resolve => setTimeout(resolve, 500));
-      setIsLoading(false);
+      try {
+        const res = await fetch('/api/settings');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.callRouting) {
+            setCallSettings(prev => ({ ...prev, ...data.callRouting }));
+          }
+        }
+      } catch (err) {
+        console.error('[Settings] Failed to load:', err);
+      } finally {
+        setIsLoading(false);
+      }
     };
     loadSettings();
   }, []);
@@ -985,12 +866,21 @@ export default function SettingsPage() {
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      // Simulating API save
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      toast.success('Settings saved successfully!');
-      setHasChanges(false);
-    } catch (error) {
-      toast.error('Failed to save settings');
+      const res = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ callRouting: callSettings }),
+      });
+      if (!res.ok) throw new Error('Save failed');
+      const data = await res.json();
+      if (data.success) {
+        toast.success('Settings saved to server!');
+        setHasChanges(false);
+      } else {
+        throw new Error(data.error || 'Save failed');
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to save settings');
     } finally {
       setIsSaving(false);
     }
@@ -1127,6 +1017,7 @@ export default function SettingsPage() {
   }
 
   return (
+    <DashboardShell>
     <div className="min-h-screen bg-[#F5F5F0]">
       <Toaster position="top-right" />
 
@@ -1552,6 +1443,49 @@ export default function SettingsPage() {
                 )}
               </div>
 
+              {/* Twilio Phone System Info */}
+              <SettingsCard title="Phone System" description="Twilio-powered AI answering" icon={Phone}>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 bg-[#F5F5F0] rounded-xl">
+                    <div>
+                      <div className="text-sm text-[#2D2D2D]/60">AI Phone Number</div>
+                      <div className="text-lg font-bold text-[#2D2D2D] font-mono">(432) 289-5613</div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                      <span className="text-sm text-green-600 font-medium">Live</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between p-4 bg-[#F5F5F0] rounded-xl">
+                    <div>
+                      <div className="text-sm text-[#2D2D2D]/60">Forwards To (Steven)</div>
+                      <div className="text-lg font-bold text-[#2D2D2D] font-mono">
+                        {callSettings.callForwardNumber || '(432) 559-1904'}
+                      </div>
+                    </div>
+                    <PhoneForwarded className="w-5 h-5 text-[#500000]" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="p-3 bg-[#F5F5F0] rounded-xl text-center">
+                      <div className="text-xs text-[#2D2D2D]/60">Voice</div>
+                      <div className="text-sm font-medium text-[#2D2D2D]">Polly Neural + ElevenLabs</div>
+                    </div>
+                    <div className="p-3 bg-[#F5F5F0] rounded-xl text-center">
+                      <div className="text-xs text-[#2D2D2D]/60">AI Brain</div>
+                      <div className="text-sm font-medium text-[#2D2D2D]">Cloudflare Workers AI</div>
+                    </div>
+                  </div>
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl">
+                    <div className="flex items-start gap-2">
+                      <Info className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                      <p className="text-xs text-blue-700">
+                        Callers dial <strong>(432) 289-5613</strong>. The AI assistant answers, handles questions about properties, check-in/out, WiFi, and directions. If it can&apos;t help, it transfers to Steven at <strong>{callSettings.callForwardNumber || '(432) 559-1904'}</strong>.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </SettingsCard>
+
               {/* Availability Mode */}
               <SettingsCard title="Availability Mode" icon={Clock}>
                 <div className="space-y-3">
@@ -1693,19 +1627,50 @@ export default function SettingsPage() {
                 )}
               </SettingsCard>
 
-              {/* AI Greeting */}
-              <SettingsCard title="AI Greeting" icon={MessageSquare}>
-                <div>
-                  <label className="text-sm text-[#2D2D2D]/60 block mb-2">How the AI answers calls</label>
-                  <textarea
-                    value={callSettings.aiGreeting}
-                    onChange={(e) => {
-                      setCallSettings(prev => ({ ...prev, aiGreeting: e.target.value }));
-                      setHasChanges(true);
-                    }}
-                    rows={3}
-                    className="w-full p-4 bg-[#F5F5F0] rounded-xl text-[#2D2D2D] resize-none border-2 border-transparent focus:border-[#500000] focus:outline-none"
-                  />
+              {/* AI Greeting & Forwarding */}
+              <SettingsCard title="AI Greeting & Forwarding" icon={MessageSquare}>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm text-[#2D2D2D]/60 block mb-2">How the AI answers calls</label>
+                    <textarea
+                      value={callSettings.aiGreeting}
+                      onChange={(e) => {
+                        setCallSettings(prev => ({ ...prev, aiGreeting: e.target.value }));
+                        setHasChanges(true);
+                      }}
+                      rows={3}
+                      className="w-full p-4 bg-[#F5F5F0] rounded-xl text-[#2D2D2D] resize-none border-2 border-transparent focus:border-[#500000] focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm text-[#2D2D2D]/60 block mb-2">Forward calls to (your number)</label>
+                    <input
+                      type="tel"
+                      value={callSettings.callForwardNumber}
+                      onChange={(e) => {
+                        setCallSettings(prev => ({ ...prev, callForwardNumber: e.target.value }));
+                        setHasChanges(true);
+                      }}
+                      className="w-full p-4 bg-[#F5F5F0] rounded-xl text-[#2D2D2D] border-2 border-transparent focus:border-[#500000] focus:outline-none"
+                      placeholder="(432) 559-1904"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm text-[#2D2D2D]/60 block mb-2">Max AI conversation turns before offering Steven</label>
+                    <select
+                      value={(callSettings as any).maxAiTurns || 3}
+                      onChange={(e) => {
+                        setCallSettings(prev => ({ ...prev, maxAiTurns: parseInt(e.target.value) } as any));
+                        setHasChanges(true);
+                      }}
+                      className="w-full p-4 bg-[#F5F5F0] rounded-xl text-[#2D2D2D] border-2 border-transparent focus:border-[#500000] focus:outline-none"
+                    >
+                      <option value={2}>2 turns</option>
+                      <option value={3}>3 turns (recommended)</option>
+                      <option value={5}>5 turns</option>
+                      <option value={10}>10 turns</option>
+                    </select>
+                  </div>
                 </div>
               </SettingsCard>
             </motion.div>
@@ -2232,5 +2197,6 @@ export default function SettingsPage() {
         <kbd className="px-2 py-1 bg-white rounded shadow">S</kbd> to save
       </div>
     </div>
+    </DashboardShell>
   );
 }

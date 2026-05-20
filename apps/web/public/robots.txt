@@ -7,7 +7,7 @@ User-agent: *
 Allow: /
 
 # Sitemap location
-Sitemap: https://rightathomebnb.com/sitemap.xml
+Sitemap: https://rah-midland.com/sitemap.xml
 
 # Allow important pages
 Allow: /properties

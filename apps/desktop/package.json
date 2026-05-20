@@ -5,7 +5,7 @@
   "main": "dist/main/main.js",
   "author": {
     "name": "Steven Palma",
-    "email": "steven@rightathomebnb.com"
+    "email": "steven@rah-midland.com"
   },
   "license": "MIT",
   "private": true,
@@ -175,7 +175,7 @@
         "rpm"
       ],
       "category": "Office",
-      "maintainer": "Steven Palma <steven@rightathomebnb.com>",
+      "maintainer": "Steven Palma <steven@rah-midland.com>",
       "vendor": "Right at Home BnB"
     },
     "publish": {
