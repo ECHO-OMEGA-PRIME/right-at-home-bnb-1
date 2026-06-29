@@ -36,6 +36,7 @@ const PUBLIC_ROUTES = [
 const PUBLIC_API_ROUTES = [
   "/api/health",
   "/api/properties",
+  "/api/weather",      // Public weather widget on homepage
   "/api/webhooks/stripe",
   "/api/webhooks/vrbo",
   "/api/integrations/vrbo/webhook",
