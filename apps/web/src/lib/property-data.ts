@@ -615,7 +615,7 @@ export const PROPERTIES: PropertyListing[] = [
     status: 'ACTIVE',
   },
   {
-    id: 'Lanham-1426',
+    id: 'posh-private-1426',
     name: 'Posh & Private with Billiards',
     address: '1426 Lanham St',
     city: 'Midland',

@@ -342,7 +342,7 @@ const P: Record<string, PhotoDef[]> = {
     { f: "photo-8.webp", c: "kitchen", u: "/properties/Humble-3106/photo-8.webp" },
     { f: "photo-9.webp", c: "living-room", u: "/properties/Humble-3106/photo-9.webp" },
   ],
-  "Lanham-1426": [
+  "posh-private-1426": [
     { f: "main.webp", c: "hero", u: "/properties/Lanham-1426/main.webp" },
     { f: "photo-1.webp", c: "dining-room", u: "/properties/Lanham-1426/photo-1.webp" },
     { f: "photo-10.webp", c: "dining-room", u: "/properties/Lanham-1426/photo-10.webp" },
