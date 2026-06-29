@@ -399,7 +399,7 @@ export const PROPERTIES: PropertyListing[] = [
     status: 'ACTIVE',
   },
   {
-    id: 'Daventry-1311',
+    id: 'santiago-dreams-1311',
     name: 'Santiago Dreams',
     address: '1311 Daventry Pl',
     city: 'Midland',
@@ -579,7 +579,7 @@ export const PROPERTIES: PropertyListing[] = [
     status: 'ACTIVE',
   },
   {
-    id: 'Humble-3106',
+    id: 'outdoor-dream-3106',
     name: 'Outdoor Dream',
     address: '3104 Humble Ave',
     city: 'Midland',
