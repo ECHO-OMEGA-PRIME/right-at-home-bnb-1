@@ -177,7 +177,7 @@ export const properties: PropertyDetails[] = [
 
   // Santiago Dreams @ 1311 Daventry
   {
-    id: 'santiago-dreams-1311',
+    id: 'Daventry-1311',
     name: 'Santiago Dreams',
     address: '1311 Daventry, Midland, TX 79705',
     nickname: 'Santiago Dreams',
@@ -268,7 +268,7 @@ export const properties: PropertyDetails[] = [
 
   // Outdoor Dream @ 3106 Humble
   {
-    id: 'outdoor-dream-3106',
+    id: 'Humble-3106',
     name: 'Outdoor Dream',
     address: '3106 Humble, Midland, TX 79705',
     nickname: 'Outdoor Dream',
