@@ -5,6 +5,14 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      force_deploy:
+        description: 'Force deploy to Vercel even without a recent push (requires VERCEL_TOKEN secret)'
+        required: false
+        default: 'true'
+        type: choice
+        options: ['true', 'false']
 
 jobs:
   build:
@@ -38,7 +46,7 @@ jobs:
           SKIP_PRISMA: true
 
       - name: Deploy to Vercel (production)
-        if: github.ref == 'refs/heads/main' && env.VERCEL_TOKEN != ''
+        if: (github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch') && env.VERCEL_TOKEN != ''
         working-directory: ../..
         run: |
           npm install -g vercel@latest --silent
