@@ -49,6 +49,10 @@ const FloatingHeader = () => {
     const fetchWeather = async () => {
       try {
         const res = await fetch('/api/weather');
+        if (!res.ok) {
+          setWeather({ temp: 72, condition: 'Clear', emoji: '☀️' });
+          return;
+        }
         const data = await res.json();
         if (data.success && data.data) {
           setWeather({
@@ -63,8 +67,7 @@ const FloatingHeader = () => {
             emoji: data.emoji || getWeatherEmoji(data.condition),
           });
         }
-      } catch (error) {
-        console.error('Weather fetch error:', error);
+      } catch {
         setWeather({ temp: 72, condition: 'Clear', emoji: '☀️' });
       }
     };
