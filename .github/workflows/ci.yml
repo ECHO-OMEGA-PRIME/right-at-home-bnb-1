@@ -37,7 +37,17 @@ jobs:
         env:
           SKIP_PRISMA: true
 
+      - name: Deploy to Vercel (production)
+        if: github.ref == 'refs/heads/main' && env.VERCEL_TOKEN != ''
+        working-directory: ../..
+        run: |
+          npm install -g vercel@latest --silent
+          vercel deploy --prod --yes --token=$VERCEL_TOKEN
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
       - name: Health check
         if: github.ref == 'refs/heads/main'
         run: |
+          sleep 10
           curl -sf https://rah-midland.com/api/health || echo "Health check skipped (deploy pending)"
