@@ -7,8 +7,15 @@ Write-Host "Team ID: W54TFAVXS2" -ForegroundColor Yellow
 Write-Host ""
 
 # Set environment variables for Apple credentials
-$env:EXPO_APPLE_ID = "echoprime76@icloud.com"
-$env:EXPO_APPLE_PASSWORD = "Imissus69@@"
+# SECURITY: do not hardcode the Apple ID password here - it was previously committed
+# in plaintext and publicly exposed on GitHub (see human-action-rotate-apple-id-harvested-dump-2026-07-01).
+# Set EXPO_APPLE_ID / EXPO_APPLE_PASSWORD in your shell environment (or a local,
+# gitignored .env.local) before running this script, or use an app-specific password.
+if (-not $env:EXPO_APPLE_ID) { $env:EXPO_APPLE_ID = Read-Host "Apple ID email" }
+if (-not $env:EXPO_APPLE_PASSWORD) {
+    $securePassword = Read-Host "Apple ID password (app-specific password recommended)" -AsSecureString
+    $env:EXPO_APPLE_PASSWORD = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto([System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($securePassword))
+}
 
 # Change to mobile app directory
 Set-Location "P:\SOVEREIGN_APPS\RightAtHomeBnB\apps\mobile"

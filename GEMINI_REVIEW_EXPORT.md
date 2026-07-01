@@ -26322,7 +26322,7 @@ Write-Host ""
 
 # Set environment variables for Apple credentials
 $env:EXPO_APPLE_ID = "echoprime76@icloud.com"
-$env:EXPO_APPLE_PASSWORD = "Imissus69@@"
+$env:EXPO_APPLE_PASSWORD = "[REDACTED - plaintext credential removed 2026-07-01, see human-action-rotate-apple-id-harvested-dump-2026-07-01]"
 
 # Change to mobile app directory
 Set-Location "P:\SOVEREIGN_APPS\RightAtHomeBnB\apps\mobile"
