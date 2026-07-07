@@ -5,8 +5,13 @@
  */
 
 import prisma from '@/lib/prisma';
+import {
+  parseICalFeed,
+  fetchAndParseICal,
+  type ICalBooking,
+} from '@rightathome/shared/vrbo';
 import { runNewBookingAutomations, runModifiedBookingAutomations, runCancelledBookingAutomations } from './booking-automations';
-import type { NewBookingEvent, AutomationResult } from './booking-automations';
+import type { AutomationResult } from './booking-automations';
 
 // ============================================
 // VRBO PROPERTY MAP — Corrected from Partner Central April 2026
@@ -49,131 +54,7 @@ export const VRBO_PROPERTIES: Record<string, string> = {
   'blazing-saddle-dup': '5103284',    // Blazing Saddle (duplicate of Saddle Club)
 };
 
-// ============================================
-// iCAL PARSER
-// ============================================
-
-interface ParsedBooking {
-  uid: string;
-  guestName: string;
-  confirmCode: string;
-  checkIn: Date;
-  checkOut: Date;
-  summary: string;
-  description: string;
-  status: string;
-}
-
-function parseICalFeed(icalText: string): ParsedBooking[] {
-  const bookings: ParsedBooking[] = [];
-  const lines = icalText.replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/\n[ \t]/g, '').split('\n');
-
-  let inEvent = false;
-  let current: Partial<ParsedBooking> = {};
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (trimmed === 'BEGIN:VEVENT') {
-      inEvent = true;
-      current = { status: 'CONFIRMED', summary: '', description: '', guestName: '', confirmCode: '' };
-      continue;
-    }
-    if (trimmed === 'END:VEVENT') {
-      inEvent = false;
-      if (current.uid && current.checkIn && current.checkOut) {
-        bookings.push(current as ParsedBooking);
-      }
-      current = {};
-      continue;
-    }
-    if (!inEvent) continue;
-
-    const colonIdx = findUnquotedColon(trimmed);
-    if (colonIdx === -1) continue;
-    const nameAndParams = trimmed.slice(0, colonIdx);
-    const value = trimmed.slice(colonIdx + 1);
-    const name = nameAndParams.split(';')[0].toUpperCase();
-
-    switch (name) {
-      case 'UID':
-        current.uid = value;
-        break;
-      case 'SUMMARY':
-        current.summary = value;
-        current.guestName = current.guestName || extractGuestName(value);
-        break;
-      case 'DESCRIPTION':
-        current.description = value;
-        if (!current.guestName) current.guestName = extractGuestName(value);
-        if (!current.confirmCode) current.confirmCode = extractConfirmCode(value);
-        break;
-      case 'DTSTART':
-        current.checkIn = parseICalDate(value);
-        break;
-      case 'DTEND':
-        current.checkOut = parseICalDate(value);
-        break;
-      case 'STATUS':
-        current.status = value;
-        break;
-    }
-  }
-
-  return bookings;
-}
-
-function findUnquotedColon(line: string): number {
-  let inQuotes = false;
-  for (let i = 0; i < line.length; i++) {
-    if (line[i] === '"') inQuotes = !inQuotes;
-    else if (line[i] === ':' && !inQuotes) return i;
-  }
-  return -1;
-}
-
-function parseICalDate(value: string): Date {
-  const clean = value.replace(/[^0-9TZ]/g, '');
-  if (clean.length === 8) {
-    return new Date(parseInt(clean.slice(0, 4)), parseInt(clean.slice(4, 6)) - 1, parseInt(clean.slice(6, 8)));
-  }
-  const digits = clean.replace('T', '').replace('Z', '');
-  const y = parseInt(digits.slice(0, 4));
-  const mo = parseInt(digits.slice(4, 6)) - 1;
-  const d = parseInt(digits.slice(6, 8));
-  const h = parseInt(digits.slice(8, 10)) || 0;
-  const mi = parseInt(digits.slice(10, 12)) || 0;
-  return clean.endsWith('Z') ? new Date(Date.UTC(y, mo, d, h, mi)) : new Date(y, mo, d, h, mi);
-}
-
-function extractGuestName(text: string): string {
-  if (!text) return '';
-  const patterns = [
-    /Reserved\s*[-:]\s*(.+)/i,
-    /(?:airbnb|vrbo|booking)\s*\((.+?)\)/i,
-    /Guest:\s*(.+)/i,
-    /Booked by\s*[-:]\s*(.+)/i,
-  ];
-  for (const p of patterns) {
-    const m = text.match(p);
-    if (m) return m[1].trim();
-  }
-  return '';
-}
-
-function extractConfirmCode(text: string): string {
-  if (!text) return '';
-  const patterns = [
-    /Reservation\s*(?:ID|#|:)\s*([A-Z0-9-]+)/i,
-    /Confirmation\s*(?:Code|#|:)\s*([A-Z0-9-]+)/i,
-    /Booking\s*(?:ID|#|:)\s*([A-Z0-9-]+)/i,
-    /(HA-[A-Z0-9]+)/,
-  ];
-  for (const p of patterns) {
-    const m = text.match(p);
-    if (m) return m[1] || m[0];
-  }
-  return '';
-}
+type ParsedBooking = ICalBooking;
 
 // ============================================
 // SYNC ENGINE
@@ -207,21 +88,7 @@ export async function syncPropertyIcal(propertyId: string, vrboListingId: string
   const result: SyncResult = { propertyId, vrboId: vrboListingId, imported: 0, updated: 0, skipped: 0, errors: [] };
 
   try {
-    // Fetch iCal feed
-    const response = await fetch(icalUrl, {
-      headers: { 'User-Agent': 'RightAtHomeBnB/1.0 Calendar-Sync' },
-      signal: AbortSignal.timeout(15000),
-    });
-    if (!response.ok) {
-      throw new Error(`iCal fetch failed: ${response.status} ${response.statusText}`);
-    }
-    const icalText = await response.text();
-    if (!icalText.includes('BEGIN:VCALENDAR')) {
-      throw new Error('Invalid iCal response');
-    }
-
-    // Parse bookings from iCal
-    const parsedBookings = parseICalFeed(icalText);
+    const parsedBookings = await fetchAndParseICal(icalUrl);
 
     // Find the internal property record
     const property = await prisma.property.findFirst({

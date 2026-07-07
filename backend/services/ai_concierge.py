@@ -12,8 +12,17 @@ from loguru import logger
 import httpx
 from openai import AsyncOpenAI
 
-# Initialize OpenAI client
-client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+# Lazy OpenAI client — allows API boot without OPENAI_API_KEY (concierge disabled until set)
+_client: Optional[AsyncOpenAI] = None
+
+def _get_client() -> AsyncOpenAI:
+    global _client
+    if _client is None:
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise RuntimeError("OPENAI_API_KEY is not set — AI concierge unavailable")
+        _client = AsyncOpenAI(api_key=api_key)
+    return _client
 
 # System prompts for different contexts
 SYSTEM_PROMPTS = {
@@ -108,7 +117,7 @@ class AIConcierge:
             messages.append({"role": "user", "content": prompt})
 
             # Call OpenAI API
-            response = await client.chat.completions.create(
+            response = await _get_client().chat.completions.create(
                 model=self.model,
                 messages=messages,
                 temperature=self.temperature,

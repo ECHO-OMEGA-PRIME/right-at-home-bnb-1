@@ -14,6 +14,7 @@
     "db:seed": "tsx lib/db/seed.ts"
   },
   "dependencies": {
+    "@rightathome/shared": "workspace:*",
     "@prisma/client": "^5.22.0",
     "@auth/firebase-adapter": "^2.11.1",
     "@gsap/react": "^2.1.2",

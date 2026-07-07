@@ -7,7 +7,7 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  transpilePackages: ['lucide-react'],
+  transpilePackages: ['lucide-react', '@rightathome/shared'],
   images: {
     domains: [
       'localhost',

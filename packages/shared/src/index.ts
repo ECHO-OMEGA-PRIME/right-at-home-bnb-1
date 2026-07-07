@@ -27,6 +27,9 @@ export {
 // API Client
 export { api, RightAtHomeAPI } from './api';
 
+// VRBO sync (iCal, listing scrape, CSV import)
+export * from './vrbo';
+
 // Constants
 export const APP_NAME = 'Right at Home BNB';
 export const APP_VERSION = '1.0.0';

@@ -18,7 +18,6 @@ import type {
   Notification,
   AppSettings,
   ApiResponse,
-  PaginatedResponse
 } from '../types';
 
 // API base URL - configurable per platform

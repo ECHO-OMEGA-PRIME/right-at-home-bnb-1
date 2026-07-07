@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import DashboardShell from '@/components/layout/DashboardShell';
+import SyncStatusPanel from '@/components/vrbo/SyncStatusPanel';
 
 interface CalendarBooking {
   id: string;
@@ -296,8 +297,9 @@ export default function CalendarPage() {
         )}
       </AnimatePresence>
 
-      {/* Monthly Stats */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      {/* Monthly Stats + VRBO Sync */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        <SyncStatusPanel compact />
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div className="rounded-xl border border-white/10 bg-[#1a0a0a]/80 p-4">
             <div className="flex items-center gap-2 mb-2">

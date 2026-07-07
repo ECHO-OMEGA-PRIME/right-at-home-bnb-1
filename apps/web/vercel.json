@@ -10,7 +10,11 @@
     },
     {
       "path": "/api/cron/vrbo-sync",
-      "schedule": "*/5 * * * *"
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/vrbo-listings",
+      "schedule": "0 6 * * *"
     },
     {
       "path": "/api/cron/guest-messages",

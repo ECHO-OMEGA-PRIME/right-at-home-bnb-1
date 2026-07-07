@@ -177,11 +177,11 @@ export function createFirebaseMock() {
 
         return {
           doc: vi.fn((docId: string) => ({
-            get: vi.fn().mockResolvedValue({
+            get: vi.fn(() => Promise.resolve({
               exists: collection.has(docId),
               id: docId,
               data: () => collection.get(docId)
-            }),
+            })),
             set: vi.fn((data: unknown) => {
               collection.set(docId, data);
               return Promise.resolve();

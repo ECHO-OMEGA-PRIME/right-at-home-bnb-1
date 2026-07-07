@@ -23,19 +23,28 @@ const PROTECTED_PREFIXES = [
 const PUBLIC_ROUTES = [
   "/",
   "/properties",
+  "/listings",
+  "/book",
+  "/about",
+  "/contact",
   "/login",
   "/register",
   "/dev-login",
   "/privacy-policy",
   "/terms-of-service",
+  "/booking",
   "/booking/success",
   "/booking/complete",
+  "/booking/cancelled",
+  "/booking/confirm",
 ];
 
 // API routes that are public (no auth)
 const PUBLIC_API_ROUTES = [
   "/api/health",
   "/api/properties",
+  "/api/listings",
+  "/api/availability",
   "/api/weather",      // Public weather widget on homepage
   "/api/webhooks/stripe",
   "/api/webhooks/vrbo",
