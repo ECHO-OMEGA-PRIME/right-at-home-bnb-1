@@ -204,7 +204,7 @@ export interface FullSyncResult {
  */
 export async function syncPropertyIcal(propertyId: string, vrboListingId: string, icalUrl: string): Promise<SyncResult> {
   const start = Date.now();
-  const result: SyncResult = { propertyId, vrboId: vrboListingId, imported: 0, updated: 0, skipped: 0, errors: [] };
+  const result: SyncResult = { propertyId, vrboId: vrboListingId, imported: 0, updated: 0, skipped: 0, errors: [], durationMs: 0 };
 
   try {
     // Fetch iCal feed

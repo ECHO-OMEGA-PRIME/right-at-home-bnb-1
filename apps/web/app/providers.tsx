@@ -1,19 +1,23 @@
 'use client';
 
-/**
- * Right at Home BnB - App Providers
- * React Query, Toaster, Cross-Platform Sync, Auth, and other global providers
- */
-
 import { useState } from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import { createQueryClient } from '@/lib/api';
 import { SyncProvider } from '@/context/SyncContext';
-import { AuthProvider } from '@/context/AuthContext';
+import { AuthProvider, useAuth } from '@/context/AuthContext';
 
-// Default user ID for non-authenticated users
-const DEFAULT_USER_ID = 'guest_user';
+const ANONYMOUS_SYNC_USER_ID = 'anonymous';
+
+function AuthenticatedSyncProvider({ children }: { children: React.ReactNode }) {
+  const { user, appUser, loading } = useAuth();
+  const userId = user?.uid ?? appUser?.uid ?? ANONYMOUS_SYNC_USER_ID;
+
+  // Do not initialize a user-scoped sync channel until auth state has settled.
+  if (loading) return <>{children}</>;
+
+  return <SyncProvider userId={userId}>{children}</SyncProvider>;
+}
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => createQueryClient());
@@ -21,9 +25,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <SyncProvider userId={DEFAULT_USER_ID}>
-          {children}
-        </SyncProvider>
+        <AuthenticatedSyncProvider>{children}</AuthenticatedSyncProvider>
       </AuthProvider>
       <Toaster
         position="top-right"

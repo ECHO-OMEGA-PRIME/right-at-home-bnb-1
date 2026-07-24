@@ -1,157 +1,72 @@
-# Right at Home BnB - Vercel Environment Variables
+# RAH Midland — Vercel Environment Setup
 
-## ECHO OMEGA PRIME Vault Integration
+## Canonical deployment
 
-This project integrates with the ECHO OMEGA PRIME credential vault for centralized key management.
+- Vercel project: `right-at-home-bnb`
+- Production domains: `rah-midland.com`, `www.rah-midland.com`
+- Firebase project: `rightathome-prod`
 
-### Quick Sync from Vault
+Do not configure this application against `echo-prime-ai` or any other shared Echo Firebase project.
 
-```bash
-# List what will be synced
-python tools/sync-vercel-env.py --list
+## Required Firebase client variables
 
-# Preview commands (doesn't actually sync)
-python tools/sync-vercel-env.py --preview
+Configure all six values in Vercel for **Production**, **Preview**, and **Development** as appropriate:
 
-# Sync all environment variables to Vercel
-python tools/sync-vercel-env.py --sync
+```text
+NEXT_PUBLIC_FIREBASE_API_KEY=<from rightathome-prod project settings>
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=rightathome-prod.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=rightathome-prod
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=<exact bucket shown by Firebase>
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=<from rightathome-prod project settings>
+NEXT_PUBLIC_FIREBASE_APP_ID=<from rightathome-prod project settings>
 ```
 
-### Manual Configuration
+The application now fails closed when any value is absent or when the project ID is not exactly `rightathome-prod`.
 
-If you prefer manual setup, configure these in Vercel Dashboard > Project Settings > Environment Variables
+## Required Firebase Admin variables
 
----
-
-### Firebase (Authentication & Database)
-
-```
-NEXT_PUBLIC_FIREBASE_API_KEY=<your-firebase-api-key>
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=echo-prime-ai.firebaseapp.com
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=echo-prime-ai
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=echo-prime-ai.appspot.com
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=249995513427
-NEXT_PUBLIC_FIREBASE_APP_ID=<your-firebase-app-id>
+```text
+FIREBASE_PROJECT_ID=rightathome-prod
+FIREBASE_STORAGE_BUCKET=<exact bucket shown by Firebase>
+FIREBASE_SERVICE_ACCOUNT=<single-line JSON for a rightathome-prod service account>
 ```
 
-**Status Check:** Go to `/api/debug` and verify `firebase.configured: true`
+The service-account JSON must belong to `rightathome-prod`. A service account from another Firebase project is rejected at startup.
 
----
+## Authorized domains
 
-### AI / Chat (Steven AI)
+In Firebase Console → Authentication → Settings → Authorized domains, verify:
 
-```
-GROQ_API_KEY=<your-groq-api-key>
-```
-
-**What happens without it:** Steven AI falls back to a default message instead of generating responses.
-
----
-
-### Voice Output (ElevenLabs TTS)
-
-```
-ELEVENLABS_API_KEY=<your-elevenlabs-api-key>
-ELEVENLABS_STEVEN_VOICE_ID=keDMh3sQlEXKM4EQxvvi  # Optional - defaults to ECHO Prime voice
+```text
+rah-midland.com
+www.rah-midland.com
+<current Vercel production hostname>
+localhost
 ```
 
-**What happens without it:** Steven AI will NOT speak - only text responses will be shown.
+Only include `localhost` for development.
 
-**How to get:**
-1. Go to https://elevenlabs.io
-2. Sign in and go to Profile > API Keys
-3. Copy your API key
+## Safe verification procedure
 
----
+1. Confirm the linked Vercel project ID from `.vercel/project.json`.
+2. Run `vercel env ls` from `apps/web` and verify the required variable **names** exist. Do not paste values into logs.
+3. Build from a clean shell with the intended environment loaded.
+4. Inspect the generated bundle and confirm it contains `rightathome-prod` and does not contain `echo-prime-ai`.
+5. Deploy an immutable commit.
+6. Verify:
+   - `/login` initializes Firebase without configuration errors.
+   - Google and email sign-in complete successfully.
+   - `/properties/new` redirects unauthenticated users to `/login`.
+   - The public `/properties` page does not display administrative controls.
 
-## Quick Debug Endpoint
+## Environment sync tool
 
-After deployment, visit:
-```
-https://your-domain.vercel.app/api/debug
-```
+`tools/sync-vercel-env.py` is fail closed. It reads values only from the current process environment, requires `NEXT_PUBLIC_FIREBASE_PROJECT_ID=rightathome-prod`, and requires an explicit confirmation token before changing Vercel.
 
-This will show which environment variables are configured and their status.
+Do not use old vault paths or hardcoded project values.
 
----
+## Secret handling
 
-## Firebase Firestore Rules
-
-If you see "Missing or insufficient permissions" error, update your Firestore rules:
-
-1. Go to Firebase Console > Firestore Database > Rules
-2. For development/testing, use:
-
-```
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    // Users collection - authenticated users can read/write their own data
-    match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-      allow read: if request.auth != null;
-    }
-
-    // Sync events - authenticated users can read/write
-    match /sync_events/{document=**} {
-      allow read, write: if request.auth != null;
-    }
-
-    // Sync devices - authenticated users can read/write
-    match /sync_devices/{document=**} {
-      allow read, write: if request.auth != null;
-    }
-
-    // Steven AI memory - authenticated users only
-    match /steven_memory/{document=**} {
-      allow read, write: if request.auth != null;
-    }
-
-    // Guest memory - authenticated users only
-    match /guest_memory/{document=**} {
-      allow read, write: if request.auth != null;
-    }
-
-    // Sessions - authenticated users only
-    match /sessions/{document=**} {
-      allow read, write: if request.auth != null;
-    }
-  }
-}
-```
-
-3. Click "Publish"
-
----
-
-## Google Sign-In Setup
-
-For Google Sign-In to work:
-
-1. Firebase Console > Authentication > Sign-in method
-2. Enable Google provider
-3. Add your Vercel domain to "Authorized domains":
-   - `web-xxxxx.vercel.app`
-   - `your-custom-domain.com`
-
-4. Google Cloud Console > APIs & Services > Credentials
-5. Update OAuth 2.0 Client ID with:
-   - Authorized JavaScript origins: `https://your-domain.vercel.app`
-   - Authorized redirect URIs: `https://your-domain.vercel.app/__/auth/handler`
-
----
-
-## Environment Variable Checklist
-
-| Variable | Required | Status |
-|----------|----------|--------|
-| NEXT_PUBLIC_FIREBASE_API_KEY | Yes | [ ] |
-| NEXT_PUBLIC_FIREBASE_PROJECT_ID | Yes | [ ] |
-| GROQ_API_KEY | Yes | [ ] |
-| ELEVENLABS_API_KEY | Yes (for voice) | [ ] |
-| ELEVENLABS_STEVEN_VOICE_ID | No | [ ] |
-
----
-
-**Created by ECHO OMEGA PRIME**
-**Last Updated:** 2026-01-16
+- Never commit `.env`, `.env.local`, private keys, service-account files, or exported Vercel environment output.
+- Rotate any credential that has appeared in a status document, terminal transcript, chat, or repository history.
+- Revoke old sessions and tokens after rotation.

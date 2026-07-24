@@ -481,61 +481,6 @@ function BookingModal({
               </div>
             </div>
 
-            {/* Settings Panel */}
-        {showSettingsPanel && (
-          <div className="bg-white rounded-2xl border border-[#2D2D2D]/10 p-6 mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-['Playfair_Display'] font-bold text-[#2D2D2D]">
-                Calendar Settings
-              </h3>
-              <button
-                onClick={() => setShowSettingsPanel(false)}
-                className="p-1 hover:bg-[#F5F5F0] rounded-lg"
-              >
-                <X className="w-4 h-4 text-[#2D2D2D]/60" />
-              </button>
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-[#2D2D2D]/70 mb-2">
-                Filter by Property
-              </label>
-              <select
-                value={propertyFilter || ''}
-                onChange={(e) => setPropertyFilter(e.target.value || null)}
-                className="w-full px-4 py-2.5 border border-[#2D2D2D]/20 rounded-xl text-sm focus:ring-2 focus:ring-[#500000] focus:border-transparent bg-[#F5F5F0]"
-              >
-                <option value="">All Properties ({properties.length})</option>
-                {properties.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name} - {p.address}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-              {properties.slice(0, 8).map((p) => (
-                <button
-                  key={p.id}
-                  onClick={() => setPropertyFilter(propertyFilter === p.id ? null : p.id)}
-                  className={`text-left p-3 rounded-xl border text-sm transition-colors ${
-                    propertyFilter === p.id
-                      ? 'border-[#500000] bg-[#500000]/5 text-[#500000]'
-                      : 'border-[#2D2D2D]/10 hover:bg-[#F5F5F0] text-[#2D2D2D]'
-                  }`}
-                >
-                  <div className="font-medium truncate">{p.name}</div>
-                  <div className="text-xs text-[#2D2D2D]/50 truncate">{p.bedrooms}BR / {p.maxGuests} guests</div>
-                </button>
-              ))}
-            </div>
-            {properties.length > 8 && (
-              <p className="text-xs text-[#2D2D2D]/50 mt-2">
-                + {properties.length - 8} more properties. Use the dropdown above to see all.
-              </p>
-            )}
-          </div>
-        )}
-
         {/* Stats */}
             <div className="grid grid-cols-3 gap-4">
               <div className="text-center p-3 bg-[#500000]/5 rounded-xl">
@@ -874,6 +819,61 @@ export default function BookingsPage() {
       </header>
 
       <div className="p-6">
+        {/* Settings Panel */}
+        {showSettingsPanel && (
+          <div className="bg-white rounded-2xl border border-[#2D2D2D]/10 p-6 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-['Playfair_Display'] font-bold text-[#2D2D2D]">
+                Calendar Settings
+              </h3>
+              <button
+                onClick={() => setShowSettingsPanel(false)}
+                className="p-1 hover:bg-[#F5F5F0] rounded-lg"
+              >
+                <X className="w-4 h-4 text-[#2D2D2D]/60" />
+              </button>
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-[#2D2D2D]/70 mb-2">
+                Filter by Property
+              </label>
+              <select
+                value={propertyFilter || ''}
+                onChange={(e) => setPropertyFilter(e.target.value || null)}
+                className="w-full px-4 py-2.5 border border-[#2D2D2D]/20 rounded-xl text-sm focus:ring-2 focus:ring-[#500000] focus:border-transparent bg-[#F5F5F0]"
+              >
+                <option value="">All Properties ({properties.length})</option>
+                {properties.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} - {p.address}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+              {properties.slice(0, 8).map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => setPropertyFilter(propertyFilter === p.id ? null : p.id)}
+                  className={`text-left p-3 rounded-xl border text-sm transition-colors ${
+                    propertyFilter === p.id
+                      ? 'border-[#500000] bg-[#500000]/5 text-[#500000]'
+                      : 'border-[#2D2D2D]/10 hover:bg-[#F5F5F0] text-[#2D2D2D]'
+                  }`}
+                >
+                  <div className="font-medium truncate">{p.name}</div>
+                  <div className="text-xs text-[#2D2D2D]/50 truncate">{p.bedrooms}BR / {p.maxGuests} guests</div>
+                </button>
+              ))}
+            </div>
+            {properties.length > 8 && (
+              <p className="text-xs text-[#2D2D2D]/50 mt-2">
+                + {properties.length - 8} more properties. Use the dropdown above to see all.
+              </p>
+            )}
+          </div>
+        )}
+
         {/* Stats */}
         <StatsCards events={events} />
 

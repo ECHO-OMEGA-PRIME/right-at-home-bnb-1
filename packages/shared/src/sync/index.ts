@@ -13,6 +13,7 @@ import {
   query,
   where,
   orderBy,
+  getDocs,
   Timestamp,
   Unsubscribe
 } from 'firebase/firestore';
@@ -178,11 +179,11 @@ export class CrossPlatformSync {
       where('lastSeen', '>=', Timestamp.fromDate(fiveMinutesAgo))
     );
 
-    const snapshot = await devicesQuery.get();
-    return snapshot.docs.map(doc => ({
-      platform: doc.data().platform,
-      deviceId: doc.id,
-      lastSeen: doc.data().lastSeen.toDate()
+    const snapshot = await getDocs(devicesQuery);
+    return snapshot.docs.map((deviceDoc) => ({
+      platform: deviceDoc.data().platform,
+      deviceId: deviceDoc.id,
+      lastSeen: deviceDoc.data().lastSeen.toDate()
     }));
   }
 

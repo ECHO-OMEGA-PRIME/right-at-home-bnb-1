@@ -2,10 +2,11 @@
 const nextConfig = {
   reactStrictMode: true,
   eslint: {
+    // Existing lint debt is tracked separately. TypeScript errors remain fatal.
     ignoreDuringBuilds: true,
   },
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
   transpilePackages: ['lucide-react'],
   images: {

@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPayPalBaseUrl } from "@/lib/integrations/paypal-client";
 
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 /**
  * GET /api/integrations/paypal/callback
  *

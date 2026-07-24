@@ -1,21 +1,10 @@
 /**
- * Right at Home BnB — Server-side API Route Authentication
- * Validates auth tokens and extracts user role for API route protection.
- *
- * Usage in any API route:
- *   import { requireAuth, requireRole } from '@/lib/api-auth';
- *
- *   export async function GET(request: NextRequest) {
- *     const auth = await requireAuth(request);
- *     if (auth.error) return auth.error; // Returns 401 NextResponse
- *     // auth.user is available with uid, role, email
- *   }
- *
- * @author ECHO OMEGA PRIME
+ * Right at Home BnB — server-side authentication and role enforcement.
+ * Firebase ID tokens are verified with Firebase Admin. Unsigned development
+ * tokens are accepted only during an explicitly enabled local development run.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 
 export type ApiUserRole = 'guest' | 'worker' | 'admin' | 'owner';
 
@@ -33,111 +22,88 @@ interface AuthResult {
 }
 
 const AUTH_COOKIE = 'rah-auth-token';
+const VALID_ROLES = new Set<ApiUserRole>(['guest', 'worker', 'admin', 'owner']);
 
-/**
- * Parse the auth cookie and extract user info.
- * In production, this verifies Firebase ID tokens via firebase-admin.
- * In dev mode (NODE_ENV !== 'production'), it also accepts dev tokens.
- */
-async function parseAuthToken(request: NextRequest): Promise<ApiUser | null> {
-  const token = request.cookies.get(AUTH_COOKIE)?.value;
+function devLoginEnabled(): boolean {
+  return process.env.NODE_ENV === 'development' && process.env.ALLOW_DEV_LOGIN === 'true';
+}
+
+function isDevToken(token: string): boolean {
+  return token.startsWith('dev_') || token.startsWith('dev-mode-');
+}
+
+function parseDevToken(token: string): ApiUser | null {
+  if (!devLoginEnabled() || !isDevToken(token)) return null;
+
+  const cleanToken = token.replace(/^dev-mode-/, '');
+  const parts = cleanToken.split('_');
+  const role = parts[1] as ApiUserRole | undefined;
+  if (!role || !VALID_ROLES.has(role)) return null;
+
+  const workerType = parts[2] && parts[2] !== 'general' ? parts[2] : null;
+  return {
+    uid: cleanToken,
+    email: null,
+    role,
+    workerType,
+    isDevMode: true,
+  };
+}
+
+/** Verify one raw RAH auth token and return its authoritative user identity. */
+export async function verifyAuthToken(token: string | undefined): Promise<ApiUser | null> {
   if (!token) return null;
 
-  // Dev mode tokens: "dev_role_workerType" (only in non-production)
-  if (token.startsWith('dev_') || token.startsWith('dev-mode-')) {
-    if (process.env.NODE_ENV === 'production' && !process.env.ALLOW_DEV_LOGIN) {
-      return null; // Reject dev tokens in production
-    }
-
-    // Parse dev token format: "dev_role_workerType" or "dev-mode-dev_role_..."
-    const cleanToken = token.replace('dev-mode-', '');
-    const parts = cleanToken.split('_');
-    // Format: dev_role_workerType_timestamp
-    const role = (parts[1] || 'guest') as ApiUserRole;
-    const workerType = parts[2] && parts[2] !== 'general' ? parts[2] : null;
-
-    return {
-      uid: cleanToken,
-      email: null,
-      role,
-      workerType,
-      isDevMode: true,
-    };
+  if (isDevToken(token)) {
+    return parseDevToken(token);
   }
 
-  // Firebase ID token verification
   try {
-    const { getAuth } = await import('firebase-admin/auth');
-    const { default: adminApp } = await import('@/lib/firebase-admin');
+    const [{ getAuth }, firebaseAdminModule] = await Promise.all([
+      import('firebase-admin/auth'),
+      import('@/lib/firebase-admin'),
+    ]);
 
-    if (!adminApp) {
-      // Firebase Admin not configured — allow through in development
-      if (process.env.NODE_ENV !== 'production') {
-        return {
-          uid: 'unverified',
-          email: null,
-          role: 'guest',
-          workerType: null,
-          isDevMode: false,
-        };
-      }
-      return null;
-    }
+    const adminApp = firebaseAdminModule.default;
+    const db = firebaseAdminModule.db;
+    if (!adminApp || !db) return null;
 
-    const auth = getAuth(adminApp);
-    const decodedToken = await auth.verifyIdToken(token);
-
-    // Look up user role from Firestore
-    const { db } = await import('@/lib/firebase-admin');
-    let role: ApiUserRole = 'guest';
-    let workerType: string | null = null;
-
-    if (db) {
-      const userDoc = await db.collection('users').doc(decodedToken.uid).get();
-      if (userDoc.exists) {
-        const data = userDoc.data();
-        role = (data?.role as ApiUserRole) || 'guest';
-        workerType = data?.workerType || null;
-      }
-    }
+    const decodedToken = await getAuth(adminApp).verifyIdToken(token, true);
+    const userDoc = await db.collection('users').doc(decodedToken.uid).get();
+    const data = userDoc.exists ? userDoc.data() : undefined;
+    const candidateRole = data?.role as ApiUserRole | undefined;
+    const role = candidateRole && VALID_ROLES.has(candidateRole) ? candidateRole : 'guest';
 
     return {
       uid: decodedToken.uid,
       email: decodedToken.email || null,
       role,
-      workerType,
+      workerType: typeof data?.workerType === 'string' ? data.workerType : null,
       isDevMode: false,
     };
-  } catch (err) {
-    // Token verification failed
+  } catch {
     return null;
   }
 }
 
-/**
- * Require authentication for an API route.
- * Returns { user, error } — check error first.
- */
+async function parseAuthToken(request: NextRequest): Promise<ApiUser | null> {
+  return verifyAuthToken(request.cookies.get(AUTH_COOKIE)?.value);
+}
+
 export async function requireAuth(request: NextRequest): Promise<AuthResult> {
   const user = await parseAuthToken(request);
-
   if (!user) {
     return {
       user: null,
       error: NextResponse.json(
         { error: 'Authentication required', code: 'UNAUTHORIZED' },
-        { status: 401 }
+        { status: 401 },
       ),
     };
   }
-
   return { user, error: null };
 }
 
-/**
- * Require a specific role (or higher) for an API route.
- * Role hierarchy: owner > admin > worker > guest
- */
 const ROLE_HIERARCHY: Record<ApiUserRole, number> = {
   guest: 0,
   worker: 1,
@@ -147,20 +113,17 @@ const ROLE_HIERARCHY: Record<ApiUserRole, number> = {
 
 export async function requireRole(
   request: NextRequest,
-  minimumRole: ApiUserRole
+  minimumRole: ApiUserRole,
 ): Promise<AuthResult> {
   const auth = await requireAuth(request);
   if (auth.error) return auth;
 
-  const userLevel = ROLE_HIERARCHY[auth.user!.role];
-  const requiredLevel = ROLE_HIERARCHY[minimumRole];
-
-  if (userLevel < requiredLevel) {
+  if (ROLE_HIERARCHY[auth.user!.role] < ROLE_HIERARCHY[minimumRole]) {
     return {
       user: auth.user,
       error: NextResponse.json(
         { error: 'Insufficient permissions', code: 'FORBIDDEN', required: minimumRole },
-        { status: 403 }
+        { status: 403 },
       ),
     };
   }
@@ -168,12 +131,9 @@ export async function requireRole(
   return auth;
 }
 
-/**
- * Require one of specific roles.
- */
 export async function requireOneOfRoles(
   request: NextRequest,
-  allowedRoles: ApiUserRole[]
+  allowedRoles: ApiUserRole[],
 ): Promise<AuthResult> {
   const auth = await requireAuth(request);
   if (auth.error) return auth;
@@ -183,7 +143,7 @@ export async function requireOneOfRoles(
       user: auth.user,
       error: NextResponse.json(
         { error: 'Insufficient permissions', code: 'FORBIDDEN', allowed: allowedRoles },
-        { status: 403 }
+        { status: 403 },
       ),
     };
   }

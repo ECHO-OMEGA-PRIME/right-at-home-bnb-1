@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { User } from 'firebase/auth';
 import {
   auth,
@@ -12,19 +12,39 @@ import {
   AppUser,
 } from '@/lib/auth';
 
-
-// Cookie helpers for middleware auth
 function setAuthCookie(token: string) {
-  if (typeof document !== 'undefined') {
-    const maxAge = 60 * 60 * 24 * 30; // 30 days
-    document.cookie = `rah-auth-token=${token}; path=/; max-age=${maxAge}; SameSite=Lax`;
-  }
+  if (typeof document === 'undefined') return;
+  const maxAge = 60 * 60 * 24 * 30;
+  const secure = window.location.protocol === 'https:' ? '; Secure' : '';
+  document.cookie = `rah-auth-token=${encodeURIComponent(token)}; path=/; max-age=${maxAge}; SameSite=Strict${secure}`;
 }
 
 function clearAuthCookie() {
-  if (typeof document !== 'undefined') {
-    document.cookie = 'rah-auth-token=; path=/; max-age=0';
-  }
+  if (typeof document === 'undefined') return;
+  const secure = window.location.protocol === 'https:' ? '; Secure' : '';
+  document.cookie = `rah-auth-token=; path=/; max-age=0; SameSite=Strict${secure}`;
+}
+
+function clearDevState() {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem('dev_mode');
+  localStorage.removeItem('dev_user');
+  localStorage.removeItem('user_role');
+  localStorage.removeItem('worker_type');
+}
+
+function devLoginEnabled(): boolean {
+  return process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_ALLOW_DEV_LOGIN === 'true';
+}
+
+function isDevCookiePresent(): boolean {
+  if (typeof document === 'undefined') return false;
+  const row = document.cookie
+    .split('; ')
+    .find((item) => item.startsWith('rah-auth-token='));
+  if (!row) return false;
+  const value = decodeURIComponent(row.slice('rah-auth-token='.length));
+  return value.startsWith('dev_') || value.startsWith('dev-mode-');
 }
 
 interface AuthContextType {
@@ -50,90 +70,89 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [isDevMode, setIsDevMode] = useState(false);
 
-  // Check for dev mode login from localStorage
   const checkDevModeLogin = useCallback(() => {
     if (typeof window === 'undefined') return false;
 
+    if (!devLoginEnabled()) {
+      clearDevState();
+      if (isDevCookiePresent()) clearAuthCookie();
+      setIsDevMode(false);
+      return false;
+    }
+
     const devMode = localStorage.getItem('dev_mode');
     const devUserJson = localStorage.getItem('dev_user');
+    if (devMode !== 'true' || !devUserJson) return false;
 
-    if (devMode === 'true' && devUserJson) {
-      try {
-        const devUser = JSON.parse(devUserJson);
-        setAppUser({
-          uid: devUser.uid,
-          email: devUser.email,
-          displayName: devUser.displayName,
-          photoURL: devUser.photoURL || null,
-          role: devUser.role,
-          isOwner: devUser.isOwner || devUser.role === 'owner',
-          isActiveWorker: devUser.isActiveWorker || devUser.role === 'worker',
-          workerType: devUser.workerType,
-          assignedProperties: devUser.properties || [],
-          createdAt: devUser.createdAt,
-          lastLogin: devUser.lastLogin,
-        } as AppUser);
-        setIsDevMode(true);
-        setAuthCookie('dev-mode-' + devUser.uid);
-        return true;
-      } catch (err) {
-        console.error('Error parsing dev user:', err);
-        localStorage.removeItem('dev_mode');
-        localStorage.removeItem('dev_user');
-      }
+    try {
+      const devUser = JSON.parse(devUserJson);
+      const validRoles = new Set(['guest', 'worker', 'admin', 'owner']);
+      if (!devUser?.uid || !validRoles.has(devUser.role)) throw new Error('Invalid development user');
+
+      setAppUser({
+        uid: devUser.uid,
+        email: devUser.email,
+        displayName: devUser.displayName,
+        photoURL: devUser.photoURL || null,
+        role: devUser.role,
+        isOwner: devUser.role === 'owner' || devUser.role === 'admin',
+        isActiveWorker: devUser.role === 'worker',
+        workerType: devUser.workerType,
+        assignedProperties: devUser.properties || [],
+        createdAt: devUser.createdAt,
+        lastLogin: devUser.lastLogin,
+      } as AppUser);
+      setIsDevMode(true);
+      setAuthCookie(`dev-mode-${devUser.uid}`);
+      return true;
+    } catch (err) {
+      console.error('Invalid development auth state:', err);
+      clearDevState();
+      if (isDevCookiePresent()) clearAuthCookie();
+      setIsDevMode(false);
+      return false;
     }
-    return false;
   }, []);
 
-  // Load user data
   const loadUserData = useCallback(async () => {
     try {
       const userData = await getCurrentUser();
       setAppUser(userData);
     } catch (err) {
       console.error('Error loading user data:', err);
+      setAppUser(null);
     }
   }, []);
 
-  // Auth state listener
   useEffect(() => {
-    // First check for dev mode
-    const devModeActive = checkDevModeLogin();
-
-    if (devModeActive) {
+    if (checkDevModeLogin()) {
       setLoading(false);
-      return; // Skip Firebase auth for dev mode
+      return;
     }
 
     const unsubscribe = onAuthChange(async (firebaseUser) => {
       setUser(firebaseUser);
-
       if (firebaseUser) {
         const token = await firebaseUser.getIdToken();
         setAuthCookie(token);
         await loadUserData();
       } else {
-        // Check dev mode again if no firebase user
-        if (!checkDevModeLogin()) {
-          setAppUser(null);
-        }
+        setAppUser(null);
+        setIsDevMode(false);
+        if (isDevCookiePresent()) clearAuthCookie();
       }
-
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [loadUserData, checkDevModeLogin]);
+  }, [checkDevModeLogin, loadUserData]);
 
-  // Sign in with Google
   const signInGoogle = async () => {
     setError(null);
     setLoading(true);
     try {
       const userData = await signInWithGoogle();
-      if (userData) {
-        setAppUser(userData);
-      }
+      if (userData) setAppUser(userData);
     } catch (err: any) {
       setError(err.message || 'Failed to sign in with Google');
       throw err;
@@ -142,15 +161,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Sign in with Apple
   const signInApple = async () => {
     setError(null);
     setLoading(true);
     try {
       const userData = await signInWithApple();
-      if (userData) {
-        setAppUser(userData);
-      }
+      if (userData) setAppUser(userData);
     } catch (err: any) {
       setError(err.message || 'Failed to sign in with Apple');
       throw err;
@@ -159,23 +175,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Logout
   const logout = async () => {
     setLoading(true);
     try {
-      // Clear dev mode from localStorage
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('dev_mode');
-        localStorage.removeItem('dev_user');
-        localStorage.removeItem('user_role');
-      }
-      setIsDevMode(false);
+      clearDevState();
       clearAuthCookie();
-
-      // Sign out from Firebase if there's a user
-      if (user) {
-        await signOut();
-      }
+      setIsDevMode(false);
+      if (user) await signOut();
       setUser(null);
       setAppUser(null);
     } catch (err: any) {
@@ -205,8 +211,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
+  if (context === undefined) throw new Error('useAuth must be used within an AuthProvider');
   return context;
 }

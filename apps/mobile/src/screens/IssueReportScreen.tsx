@@ -25,15 +25,23 @@ interface IssueReportScreenProps {
 }
 
 type IssuePriority = 'low' | 'medium' | 'high' | 'urgent';
-type IssueCategory = 'plumbing' | 'electrical' | 'hvac' | 'appliance' | 'structural' | 'cleaning' | 'safety' | 'other';
+type IssueCategoryId =
+  | 'plumbing'
+  | 'electrical'
+  | 'hvac'
+  | 'appliance'
+  | 'structural'
+  | 'cleaning'
+  | 'safety'
+  | 'other';
 
-interface IssueCategory {
-  id: IssueCategory;
+interface IssueCategoryOption {
+  id: IssueCategoryId;
   label: string;
   icon: string;
 }
 
-const ISSUE_CATEGORIES: IssueCategory[] = [
+const ISSUE_CATEGORIES: IssueCategoryOption[] = [
   { id: 'plumbing', label: 'Plumbing', icon: '🚿' },
   { id: 'electrical', label: 'Electrical', icon: '💡' },
   { id: 'hvac', label: 'HVAC', icon: '❄️' },
@@ -54,7 +62,7 @@ const PRIORITY_OPTIONS: { value: IssuePriority; label: string; color: string; de
 export default function IssueReportScreen({ navigation, route }: IssueReportScreenProps) {
   const { jobId, propertyId, propertyName } = route.params;
 
-  const [category, setCategory] = useState<string | null>(null);
+  const [category, setCategory] = useState<IssueCategoryId | null>(null);
   const [priority, setPriority] = useState<IssuePriority>('medium');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -133,8 +141,11 @@ export default function IssueReportScreen({ navigation, route }: IssueReportScre
         } as any);
       });
 
-      // Submit to API
-      const response = await fetch('https://api.rightathome.bnb/issues/report', {
+      // Submit to the configured API authority.
+      const apiBase = process.env.EXPO_PUBLIC_API_URL?.replace(/\/+$/, '');
+      if (!apiBase) throw new Error('EXPO_PUBLIC_API_URL is not configured');
+
+      const response = await fetch(`${apiBase}/issues/report`, {
         method: 'POST',
         headers: {
           'Content-Type': 'multipart/form-data',

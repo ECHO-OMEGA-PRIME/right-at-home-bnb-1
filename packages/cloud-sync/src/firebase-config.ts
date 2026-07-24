@@ -1,23 +1,65 @@
 /**
- * Firebase Configuration for RightAtHomeBnB CloudSync
- * Project: echo-prime-ai
- *
- * Provides Firebase/Firestore initialization for real-time cloud sync.
+ * Firebase configuration for Right at Home BnB CloudSync.
+ * Configuration is environment-only and restricted to rightathome-prod.
  */
 
-import { initializeApp, FirebaseApp, getApps, getApp } from 'firebase/app';
+import { FirebaseApp, FirebaseOptions, getApp, getApps, initializeApp } from 'firebase/app';
 import {
-  getFirestore,
+  CACHE_SIZE_UNLIMITED,
   Firestore,
+  connectFirestoreEmulator,
+  getFirestore,
   initializeFirestore,
   persistentLocalCache,
   persistentMultipleTabManager,
-  CACHE_SIZE_UNLIMITED,
-  enableIndexedDbPersistence,
-  connectFirestoreEmulator
 } from 'firebase/firestore';
 
-// Collection names for RightAtHomeBnB
+const EXPECTED_PROJECT_ID = 'rightathome-prod';
+
+function value(...candidates: Array<string | undefined>): string {
+  return candidates.find((candidate) => candidate?.trim())?.trim() ?? '';
+}
+
+function resolveFirebaseConfig(): FirebaseOptions {
+  const config: FirebaseOptions = {
+    apiKey: value(process.env.NEXT_PUBLIC_FIREBASE_API_KEY, process.env.FIREBASE_API_KEY),
+    authDomain: value(
+      process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+      process.env.FIREBASE_AUTH_DOMAIN,
+    ),
+    projectId: value(
+      process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+      process.env.FIREBASE_PROJECT_ID,
+    ),
+    storageBucket: value(
+      process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+      process.env.FIREBASE_STORAGE_BUCKET,
+    ),
+    messagingSenderId: value(
+      process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+      process.env.FIREBASE_MESSAGING_SENDER_ID,
+    ),
+    appId: value(process.env.NEXT_PUBLIC_FIREBASE_APP_ID, process.env.FIREBASE_APP_ID),
+  };
+
+  const missing = Object.entries(config)
+    .filter(([, item]) => !item)
+    .map(([key]) => key);
+
+  if (missing.length > 0) {
+    throw new Error(`[CloudSync] Firebase configuration missing: ${missing.join(', ')}`);
+  }
+
+  if (config.projectId !== EXPECTED_PROJECT_ID) {
+    throw new Error(
+      `[CloudSync] Firebase project mismatch: expected ${EXPECTED_PROJECT_ID}, ` +
+        `received ${config.projectId}.`,
+    );
+  }
+
+  return config;
+}
+
 export const COLLECTIONS = {
   PROPERTIES: 'rightathome_properties',
   PHOTOS: 'rightathome_photos',
@@ -29,20 +71,10 @@ export const COLLECTIONS = {
   EXPENSES: 'rightathome_expenses',
   USERS: 'rightathome_users',
   SYNC_METADATA: 'rightathome_sync_metadata',
-  OFFLINE_QUEUE: 'rightathome_offline_queue'
+  OFFLINE_QUEUE: 'rightathome_offline_queue',
 } as const;
 
-export type CollectionName = typeof COLLECTIONS[keyof typeof COLLECTIONS];
-
-// Firebase configuration for echo-prime-ai project
-const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.FIREBASE_API_KEY || '',
-  authDomain: 'echo-prime-ai.firebaseapp.com',
-  projectId: 'echo-prime-ai',
-  storageBucket: 'echo-prime-ai.appspot.com',
-  messagingSenderId: '249995513427',
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || process.env.FIREBASE_APP_ID || ''
-};
+export type CollectionName = (typeof COLLECTIONS)[keyof typeof COLLECTIONS];
 
 let firebaseApp: FirebaseApp | null = null;
 let firestoreDb: Firestore | null = null;
@@ -56,61 +88,56 @@ export interface FirebaseInitOptions {
   enableOfflinePersistence?: boolean;
 }
 
-/**
- * Initialize Firebase and Firestore with offline persistence support
- */
-export async function initializeFirebase(options: FirebaseInitOptions = {}): Promise<Firestore> {
-  // Return existing promise if initialization is in progress
-  if (initializationPromise) {
-    return initializationPromise;
-  }
+function getOrCreateFirebaseApp(): FirebaseApp {
+  const config = resolveFirebaseConfig();
 
-  // Return existing instance if already initialized
-  if (isInitialized && firestoreDb) {
-    return firestoreDb;
+  if (getApps().length === 0) return initializeApp(config);
+
+  const existing = getApp();
+  if (existing.options.projectId !== config.projectId) {
+    throw new Error(
+      `[CloudSync] Existing Firebase app uses ${existing.options.projectId ?? 'unknown'}; ` +
+        `RAH requires ${config.projectId}.`,
+    );
   }
+  return existing;
+}
+
+export async function initializeFirebase(
+  options: FirebaseInitOptions = {},
+): Promise<Firestore> {
+  if (initializationPromise) return initializationPromise;
+  if (isInitialized && firestoreDb) return firestoreDb;
 
   initializationPromise = (async () => {
     try {
-      // Check if Firebase app already exists
-      if (getApps().length === 0) {
-        firebaseApp = initializeApp(firebaseConfig);
-      } else {
-        firebaseApp = getApp();
-      }
+      firebaseApp = getOrCreateFirebaseApp();
 
-      // Initialize Firestore with persistence settings
       const {
         useEmulator = false,
         emulatorHost = 'localhost',
         emulatorPort = 8080,
-        enableOfflinePersistence = true
+        enableOfflinePersistence = true,
       } = options;
 
-      // For browser environments, use persistent local cache
       if (typeof window !== 'undefined' && enableOfflinePersistence) {
         firestoreDb = initializeFirestore(firebaseApp, {
           localCache: persistentLocalCache({
             tabManager: persistentMultipleTabManager(),
-            cacheSizeBytes: CACHE_SIZE_UNLIMITED
-          })
+            cacheSizeBytes: CACHE_SIZE_UNLIMITED,
+          }),
         });
       } else {
         firestoreDb = getFirestore(firebaseApp);
       }
 
-      // Connect to emulator if specified
       if (useEmulator) {
         connectFirestoreEmulator(firestoreDb, emulatorHost, emulatorPort);
-        console.log(`[CloudSync] Connected to Firestore emulator at ${emulatorHost}:${emulatorPort}`);
       }
 
       isInitialized = true;
-      console.log('[CloudSync] Firebase initialized successfully for project: echo-prime-ai');
-
       return firestoreDb;
     } catch (error) {
-      console.error('[CloudSync] Firebase initialization failed:', error);
       initializationPromise = null;
       throw error;
     }
@@ -119,19 +146,11 @@ export async function initializeFirebase(options: FirebaseInitOptions = {}): Pro
   return initializationPromise;
 }
 
-/**
- * Get the Firestore instance (initializes if needed)
- */
 export async function getFirestoreDb(): Promise<Firestore> {
-  if (firestoreDb && isInitialized) {
-    return firestoreDb;
-  }
+  if (firestoreDb && isInitialized) return firestoreDb;
   return initializeFirebase();
 }
 
-/**
- * Get Firestore synchronously (throws if not initialized)
- */
 export function getFirestoreSync(): Firestore {
   if (!firestoreDb || !isInitialized) {
     throw new Error('[CloudSync] Firebase not initialized. Call initializeFirebase() first.');
@@ -139,33 +158,21 @@ export function getFirestoreSync(): Firestore {
   return firestoreDb;
 }
 
-/**
- * Check if Firebase is initialized
- */
 export function isFirebaseInitialized(): boolean {
   return isInitialized;
 }
 
-/**
- * Get the Firebase app instance
- */
 export function getFirebaseApp(): FirebaseApp | null {
   return firebaseApp;
 }
 
-/**
- * Clean up Firebase resources
- */
 export async function cleanupFirebase(): Promise<void> {
-  if (firebaseApp) {
-    // Firebase SDK doesn't have a direct cleanup method for web
-    // Just clear our references
-    firestoreDb = null;
-    firebaseApp = null;
-    isInitialized = false;
-    initializationPromise = null;
-    console.log('[CloudSync] Firebase resources cleaned up');
-  }
+  firestoreDb = null;
+  firebaseApp = null;
+  isInitialized = false;
+  initializationPromise = null;
 }
 
-export { firebaseConfig };
+export function getFirebaseConfiguration(): FirebaseOptions {
+  return resolveFirebaseConfig();
+}

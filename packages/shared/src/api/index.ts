@@ -17,8 +17,7 @@ import type {
   FinancialSummary,
   Notification,
   AppSettings,
-  ApiResponse,
-  PaginatedResponse
+  ApiResponse
 } from '../types';
 
 // API base URL - configurable per platform
@@ -36,7 +35,7 @@ const getBaseUrl = (): string => {
     return process.env.VITE_API_URL;
   }
   // Default to production
-  return 'https://rightathome.vercel.app/api';
+  return 'https://api.rah-midland.com';
 };
 
 class RightAtHomeAPI {

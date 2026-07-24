@@ -114,7 +114,7 @@ def seed_properties(db):
             address=address,
             city="Midland",
             state="TX",
-            zip_code=f"797{random.randint(01, 07):02d}",
+            zip_code=f"797{random.randint(1, 7):02d}",
             latitude=31.9973 + random.uniform(-0.05, 0.05),
             longitude=-102.0779 + random.uniform(-0.05, 0.05),
             bedrooms=random.choice([2, 3, 3, 4, 4, 5]),
