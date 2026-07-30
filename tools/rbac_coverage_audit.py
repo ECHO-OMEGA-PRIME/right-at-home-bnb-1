@@ -69,10 +69,9 @@ PUBLIC_BY_DESIGN = {
 # Real gaps that are TRACKED, not accepted. Kept out of the --strict failure so
 # CI is not permanently red, but printed loudly every run so they cannot fade
 # into the background. Removing an entry here should mean it was actually fixed.
-KNOWN_GAPS = {
-    "ownerrez/webhook/route.ts":
-        "external webhook: needs signature verification, not a session guard "
-        "(a session guard would break OwnerRez callbacks) - queue #26828",
+KNOWN_GAPS: dict[str, str] = {
+    # (empty) ownerrez/webhook was the only entry; OwnerRez is not in use and
+    # its routes were deleted rather than guarded - dead code is not a gap.
 }
 
 MIDDLEWARE = Path("apps/web/middleware.ts")

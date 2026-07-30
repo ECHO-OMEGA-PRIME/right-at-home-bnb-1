@@ -1,0 +1,94 @@
+rules_version = '2';
+
+// RAH Midland Firestore security rules.
+//
+// These were NOT in the repository -- the deployed ruleset was the only copy,
+// so nothing reviewed it. What was deployed ended with:
+//
+//     match /{document=**} { allow read, write: if request.auth != null; }
+//
+// Firestore grants access if ANY matching rule allows it, so that catch-all
+// handed every signed-in user full read/write over the entire database,
+// overriding every narrower rule above it.
+//
+// Verified against production 2026-07-30 with a non-owner account:
+//   - read of /users returned all 8 records (emails, phone numbers, roles)
+//   - write to an arbitrary document returned HTTP 200
+//
+// That is a privilege-escalation chain, not just an information leak:
+// apps/web/src/lib/api-auth.ts resolves a caller's role from users/{uid}.role,
+// so any self-registered Google user could set their own role to "owner" and
+// then reach payroll (SSN last-4, addresses, pay rates), accounting and all
+// guest PII through the API.
+//
+// The server uses firebase-admin, which BYPASSES these rules entirely, so
+// tightening client access does not affect any API route.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Role is the authorization source of truth for the API. It must never be
+    // writable by the client that it authorizes.
+    function roleFieldsUnchanged() {
+      return !request.resource.data.diff(resource.data)
+                .affectedKeys()
+                .hasAny(['role', 'authority', 'trustLevel']);
+    }
+
+    function callerRole() {
+      return request.auth != null ? request.auth.token.get('role', '') : '';
+    }
+
+    function isStaff() {
+      return callerRole() in ['owner', 'admin'];
+    }
+
+    // A user may read and update ONLY their own document, and may never touch
+    // the fields that decide their own privileges. Staff (by custom claim,
+    // which the client cannot forge) may read all users.
+    match /users/{userId} {
+      allow read: if request.auth != null && (request.auth.uid == userId || isStaff());
+      allow create: if request.auth != null && request.auth.uid == userId
+                    && !request.resource.data.keys().hasAny(['role', 'authority', 'trustLevel']);
+      allow update: if request.auth != null && request.auth.uid == userId
+                    && roleFieldsUnchanged();
+      allow delete: if false;
+    }
+
+    // Public marketing listings. Writes come from the server (admin SDK).
+    match /properties/{propertyId} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+
+    // Operational collections. Left readable/writable to authenticated users to
+    // avoid breaking the 13 client modules that still use them, but no longer
+    // covered by a blanket catch-all. Tightening these to role- and
+    // property-scoped access is P1 objective 1 follow-up work; they are
+    // currently empty in production (data lives in Postgres), so the exposure
+    // is latent rather than live.
+    match /bookings/{bookingId} {
+      allow read, write: if request.auth != null;
+    }
+    match /cleaningTasks/{taskId} {
+      allow read, write: if request.auth != null;
+    }
+    match /maintenance/{taskId} {
+      allow read, write: if request.auth != null;
+    }
+    match /inventory/{itemId} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Default DENY. This replaces the catch-all allow that caused the finding.
+    // Anything not named above is server-only (admin SDK bypasses rules).
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
