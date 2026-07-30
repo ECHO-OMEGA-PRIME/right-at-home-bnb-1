@@ -1272,3 +1272,36 @@ model InventoryMovement {
   @@index([itemId])
   @@index([propertyId])
 }
+
+// ============================================
+// OPERATIONAL NOTES  (P1, added 2026-07-30)
+// ============================================
+
+/// Free-form operational notes pinned to a property, booking or guest.
+/// Replaces an in-memory array that discarded every note on cold start --
+/// including things like "front gate code changed", which is exactly the sort
+/// of note whose loss causes a real operational failure.
+model Note {
+  id         String  @id @default(cuid())
+  /// general | property | booking | guest | maintenance
+  type       String  @default("general")
+  propertyId String?
+  bookingId  String?
+  guestId    String?
+  title      String
+  content    String
+  pinned     Boolean @default(false)
+  author     String  @default("system")
+  /// JSON array of strings, matching this schema's existing convention for
+  /// tag/amenity lists rather than introducing a relation for free text.
+  tags       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([type])
+  @@index([propertyId])
+  @@index([bookingId])
+  @@index([guestId])
+  @@index([pinned])
+}

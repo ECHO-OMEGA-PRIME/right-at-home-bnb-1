@@ -1,64 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireOneOfRoles } from '@/lib/api-auth';
+import { prisma } from '@/lib/prisma';
 
-const notes: any[] = [
-  {
-    id: 'NOTE-001',
-    type: 'property',
-    property_id: 'PROP-001',
-    booking_id: null,
-    guest_id: null,
-    title: 'Gate code updated',
-    content: 'Front gate code changed to 4821 as of March 1. Update lock code generator.',
-    pinned: true,
-    author: 'bobby',
-    tags: ['access', 'security'],
-    created_at: '2026-03-01T09:00:00Z',
-    updated_at: '2026-03-01T09:00:00Z',
-  },
-  {
-    id: 'NOTE-002',
-    type: 'booking',
-    property_id: 'PROP-001',
-    booking_id: 'BK-001',
-    guest_id: 'GUEST-001',
-    title: 'Guest preference — Sarah Johnson',
-    content: 'Sarah prefers extra pillows and decaf coffee. Has 2 kids (ages 8 and 11). Husband is allergic to feather pillows — use hypoallergenic.',
-    pinned: false,
-    author: 'bree',
-    tags: ['guest-preference', 'vip'],
-    created_at: '2026-03-18T08:00:00Z',
-    updated_at: '2026-03-18T08:00:00Z',
-  },
-  {
-    id: 'NOTE-003',
-    type: 'maintenance',
-    property_id: 'PROP-002',
-    booking_id: null,
-    guest_id: null,
-    title: 'Water heater inspection due',
-    content: 'Water heater at Oilfield Oasis is 8 years old. Schedule inspection before April. Last serviced 2025-09-15.',
-    pinned: true,
-    author: 'system',
-    tags: ['maintenance', 'urgent'],
-    created_at: '2026-03-10T00:00:00Z',
-    updated_at: '2026-03-10T00:00:00Z',
-  },
-  {
-    id: 'NOTE-004',
-    type: 'general',
-    property_id: null,
-    booking_id: null,
-    guest_id: null,
-    title: 'Insurance renewal reminder',
-    content: 'Proper Insurance policy renews April 1. Review coverage limits — may need to increase for Permian Basin Pad renovation.',
-    pinned: false,
-    author: 'bobby',
-    tags: ['insurance', 'reminder'],
-    created_at: '2026-03-05T14:00:00Z',
-    updated_at: '2026-03-05T14:00:00Z',
-  },
-];
+// Real Note rows (queue #26855). Notes lived in an in-memory array, so every
+// note was discarded on the next cold start -- including entries like "front
+// gate code changed to 4821", which is precisely the sort of note whose loss
+// causes an operational failure rather than a cosmetic one.
+
+const VALID_TYPES = ['general', 'property', 'booking', 'guest', 'maintenance'];
+
+function parseTags(raw: string | null): string[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.map(String) : [];
+  } catch {
+    return raw.split(',').map((t) => t.trim()).filter(Boolean);
+  }
+}
+
+function toContract(n: any) {
+  return {
+    id: n.id,
+    type: n.type,
+    property_id: n.propertyId,
+    booking_id: n.bookingId,
+    guest_id: n.guestId,
+    title: n.title,
+    content: n.content,
+    pinned: n.pinned,
+    author: n.author,
+    tags: parseTags(n.tags),
+    created_at: n.createdAt.toISOString(),
+    updated_at: n.updatedAt.toISOString(),
+  };
+}
 
 // ── GET /api/notes ────────────────────────────────────────────────────────
 export async function GET(request: NextRequest) {
@@ -74,46 +50,36 @@ export async function GET(request: NextRequest) {
     const search = params.get('search');
     const tag = params.get('tag');
 
-    let filtered = [...notes];
-
-    if (type) {
-      filtered = filtered.filter((n) => n.type === type);
-    }
-    if (propertyId) {
-      filtered = filtered.filter((n) => n.property_id === propertyId);
-    }
-    if (bookingId) {
-      filtered = filtered.filter((n) => n.booking_id === bookingId);
-    }
-    if (guestId) {
-      filtered = filtered.filter((n) => n.guest_id === guestId);
-    }
-    if (pinned !== null && pinned !== undefined) {
-      filtered = filtered.filter((n) => n.pinned === (pinned === 'true'));
-    }
-    if (tag) {
-      filtered = filtered.filter((n) => n.tags.includes(tag));
-    }
-    if (search) {
-      const q = search.toLowerCase();
-      filtered = filtered.filter(
-        (n) =>
-          n.title.toLowerCase().includes(q) ||
-          n.content.toLowerCase().includes(q) ||
-          n.tags.some((t: string) => t.toLowerCase().includes(q)),
-      );
-    }
-
-    // Sort: pinned first, then by date desc
-    filtered.sort((a, b) => {
-      if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    const rows = await prisma.note.findMany({
+      where: {
+        ...(type ? { type } : {}),
+        ...(propertyId ? { propertyId } : {}),
+        ...(bookingId ? { bookingId } : {}),
+        ...(guestId ? { guestId } : {}),
+        ...(pinned !== null ? { pinned: pinned === 'true' } : {}),
+        ...(search
+          ? {
+              OR: [
+                { title: { contains: search, mode: 'insensitive' as const } },
+                { content: { contains: search, mode: 'insensitive' as const } },
+                { tags: { contains: search, mode: 'insensitive' as const } },
+              ],
+            }
+          : {}),
+      },
+      // Pinned first, then newest -- the same ordering the route promised.
+      orderBy: [{ pinned: 'desc' }, { createdAt: 'desc' }],
     });
 
+    let notes = rows.map(toContract);
+    // Tags are stored as a JSON string, so an exact tag match is applied after
+    // parsing; a SQL `contains` would also match 'access-code' for 'access'.
+    if (tag) notes = notes.filter((n) => n.tags.includes(tag));
+
     return NextResponse.json({
-      notes: filtered,
-      total: filtered.length,
-      pinned_count: filtered.filter((n) => n.pinned).length,
+      notes,
+      total: notes.length,
+      pinned_count: notes.filter((n) => n.pinned).length,
     });
   } catch (error: any) {
     return NextResponse.json(
@@ -131,40 +97,33 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
 
     if (!body.title || !body.content) {
-      return NextResponse.json(
-        { error: 'Missing required: title, content' },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: 'Required: title, content' }, { status: 400 });
     }
 
-    const validTypes = ['property', 'booking', 'maintenance', 'guest', 'general', 'financial'];
     const noteType = body.type ?? 'general';
-    if (!validTypes.includes(noteType)) {
+    if (!VALID_TYPES.includes(noteType)) {
       return NextResponse.json(
-        { error: `type must be one of: ${validTypes.join(', ')}` },
+        { error: `type must be one of: ${VALID_TYPES.join(', ')}` },
         { status: 400 },
       );
     }
 
-    const now = new Date().toISOString();
-    const note = {
-      id: `NOTE-${Date.now().toString(36).toUpperCase()}`,
-      type: noteType,
-      property_id: body.property_id ?? null,
-      booking_id: body.booking_id ?? null,
-      guest_id: body.guest_id ?? null,
-      title: body.title,
-      content: body.content,
-      pinned: body.pinned ?? false,
-      author: body.author ?? 'system',
-      tags: body.tags ?? [],
-      created_at: now,
-      updated_at: now,
-    };
+    const created = await prisma.note.create({
+      data: {
+        type: noteType,
+        propertyId: body.property_id ?? null,
+        bookingId: body.booking_id ?? null,
+        guestId: body.guest_id ?? null,
+        title: body.title,
+        content: body.content,
+        pinned: body.pinned ?? false,
+        // Attribute to the signed-in user when the caller does not say.
+        author: body.author ?? auth.user?.email ?? 'system',
+        tags: body.tags ? JSON.stringify(body.tags) : null,
+      },
+    });
 
-    notes.push(note);
-
-    return NextResponse.json({ note }, { status: 201 });
+    return NextResponse.json({ note: toContract(created) }, { status: 201 });
   } catch (error: any) {
     return NextResponse.json(
       { error: 'Failed to create note', detail: error.message },
