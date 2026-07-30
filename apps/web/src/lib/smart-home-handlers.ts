@@ -8,6 +8,7 @@ import {
   isTuyaConfigured,
   listCodes,
   setLockState,
+  getLockStatus,
 } from '@/lib/integrations/tuya-client';
 import {
   processGuestAccessLifecycle,
@@ -170,6 +171,38 @@ export async function safeSmartHomeGet(request: NextRequest) {
 
     if (isTuyaConfigured()) {
       const locks = await getLocks();
+
+      // GET /locks on the proxy serves a STORED row, not a live poll: its
+      // last_sync was 18 days old while every device was in fact online and
+      // reporting minutes ago. Showing that cached `status: online` is the same
+      // "presented as live, actually stale" failure this codebase has been
+      // clearing out, so each lock's true state is read from Tuya here.
+      //
+      // Bounded and fail-soft: allSettled, so one unreachable device degrades
+      // to `online: null` (unknown) instead of failing the whole list, and the
+      // enrichment is skipped entirely past a sane fleet size.
+      const LIVE_STATUS_MAX = 25;
+      const live = new Map<string, { online: boolean | null; updatedAt: string | null }>();
+      if (locks.length <= LIVE_STATUS_MAX) {
+        const results = await Promise.allSettled(
+          locks.map((l: any) => getLockStatus(String(l.id ?? l.device_id))),
+        );
+        results.forEach((res, i) => {
+          const key = String(locks[i].id ?? locks[i].device_id);
+          if (res.status === 'fulfilled') {
+            const dev = (res.value as any)?.device ?? res.value;
+            live.set(key, {
+              online: typeof dev?.online === 'boolean' ? dev.online : null,
+              updatedAt: dev?.update_time
+                ? new Date(dev.update_time * 1000).toISOString()
+                : null,
+            });
+          } else {
+            live.set(key, { online: null, updatedAt: null });
+          }
+        });
+      }
+
       return NextResponse.json({
         locks: locks.map((lock: any) => ({
           id: maskedDeviceId(lock.id || lock.device_id),
@@ -178,15 +211,24 @@ export async function safeSmartHomeGet(request: NextRequest) {
           // Reading only `lock.online` yielded undefined, which JSON drops
           // entirely -- so every lock rendered as unknown/offline on screen
           // while the hardware was reporting itself online.
+          // Live device state wins. The cached row is the fallback, and when
+          // neither is available this stays null -- unknown, never "fine".
           online:
-            typeof lock.online === 'boolean'
+            live.get(String(lock.id ?? lock.device_id))?.online ??
+            (typeof lock.online === 'boolean'
               ? lock.online
               : typeof lock.status === 'string'
                 ? lock.status.toLowerCase() === 'online'
-                : null,
+                : null),
           batteryLevel: lock.battery_level ?? lock.battery_percent ?? null,
           locked: lock.locked ?? null,
-          lastSync: lock.last_sync ?? null,
+          // When this came from the device it is a real heartbeat. When it came
+          // from the stored row it can be weeks old, so say which.
+          lastSync:
+            live.get(String(lock.id ?? lock.device_id))?.updatedAt ??
+            lock.last_sync ??
+            null,
+          onlineSource: live.has(String(lock.id ?? lock.device_id)) ? 'live' : 'cached',
         })),
         source: 'tuya',
       });
