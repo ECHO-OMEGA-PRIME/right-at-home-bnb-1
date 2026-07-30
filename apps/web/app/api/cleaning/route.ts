@@ -168,7 +168,11 @@ export async function POST(request: NextRequest) {
         const { reportId, itemId, photoUrl, notes } = body;
 
         const job = await prisma.cleaningJob.findUnique({ where: { id: reportId } });
-        if (!job) {
+        if (!job || !scopeAllows(await propertyScopeFor(auth.user), job.propertyId)) {
+          // Same IDOR as the GET-by-id branch: acting on a job by id
+          // bypassed every filter. 404 rather than 403 -- a 403 confirms the
+          // job exists at a property this caller cannot see.
+
           return NextResponse.json({ error: 'Job not found' }, { status: 404 });
         }
 
@@ -208,7 +212,11 @@ export async function POST(request: NextRequest) {
         const { reportId, issue } = body;
 
         const job = await prisma.cleaningJob.findUnique({ where: { id: reportId } });
-        if (!job) {
+        if (!job || !scopeAllows(await propertyScopeFor(auth.user), job.propertyId)) {
+          // Same IDOR as the GET-by-id branch: acting on a job by id
+          // bypassed every filter. 404 rather than 403 -- a 403 confirms the
+          // job exists at a property this caller cannot see.
+
           return NextResponse.json({ error: 'Job not found' }, { status: 404 });
         }
 
@@ -233,7 +241,11 @@ export async function POST(request: NextRequest) {
         const { reportId, photoUrl, description, location } = body;
 
         const job = await prisma.cleaningJob.findUnique({ where: { id: reportId } });
-        if (!job) {
+        if (!job || !scopeAllows(await propertyScopeFor(auth.user), job.propertyId)) {
+          // Same IDOR as the GET-by-id branch: acting on a job by id
+          // bypassed every filter. 404 rather than 403 -- a 403 confirms the
+          // job exists at a property this caller cannot see.
+
           return NextResponse.json({ error: 'Job not found' }, { status: 404 });
         }
 
@@ -257,7 +269,11 @@ export async function POST(request: NextRequest) {
         const { reportId, notes } = body;
 
         const job = await prisma.cleaningJob.findUnique({ where: { id: reportId } });
-        if (!job) {
+        if (!job || !scopeAllows(await propertyScopeFor(auth.user), job.propertyId)) {
+          // Same IDOR as the GET-by-id branch: acting on a job by id
+          // bypassed every filter. 404 rather than 403 -- a 403 confirms the
+          // job exists at a property this caller cannot see.
+
           return NextResponse.json({ error: 'Job not found' }, { status: 404 });
         }
 
@@ -365,11 +381,23 @@ export async function PUT(request: NextRequest) {
     if (updates.cleanerId !== undefined) data.cleanerId = updates.cleanerId;
     if (updates.scheduledAt !== undefined) data.scheduledAt = new Date(updates.scheduledAt);
 
-    const job = await prisma.cleaningJob.update({
-      where: { id: reportId },
+    // PUT updated by primary key with NO ownership check at all: a worker could
+    // rewrite any job's status, assigned cleaner, schedule and notes at any
+    // property, silently. Scoped and made atomic in one step -- updateMany with
+    // the scope in the WHERE cannot be raced the way fetch-then-update can.
+    const scope = await propertyScopeFor(auth.user);
+    const result = await prisma.cleaningJob.updateMany({
+      where: scopedWhere({ id: reportId }, scope),
       data,
     });
 
+    if (result.count === 0) {
+      // 404, not 403 -- a 403 would confirm the job exists at a property this
+      // caller is not entitled to see.
+      return NextResponse.json({ error: 'Job not found' }, { status: 404 });
+    }
+
+    const job = await prisma.cleaningJob.findUnique({ where: { id: reportId } });
     return NextResponse.json({ success: true, report: job });
   } catch (error: any) {
     console.error('[Cleaning PUT]', error);
@@ -393,7 +421,11 @@ export async function DELETE(request: NextRequest) {
     }
 
     const job = await prisma.cleaningJob.findUnique({ where: { id: jobId } });
-    if (!job) {
+    if (!job || !scopeAllows(await propertyScopeFor(auth.user), job.propertyId)) {
+      // Same IDOR as the GET-by-id branch: acting on a job by id
+      // bypassed every filter. 404 rather than 403 -- a 403 confirms the
+      // job exists at a property this caller cannot see.
+
       return NextResponse.json({ error: 'Job not found' }, { status: 404 });
     }
 
