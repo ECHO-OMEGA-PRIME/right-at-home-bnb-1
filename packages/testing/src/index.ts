@@ -16,8 +16,8 @@ export const TEST_CONFIG = {
   /** Expected number of photos across all properties */
   EXPECTED_PHOTOS: 730,
 
-  /** Firebase project ID for testing */
-  FIREBASE_PROJECT: 'rightathome-prod',
+  /** Firebase project ID for testing (echo-prime-ai is the real, controlled project) */
+  FIREBASE_PROJECT: 'echo-prime-ai',
 
   /** Test database URL */
   DATABASE_URL: 'file:./test.db',

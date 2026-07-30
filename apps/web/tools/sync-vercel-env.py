@@ -16,7 +16,10 @@ import sys
 from pathlib import Path
 from typing import Dict, Iterable
 
-EXPECTED_PROJECT_ID = "rightathome-prod"
+# echo-prime-ai is the real, controlled Firebase project (fixed 2026-07-30,
+# commit c442be3). This fail-closed guard previously rejected the CORRECT
+# project id and would have blocked every legitimate env sync since.
+EXPECTED_PROJECT_ID = "echo-prime-ai"
 CONFIRMATION_TOKEN = "SYNC_RAH_VERCEL_ENV"
 
 FIREBASE_VARIABLES = (

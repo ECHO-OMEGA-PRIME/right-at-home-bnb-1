@@ -40,7 +40,7 @@ describe('CloudSync Integration', () => {
 
   describe('Firebase Initialization', () => {
     it('should initialize with correct project ID', () => {
-      expect(firebase.app.options.projectId).toBe('rightathome-prod');
+      expect(firebase.app.options.projectId).toBe('echo-prime-ai');
     });
 
     it('should have app name', () => {

@@ -31,12 +31,12 @@ concurrency:
 env:
   DATABASE_URL: postgresql://postgres:postgres@localhost:5432/rah_ci
   DIRECT_URL: postgresql://postgres:postgres@localhost:5432/rah_ci
-  FIREBASE_PROJECT_ID: rightathome-prod
-  FIREBASE_STORAGE_BUCKET: rightathome-prod.appspot.com
+  FIREBASE_PROJECT_ID: echo-prime-ai
+  FIREBASE_STORAGE_BUCKET: echo-prime-ai.appspot.com
   NEXT_PUBLIC_FIREBASE_API_KEY: ci-placeholder-api-key
-  NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: rightathome-prod.firebaseapp.com
-  NEXT_PUBLIC_FIREBASE_PROJECT_ID: rightathome-prod
-  NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: rightathome-prod.appspot.com
+  NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: echo-prime-ai.firebaseapp.com
+  NEXT_PUBLIC_FIREBASE_PROJECT_ID: echo-prime-ai
+  NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: echo-prime-ai.appspot.com
   NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: '000000000000'
   NEXT_PUBLIC_FIREBASE_APP_ID: 1:000000000000:web:ci-placeholder
   NEXT_PUBLIC_API_URL: https://api.rah-midland.com
@@ -188,8 +188,11 @@ jobs:
           data = json.loads(Path('rah-health.json').read_text())
           assert data.get('status') == 'healthy', data
           firebase = data.get('services', {}).get('firebase', {})
-          assert firebase.get('expectedProjectId') == 'rightathome-prod', firebase
-          assert firebase.get('configuredProjectId') == 'rightathome-prod', firebase
+          # echo-prime-ai is the real, controlled project (fixed 2026-07-30,
+          # commit c442be3). This job curls the LIVE endpoint, so asserting the
+          # old rightathome-prod value here would fail against a healthy prod.
+          assert firebase.get('expectedProjectId') == 'echo-prime-ai', firebase
+          assert firebase.get('configuredProjectId') == 'echo-prime-ai', firebase
           assert firebase.get('projectMatches') is True, firebase
           assert firebase.get('clientConfigured') is True, firebase
           assert firebase.get('adminInitialized') is True, firebase

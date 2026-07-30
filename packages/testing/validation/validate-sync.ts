@@ -25,9 +25,12 @@ interface ValidationResult {
 // Firebase configuration
 const firebaseConfig = {
   apiKey: process.env.FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY || '',
-  authDomain: 'rightathome-prod.firebaseapp.com',
-  projectId: 'rightathome-prod',
-  storageBucket: 'rightathome-prod.appspot.com',
+  authDomain: 'echo-prime-ai.firebaseapp.com',
+  projectId: 'echo-prime-ai',
+  storageBucket: 'echo-prime-ai.appspot.com',
+  // messagingSenderId already matched echo-prime-ai (249995513427, confirmed
+  // live from the rah-midland.com bundle) even before this fix -- the other
+  // three fields were simply stale.
   messagingSenderId: '249995513427',
   appId: process.env.FIREBASE_APP_ID || process.env.NEXT_PUBLIC_FIREBASE_APP_ID || ''
 };

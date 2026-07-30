@@ -267,7 +267,7 @@ export function createFirebaseMock() {
     app: {
       name: 'test-app',
       options: {
-        projectId: 'rightathome-prod'
+        projectId: 'echo-prime-ai'
       }
     },
 

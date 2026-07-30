@@ -13,7 +13,10 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $ProjectRoot = $PSScriptRoot
-$ExpectedFirebaseProject = 'rightathome-prod'
+# echo-prime-ai is the real, controlled Firebase project (fixed 2026-07-30,
+# commit c442be3). This gate previously threw on the CORRECT env and would
+# have blocked every deploy since the fix landed.
+$ExpectedFirebaseProject = 'echo-prime-ai'
 $ProductionConfirmation = 'DEPLOY_RAH_PRODUCTION'
 
 function Assert-CommandAvailable {

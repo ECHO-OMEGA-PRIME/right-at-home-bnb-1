@@ -1,6 +1,12 @@
 import type { FirebaseOptions } from 'firebase/app';
 
-export const RAH_FIREBASE_PROJECT_ID = 'rightathome-prod';
+// RAH Midland's real, controlled Firebase project is echo-prime-ai. The web
+// app carried the same wrong value ('rightathome-prod', a project we have no
+// admin access to -- see apps/web/src/lib/firebase-client-config.ts and the
+// P0 diagnosis in docs/consolidation/P0_PRODUCTION_FIREBASE_DIAGNOSIS_*.md)
+// until it was corrected in commit c442be3. Mobile still had it: fixed here
+// to match, per ECHO doctrine "ALL sites use ONE project echo-prime-ai".
+export const RAH_FIREBASE_PROJECT_ID = 'echo-prime-ai';
 
 const config = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY?.trim() ?? '',
