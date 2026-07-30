@@ -113,6 +113,7 @@ model Property {
   journalEntries     JournalEntry[]
   invoices           Invoice[]
   inventoryItems     InventoryItem[]
+  reviews            Review[]
 
   // Performance indexes
   @@index([status])
@@ -1342,4 +1343,74 @@ model Note {
   @@index([bookingId])
   @@index([guestId])
   @@index([pinned])
+}
+
+/// A recurring third-party service the business pays for (Twilio, Vercel,
+/// Supabase...). Distinct from PropertyServiceRate, which is what WE charge for
+/// a service at a property; this is what we are charged to operate.
+///
+/// monthlyCost is DOLLARS as a float, matching the route contract this backs
+/// and the rest of the money-as-dollars fields in this app. Cents-as-Int is the
+/// better representation, but mixing the two silently is worse than either.
+model ServiceSubscription {
+  id           String    @id @default(cuid())
+  /// Unique so re-POSTing a service updates it rather than creating a duplicate
+  /// row -- the route this backs has always been an upsert by service name.
+  service      String    @unique
+  category     String
+  description  String
+  monthlyCost  Float     @default(0)
+  billingCycle String    @default("monthly")
+  status       String    @default("active")
+  usageMetric  String?
+  currentUsage Int?
+  usageLimit   Int?
+  notes        String?
+  lastBilled   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([status, category])
+}
+
+/// A guest review, from any platform.
+///
+/// Replaces TWO separate in-memory arrays that both claimed to hold reviews and
+/// disagreed with each other: id REV-002 was a 4-star Airbnb review from
+/// "Sarah J." in one route and a 5-star Google review from "Sarah Johnson" in
+/// the other, so posting a response through /respond left the list view
+/// unchanged. One row, two response shapes rendered from it.
+model Review {
+  id         String  @id @default(cuid())
+  propertyId String
+  bookingId  String?
+  guestId    String?
+  /// Denormalised: reviews outlive the guest record, and platform imports often
+  /// carry only a display name ("Sarah J.") with no matching Guest row.
+  guestName  String
+  platform   String  @default("direct")
+  rating     Int
+  comment    String
+
+  response    String?
+  respondedAt DateTime?
+
+  /// Per-category sub-ratings (cleanliness, communication, ...) as JSON, matching
+  /// how the rest of this schema stores optional structured blobs.
+  categories String?
+
+  /// Stay dates, where the source platform provides them.
+  checkIn  DateTime?
+  checkOut DateTime?
+
+  status    String   @default("published")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId, status])
+  @@index([platform])
+  @@index([rating])
+  @@index([respondedAt])
 }

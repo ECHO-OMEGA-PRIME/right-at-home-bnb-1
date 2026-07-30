@@ -1,38 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireOneOfRoles } from '@/lib/api-auth';
+import { prisma } from '@/lib/prisma';
+import { toRespondContract } from '@/lib/reviews';
 
-const reviews: any[] = [
-  {
-    id: 'REV-002',
-    booking_id: 'BK-015',
-    property_id: 'PROP-002',
-    guest_id: 'GUEST-001',
-    guest_name: 'Sarah Johnson',
-    platform: 'google',
-    rating: 5,
-    text: 'Best BnB in Midland. Will be back!',
-    response_text: null,
-    response_status: 'pending',
-    stay_dates: { check_in: '2025-08-10', check_out: '2025-08-13' },
-    created_at: '2025-08-16T00:00:00Z',
-    responded_at: null,
-  },
-  {
-    id: 'REV-003',
-    booking_id: 'BK-020',
-    property_id: 'PROP-002',
-    guest_id: 'GUEST-002',
-    guest_name: 'Mike Thompson',
-    platform: 'direct',
-    rating: 4,
-    text: 'Good location for work. WiFi could be faster.',
-    response_text: null,
-    response_status: 'pending',
-    stay_dates: { check_in: '2026-01-05', check_out: '2026-01-19' },
-    created_at: '2026-01-21T00:00:00Z',
-    responded_at: null,
-  },
-];
+// Real Review rows (queue #26855). This route kept its own in-memory array of
+// two invented reviews that CONFLICTED with the array in /api/reviews: id
+// REV-002 was a 5-star Google review from "Sarah Johnson" here and a 4-star
+// Airbnb review from "Sarah J." there. Posting a response updated this copy
+// only, so the review stayed unanswered in the list view forever -- and the
+// response itself was gone on the next cold start, never having reached the
+// platform or the database.
+//
+// Both routes now read the same rows. The field names this route publishes
+// (text / response_text / response_status / stay_dates) are unchanged.
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -42,17 +22,18 @@ export async function POST(request: NextRequest, context: RouteContext) {
   if (auth.error) return auth.error;
   try {
     const { id } = await context.params;
-    const idx = reviews.findIndex((r) => r.id === id);
+    const review = await prisma.review.findUnique({ where: { id } });
 
-    if (idx === -1) {
+    if (!review) {
       return NextResponse.json({ error: 'Review not found' }, { status: 404 });
     }
 
-    const review = reviews[idx];
-
-    if (review.response_status === 'responded') {
+    if (review.respondedAt) {
       return NextResponse.json(
-        { error: 'Review already has a response', responded_at: review.responded_at },
+        {
+          error: 'Review already has a response',
+          responded_at: review.respondedAt.toISOString(),
+        },
         { status: 409 },
       );
     }
@@ -66,7 +47,9 @@ export async function POST(request: NextRequest, context: RouteContext) {
       );
     }
 
-    if (body.response_text.trim().length < 10) {
+    const text = body.response_text.trim();
+
+    if (text.length < 10) {
       return NextResponse.json(
         { error: 'response_text must be at least 10 characters' },
         { status: 400 },
@@ -80,17 +63,26 @@ export async function POST(request: NextRequest, context: RouteContext) {
       );
     }
 
-    const now = new Date().toISOString();
-    reviews[idx] = {
-      ...review,
-      response_text: body.response_text.trim(),
-      response_status: 'responded',
-      responded_at: now,
-    };
+    const updated = await prisma.review.update({
+      where: { id },
+      data: {
+        response: text,
+        respondedAt: new Date(),
+        // A review flagged for a reply is no longer waiting once answered.
+        // Leaving it at needs_response is what would keep the dashboard counter
+        // high no matter how many replies were written.
+        status: review.status === 'needs_response' ? 'published' : review.status,
+      },
+    });
 
     return NextResponse.json({
-      review: reviews[idx],
-      message: `Response posted to ${review.platform} review from ${review.guest_name}`,
+      review: toRespondContract(updated),
+      // Honest wording. The response is recorded here; pushing it to Airbnb or
+      // VRBO is a separate integration that does not exist yet, and saying
+      // "posted to <platform>" would be a claim the operator acts on.
+      message:
+        `Response recorded for the ${review.platform} review from ${review.guestName}. ` +
+        'It is stored here; publishing to the platform is not yet wired up.',
     });
   } catch (error: any) {
     return NextResponse.json(
