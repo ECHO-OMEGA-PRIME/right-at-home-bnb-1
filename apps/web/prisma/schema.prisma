@@ -109,6 +109,11 @@ model Property {
   guestRequests      GuestRequest[]
   operationalAlerts  OperationalAlert[]
 
+  // Financial ledger back-relations (P1 objective 2, added 2026-07-30)
+  journalEntries     JournalEntry[]
+  invoices           Invoice[]
+  inventoryItems     InventoryItem[]
+
   // Performance indexes
   @@index([status])
   @@index([city])
@@ -1044,4 +1049,175 @@ model VrboReconciliationRun {
 
   @@index([status, startedAt])
   @@index([syncAtRiskCount, startedAt])
+}
+
+// ============================================
+// FINANCIAL LEDGER  (P1 objective 2)
+// ============================================
+// Added 2026-07-30. The accounting, invoicing, tax and inventory API routes
+// served hardcoded in-memory arrays with no persistence of any kind, and no
+// ledger schema existed -- see queue #26855. P5 (property-level P&L, tax-ready
+// exports) is built on top of those routes, so it could only ever have graded
+// fabricated numbers.
+//
+// Money is stored as INTEGER CENTS, not Float. The existing Expense.amount is a
+// Float, which is wrong for money and is left alone here rather than migrated
+// under a security-focused change; the API routes already speak *_cents, so
+// cents is also the convention these endpoints expect.
+
+/// Chart of accounts. `type` is one of asset|liability|equity|revenue|expense
+/// and `normalSide` is debit|credit (strings, matching this schema's existing
+/// convention of no enums).
+model LedgerAccount {
+  id         String  @id @default(cuid())
+  code       String  @unique
+  name       String
+  type       String
+  normalSide String
+  isActive   Boolean @default(true)
+
+  lines JournalEntryLine[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([type])
+}
+
+/// One balanced double-entry transaction. The sum of its lines' debitCents must
+/// equal the sum of their creditCents; this is enforced in the service layer
+/// (a cross-row invariant Postgres cannot express as a simple CHECK).
+/// Append-only in spirit: corrections post a reversing entry rather than edit.
+model JournalEntry {
+  id         String  @id @default(cuid())
+  entryDate  DateTime
+  memo       String
+  reference  String?
+  propertyId String?
+  createdById String?
+
+  /// Set when this entry reverses another; the reversed entry keeps its history.
+  reversesId String? @unique
+
+  postedAt DateTime @default(now())
+
+  property Property? @relation(fields: [propertyId], references: [id])
+  lines    JournalEntryLine[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([entryDate])
+  @@index([propertyId])
+}
+
+model JournalEntryLine {
+  id             String @id @default(cuid())
+  journalEntryId String
+  accountId      String
+
+  debitCents  Int @default(0)
+  creditCents Int @default(0)
+
+  /// Per-line property attribution is what makes property-level P&L possible
+  /// without re-deriving it from memos.
+  propertyId String?
+  memo       String?
+
+  journalEntry JournalEntry  @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+  account      LedgerAccount @relation(fields: [accountId], references: [id])
+
+  @@index([journalEntryId])
+  @@index([accountId])
+  @@index([propertyId])
+}
+
+model Invoice {
+  id          String @id @default(cuid())
+  number      String @unique
+  propertyId  String?
+  guestId     String?
+  status      String  @default("draft")
+  issueDate   DateTime
+  dueDate     DateTime?
+  totalCents  Int     @default(0)
+  paidCents   Int     @default(0)
+  currency    String  @default("USD")
+  notes       String?
+
+  property Property?     @relation(fields: [propertyId], references: [id])
+  lines    InvoiceLine[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([propertyId])
+}
+
+model InvoiceLine {
+  id            String @id @default(cuid())
+  invoiceId     String
+  description   String
+  quantity      Int    @default(1)
+  unitCents     Int
+  totalCents    Int
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+}
+
+/// A closed accounting/tax window. `lockedAt` is what makes a period immutable,
+/// which P5 requires ("period locking").
+model TaxPeriod {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  periodStart DateTime
+  periodEnd   DateTime
+  lockedAt    DateTime?
+  lockedById  String?
+  notes       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([periodStart, periodEnd])
+}
+
+model InventoryItem {
+  id           String @id @default(cuid())
+  sku          String @unique
+  name         String
+  unit         String @default("each")
+  parLevel     Int    @default(0)
+  unitCostCents Int   @default(0)
+  propertyId   String?
+  isActive     Boolean @default(true)
+
+  property  Property?           @relation(fields: [propertyId], references: [id])
+  movements InventoryMovement[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([propertyId])
+}
+
+/// Append-only stock ledger. `quantityDelta` is signed: negative is consumption.
+model InventoryMovement {
+  id         String @id @default(cuid())
+  itemId     String
+  propertyId String?
+  quantityDelta Int
+  reason     String
+  reference  String?
+  createdById String?
+
+  item InventoryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([itemId])
+  @@index([propertyId])
 }
