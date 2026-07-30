@@ -244,7 +244,16 @@ export async function createPayPalOrder(
  */
 export async function capturePayPalOrder(
   orderId: string
-): Promise<{ transactionId: string; status: string; payer: Record<string, unknown> }> {
+): Promise<{
+  transactionId: string;
+  status: string;
+  payer: Record<string, unknown>;
+  /** purchase_units[0].reference_id -- the bookingRef the order was CREATED for. */
+  referenceId: string | null;
+  /** Captured amount, as a number of dollars. */
+  amount: number | null;
+  currency: string | null;
+}> {
   const res = await paypalFetch(`/v2/checkout/orders/${orderId}/capture`, {
     method: "POST",
   });
@@ -258,10 +267,19 @@ export async function capturePayPalOrder(
   const capture =
     data.purchase_units?.[0]?.payments?.captures?.[0] ?? {};
 
+  // The reference and amount were discarded here, which meant the caller had no
+  // way to check that the order it captured was the order for the booking it was
+  // about to confirm, or that the right money was paid. Both are returned now.
+  const unit = data.purchase_units?.[0] ?? {};
+  const captured = capture.amount ?? unit.amount ?? {};
+
   return {
     transactionId: (capture.id as string) ?? orderId,
     status: data.status as string,
     payer: data.payer ?? {},
+    referenceId: (unit.reference_id as string) ?? null,
+    amount: captured.value != null ? Number(captured.value) : null,
+    currency: (captured.currency_code as string) ?? null,
   };
 }
 

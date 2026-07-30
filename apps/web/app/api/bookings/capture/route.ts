@@ -18,12 +18,64 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // This endpoint is PUBLIC by design (middleware PUBLIC_API_PREFIXES) -- a
+    // guest completing a PayPal payment is not logged in. That makes verifying
+    // the payment itself the ONLY control, and it was missing entirely: the
+    // route captured whatever order id it was handed and then confirmed
+    // whatever bookingId it was handed, with no link between the two and no
+    // check on the amount.
+    //
+    // So anyone could POST their own completed $1 order id together with
+    // someone else's bookingId and mark that booking CONFIRMED -- paying a
+    // dollar for a $2,000 stay, or confirming a booking they do not own.
+    const existing = await prisma.booking.findUnique({
+      where: { id: bookingId },
+      select: { id: true, confirmCode: true, totalPrice: true, status: true },
+    });
+    if (!existing) {
+      return NextResponse.json({ error: "Booking not found" }, { status: 404 });
+    }
+
     // ── Capture payment ──────────────────────────────────────────
     const capture = await capturePayPalOrder(paypalOrderId);
 
     if (capture.status !== "COMPLETED") {
       return NextResponse.json(
         { error: `Payment not completed. Status: ${capture.status}` },
+        { status: 400 }
+      );
+    }
+
+    // The order must be the one created FOR THIS BOOKING. checkout stores that
+    // reference as booking.confirmCode, so the two must agree.
+    if (!capture.referenceId || capture.referenceId !== existing.confirmCode) {
+      console.error(
+        "[bookings/capture] order/booking mismatch",
+        { bookingId, paypalOrderId, orderRef: capture.referenceId },
+      );
+      return NextResponse.json(
+        { error: "This payment does not belong to that booking" },
+        { status: 400 }
+      );
+    }
+
+    // ...and it must be for the right money. totalPrice is DOLLARS as a float,
+    // so compare with a cent of tolerance rather than exact equality.
+    const owed = existing.totalPrice ?? 0;
+    if (capture.amount == null || Math.abs(capture.amount - owed) > 0.01) {
+      console.error(
+        "[bookings/capture] amount mismatch",
+        { bookingId, paid: capture.amount, owed },
+      );
+      return NextResponse.json(
+        { error: "Payment amount does not match the booking total" },
+        { status: 400 }
+      );
+    }
+
+    if (capture.currency && capture.currency !== "USD") {
+      return NextResponse.json(
+        { error: `Unexpected currency: ${capture.currency}` },
         { status: 400 }
       );
     }
