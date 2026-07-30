@@ -78,7 +78,15 @@ export function weeklyPeriod(weekEnding: Date) {
 export async function previewFridayPay(weekEnding: Date) {
   const { start, end } = weeklyPeriod(weekEnding);
   const entries = await prisma.workerPayEntry.findMany({
-    where: { status: 'EARNED', earnedAt: { gte: start, lte: end }, payrollBatchId: null },
+    where: {
+      status: 'EARNED',
+      earnedAt: { gte: start, lte: end },
+      payrollBatchId: null,
+      // Job-based entries only. WorkerPayEntry.workOrderId became optional so a
+      // salaried pay-period entry can exist; those belong to a payroll run, not
+      // to this per-job Friday preview.
+      workOrderId: { not: null },
+    },
     include: {
       worker: { include: { user: { select: { name: true, email: true, phone: true } } } },
       workOrder: { include: { property: { select: { name: true } } } },
@@ -104,8 +112,8 @@ export async function previewFridayPay(weekEnding: Date) {
     current.jobs.push({
       payEntryId: entry.id,
       workOrderId: entry.workOrderId,
-      propertyName: entry.workOrder.property.name,
-      serviceType: entry.workOrder.serviceType,
+      propertyName: entry.workOrder?.property.name ?? null,
+      serviceType: entry.workOrder?.serviceType ?? null,
       amountCents: entry.amountCents,
       earnedAt: entry.earnedAt,
     });

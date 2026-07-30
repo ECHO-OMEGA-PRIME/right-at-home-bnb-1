@@ -1,163 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireOneOfRoles } from '@/lib/api-auth';
+import { prisma } from '@/lib/prisma';
+import {
+  FUTA_RATE,
+  FUTA_WAGE_BASE_CENTS,
+  MEDICARE_ADDITIONAL_RATE,
+  MEDICARE_ADDITIONAL_THRESHOLD_CENTS,
+  MEDICARE_RATE,
+  SS_RATE,
+  SS_WAGE_BASE_CENTS,
+  TX_SUTA_RATE,
+  TX_SUTA_WAGE_BASE_CENTS,
+  computeFUTACents,
+  computeFederalTaxCents,
+  computeMedicareCents,
+  computeSSCents,
+  computeSUTACents,
+} from '@/lib/payroll-tax';
+import { listPayrollEmployeesForCalc } from '@/lib/payroll';
 
-// ── Payroll employee lookup (mirrors payroll/employees store) ─────────────
-
-const employees: any[] = [
-  {
-    id: 'EMP-001', name: 'Maria Garcia', role: 'cleaner',
-    pay_type: 'hourly', rate_cents: 1800,
-    w4_filing_status: 'single', w4_allowances: 1,
-    ytd_gross_cents: 1944000, ytd_ss_wages_cents: 1944000,
-    ytd_futa_wages_cents: 700000, ytd_suta_wages_cents: 900000,
-  },
-  {
-    id: 'EMP-002', name: 'James Wilson', role: 'maintenance',
-    pay_type: 'hourly', rate_cents: 2200,
-    w4_filing_status: 'married', w4_allowances: 3,
-    ytd_gross_cents: 2288000, ytd_ss_wages_cents: 2288000,
-    ytd_futa_wages_cents: 700000, ytd_suta_wages_cents: 900000,
-  },
-  {
-    id: 'EMP-003', name: 'Lisa Chen', role: 'manager',
-    pay_type: 'salary', rate_cents: 520000,
-    w4_filing_status: 'single', w4_allowances: 1,
-    ytd_gross_cents: 2600000, ytd_ss_wages_cents: 2600000,
-    ytd_futa_wages_cents: 700000, ytd_suta_wages_cents: 900000,
-  },
-  {
-    id: 'EMP-004', name: 'Carlos Ramirez', role: 'cleaner',
-    pay_type: 'hourly', rate_cents: 1600,
-    w4_filing_status: 'single', w4_allowances: 1,
-    ytd_gross_cents: 832000, ytd_ss_wages_cents: 832000,
-    ytd_futa_wages_cents: 700000, ytd_suta_wages_cents: 832000,
-  },
-];
-
-// ── 2026 Federal Income Tax Brackets (Single) ────────────────────────────
-
-const SINGLE_BRACKETS = [
-  { min: 0, max: 1192500, rate: 0.10 },
-  { min: 1192500, max: 4847500, rate: 0.12 },
-  { min: 4847500, max: 10335000, rate: 0.22 },
-  { min: 10335000, max: 19700000, rate: 0.24 },
-  { min: 19700000, max: 24375000, rate: 0.32 },
-  { min: 24375000, max: 62650000, rate: 0.35 },
-  { min: 62650000, max: Infinity, rate: 0.37 },
-];
-
-const MARRIED_BRACKETS = [
-  { min: 0, max: 2385000, rate: 0.10 },
-  { min: 2385000, max: 9695000, rate: 0.12 },
-  { min: 9695000, max: 20670000, rate: 0.22 },
-  { min: 20670000, max: 39400000, rate: 0.24 },
-  { min: 39400000, max: 48750000, rate: 0.32 },
-  { min: 48750000, max: 76350000, rate: 0.35 },
-  { min: 76350000, max: Infinity, rate: 0.37 },
-];
-
-// ── Tax Constants (all in cents) ─────────────────────────────────────────
-
-const SS_RATE = 0.062;
-const SS_WAGE_BASE_CENTS = 17610000; // $176,100
-const MEDICARE_RATE = 0.0145;
-const MEDICARE_ADDITIONAL_THRESHOLD_CENTS = 20000000; // $200,000
-const MEDICARE_ADDITIONAL_RATE = 0.009;
-const FUTA_RATE = 0.006;
-const FUTA_WAGE_BASE_CENTS = 700000; // $7,000
-const TX_SUTA_RATE = 0.027;
-const TX_SUTA_WAGE_BASE_CENTS = 900000; // $9,000
-const STANDARD_DEDUCTION_SINGLE_CENTS = 1550000; // $15,500
-const STANDARD_DEDUCTION_MARRIED_CENTS = 3100000; // $31,000
-
-// ── Helper: Annualize pay period gross to compute per-period fed tax ─────
-
-function computeFederalTaxCents(
-  periodGrossCents: number,
-  filingStatus: string,
-  payPeriodsPerYear: number,
-): number {
-  const brackets = filingStatus === 'married' ? MARRIED_BRACKETS : SINGLE_BRACKETS;
-  const standardDeduction = filingStatus === 'married'
-    ? STANDARD_DEDUCTION_MARRIED_CENTS
-    : STANDARD_DEDUCTION_SINGLE_CENTS;
-
-  // Annualize, subtract standard deduction
-  const annualizedGross = periodGrossCents * payPeriodsPerYear;
-  const taxableIncome = Math.max(0, annualizedGross - standardDeduction);
-
-  // Progressive bracket calculation
-  let annualTax = 0;
-  let remaining = taxableIncome;
-
-  for (const bracket of brackets) {
-    const bracketWidth = bracket.max - bracket.min;
-    const taxable = Math.min(remaining, bracketWidth);
-    annualTax += Math.round(taxable * bracket.rate);
-    remaining -= taxable;
-    if (remaining <= 0) break;
-  }
-
-  // De-annualize to per-period
-  return Math.round(annualTax / payPeriodsPerYear);
-}
-
-// ── Helper: Compute SS tax respecting wage base ──────────────────────────
-
-function computeSSCents(periodGrossCents: number, ytdSSWagesCents: number): {
-  employee: number;
-  employer: number;
-  taxable_wages_cents: number;
-} {
-  const remainingBase = Math.max(0, SS_WAGE_BASE_CENTS - ytdSSWagesCents);
-  const taxableWages = Math.min(periodGrossCents, remainingBase);
-  return {
-    employee: Math.round(taxableWages * SS_RATE),
-    employer: Math.round(taxableWages * SS_RATE),
-    taxable_wages_cents: taxableWages,
-  };
-}
-
-// ── Helper: Compute Medicare tax with additional surcharge ────────────────
-
-function computeMedicareCents(
-  periodGrossCents: number,
-  ytdGrossCents: number,
-): { employee: number; employer: number } {
-  const baseMedicare = Math.round(periodGrossCents * MEDICARE_RATE);
-
-  // Additional Medicare Tax (employee-only) on wages > $200K
-  let additionalMedicare = 0;
-  if (ytdGrossCents + periodGrossCents > MEDICARE_ADDITIONAL_THRESHOLD_CENTS) {
-    const overThreshold = Math.max(
-      0,
-      ytdGrossCents + periodGrossCents - MEDICARE_ADDITIONAL_THRESHOLD_CENTS,
-    );
-    const periodOverThreshold = Math.min(periodGrossCents, overThreshold);
-    additionalMedicare = Math.round(periodOverThreshold * MEDICARE_ADDITIONAL_RATE);
-  }
-
-  return {
-    employee: baseMedicare + additionalMedicare,
-    employer: baseMedicare, // employer does NOT pay additional Medicare
-  };
-}
-
-// ── Helper: FUTA (employer only, wage base $7,000) ───────────────────────
-
-function computeFUTACents(periodGrossCents: number, ytdFutaWagesCents: number): number {
-  const remainingBase = Math.max(0, FUTA_WAGE_BASE_CENTS - ytdFutaWagesCents);
-  const taxableWages = Math.min(periodGrossCents, remainingBase);
-  return Math.round(taxableWages * FUTA_RATE);
-}
-
-// ── Helper: TX SUTA (employer only, wage base $9,000) ────────────────────
-
-function computeSUTACents(periodGrossCents: number, ytdSutaWagesCents: number): number {
-  const remainingBase = Math.max(0, TX_SUTA_WAGE_BASE_CENTS - ytdSutaWagesCents);
-  const taxableWages = Math.min(periodGrossCents, remainingBase);
-  return Math.round(taxableWages * TX_SUTA_RATE);
-}
+// Real WorkerProfile rows (queue #26855). This route previously calculated
+// against a hardcoded four-person roster, so a "preview" of a real payroll was
+// a preview of four people who do not work here.
+//
+// The tax engine that used to live in this file is now @/lib/payroll-tax and is
+// shared with /api/payroll/runs. It was the better of the two engines -- wage
+// bases, filing status, standard deduction, additional Medicare -- so it became
+// the shared one rather than being replaced by the simpler version.
 
 // ── POST /api/payroll/calculate ──────────────────────────────────────────
 
@@ -183,6 +52,11 @@ export async function POST(request: NextRequest) {
     }
 
     const payPeriodsPerYear = body.pay_periods_per_year ?? 26; // default bi-weekly
+
+    // Real roster + real year-to-date wages.
+    const employees = await listPayrollEmployeesForCalc(
+      body.pay_period.end ? new Date(`${body.pay_period.end}T00:00:00.000Z`) : new Date(),
+    );
 
     const results: any[] = [];
     const errors: any[] = [];

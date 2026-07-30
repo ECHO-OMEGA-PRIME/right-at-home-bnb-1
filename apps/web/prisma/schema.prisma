@@ -855,10 +855,23 @@ model GuestRequest {
 
 model PayrollBatch {
   id            String    @id @default(cuid())
+  /// Holds the pay-period END date. The historical name says "week" but runs
+  /// may be semi-monthly; the @unique is KEPT deliberately -- it is what stops
+  /// payroll being run twice for the same period, which is a real hazard.
   weekEnding    DateTime  @unique
+  periodStart   DateTime?
+  payDate       DateTime?
   status        String    @default("DRAFT")
   totalCents    Int       @default(0)
+  /// Run totals. totalCents remains the net payable; these break it down.
+  totalGrossCents       Int @default(0)
+  totalNetCents         Int @default(0)
+  totalEmployerTaxCents Int @default(0)
   paymentMethod String?
+  /// Set once the run is approved/processed and its journal entry is posted.
+  /// Presence of this is what makes approval idempotent: a second approve
+  /// cannot double-post payroll into the ledger.
+  journalEntryId String?
   approvedAt    DateTime?
   paidAt        DateTime?
   createdAt     DateTime  @default(now())
@@ -872,9 +885,29 @@ model PayrollBatch {
 model WorkerPayEntry {
   id                 String    @id @default(cuid())
   workerId           String
-  workOrderId        String    @unique
+  /// Optional: a payroll-run entry covers a pay PERIOD, not a single job, so it
+  /// has no work order. @unique is kept -- Postgres allows many NULLs, so
+  /// job-based pay still gets exactly one entry per work order.
+  workOrderId        String?   @unique
   payrollBatchId     String?
+  /// Gross for the period (or the job amount for work-order pay).
   amountCents        Int
+
+  // ---- Payroll-run breakdown (added 2026-07-30) ------------------------
+  hours                 Float?
+  federalCents          Int @default(0)
+  socialSecurityCents   Int @default(0)
+  medicareCents         Int @default(0)
+  stateCents            Int @default(0)
+  netCents              Int @default(0)
+  /// Employer-side contributions -- a cost to the business, not withheld from
+  /// the worker. Kept separate so they can never be netted off gross by mistake.
+  employerSsCents       Int @default(0)
+  employerMedicareCents Int @default(0)
+  futaCents             Int @default(0)
+  /// State unemployment. Stored, not recomputed on read: a historical run must
+  /// retain the rate that was actually applied when it was processed.
+  sutaCents             Int @default(0)
   currency           String    @default("USD")
   status             String    @default("EARNED")
   earnedAt           DateTime  @default(now())
@@ -886,7 +919,7 @@ model WorkerPayEntry {
   updatedAt          DateTime  @updatedAt
 
   worker       WorkerProfile @relation(fields: [workerId], references: [id])
-  workOrder    WorkOrder     @relation(fields: [workOrderId], references: [id])
+  workOrder    WorkOrder?    @relation(fields: [workOrderId], references: [id])
   payrollBatch PayrollBatch? @relation(fields: [payrollBatchId], references: [id])
 
   @@index([workerId, status, earnedAt])

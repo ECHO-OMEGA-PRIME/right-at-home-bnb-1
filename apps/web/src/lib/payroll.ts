@@ -162,3 +162,47 @@ export async function auditPiiAccess(actorUid: string | null, action: string, en
     console.error('[payroll] failed to write PII access audit row', e);
   }
 }
+
+/**
+ * Employees in the shape /api/payroll/calculate needs, including year-to-date
+ * wages.
+ *
+ * YTD matters as much as the rate here: wage-base taxes (SS, FUTA, SUTA) are
+ * simply wrong without it, and the old hardcoded roster carried invented YTD
+ * figures that made every preview look like a mid-year paycheck.
+ *
+ * WorkerPayEntry records gross earned, so one YTD gross figure feeds all three
+ * wage bases -- all wages are subject to each tax, only the caps differ.
+ */
+export async function listPayrollEmployeesForCalc(asOf: Date = new Date()) {
+  const profiles = await prisma.workerProfile.findMany({
+    include: { user: { select: { name: true, isActive: true } } },
+  });
+
+  const yearStart = new Date(Date.UTC(asOf.getUTCFullYear(), 0, 1));
+  const ytdRows = await prisma.workerPayEntry.groupBy({
+    by: ['workerId'],
+    where: { earnedAt: { gte: yearStart, lte: asOf } },
+    _sum: { amountCents: true },
+  });
+  const ytdByWorker = new Map(ytdRows.map((r) => [r.workerId, r._sum.amountCents ?? 0]));
+
+  return profiles
+    .filter((p) => p.user?.isActive !== false)
+    .map((p) => {
+      const ytd = ytdByWorker.get(p.id) ?? 0;
+      return {
+        id: p.id,
+        name: p.user?.name ?? 'Unknown',
+        role: (p.workerType ?? '').toLowerCase(),
+        pay_type: (p.defaultPayType ?? '').toLowerCase(),
+        rate_cents: p.hourlyRateCents ?? 0,
+        w4_filing_status: p.w4FilingStatus ?? 'single',
+        w4_allowances: p.w4Allowances ?? 0,
+        ytd_gross_cents: ytd,
+        ytd_ss_wages_cents: ytd,
+        ytd_futa_wages_cents: ytd,
+        ytd_suta_wages_cents: ytd,
+      };
+    });
+}
