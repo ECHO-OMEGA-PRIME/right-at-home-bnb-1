@@ -43,6 +43,10 @@ API_ROOT = Path(__file__).resolve().parent.parent / "apps" / "web" / "app" / "ap
 HANDLER_RE = re.compile(r"^export (?:async )?function (GET|POST|PUT|PATCH|DELETE)\b", re.M)
 ROLES_RE = re.compile(r"require(?:OneOf)?Roles?\s*\(\s*request\s*,\s*\[([^\]]*)\]", re.S)
 SINGLE_ROLE_RE = re.compile(r"requireRole\s*\(\s*request\s*,\s*['\"](\w+)['\"]")
+# operations-auth actor guards. requireWorkerActor admits workers; requireOwnerActor
+# does not. Neither is shaped like requireOneOfRoles, so the first version of this
+# audit saw dispatch/tasks/[id] as having no role guard at all.
+ACTOR_RE = re.compile(r"require(Worker|Owner)Actor\s*\(")
 
 # Prisma access addressed by primary key.
 BY_ID_RE = re.compile(
@@ -50,7 +54,20 @@ BY_ID_RE = re.compile(
     re.S,
 )
 
-GUARDS = ("scopeAllows", "scopedWhere", "propertyScopeFor")
+# Ownership checks this codebase actually uses. The property-scope helpers, plus
+# the operations-auth pattern: requireWorkerActor + canManageAllWorkOrders, which
+# narrows the query to the caller's OWN assignments
+# (`where.assignedWorkerId = auth.workerProfile.id`). That is a per-actor scope
+# rather than a per-property one, and it is a legitimate guard -- the first
+# version of this audit did not know it and reported five false positives in
+# dispatch/tasks/[id] alone.
+GUARDS = (
+    "scopeAllows",
+    "scopedWhere",
+    "propertyScopeFor",
+    "canManageAllWorkOrders",
+    "assignedWorkerId = auth.workerProfile",
+)
 
 # Models with no property dimension -- scoping them is meaningless.
 PROPERTYLESS_MODELS = {
@@ -69,12 +86,42 @@ def handlers(source: str) -> list[tuple[str, str]]:
     return out
 
 
-def roles_for(body: str) -> set[str]:
-    m = ROLES_RE.search(body)
-    if m:
-        return {r.strip().strip("'\"") for r in m.group(1).split(",") if r.strip()}
-    m = SINGLE_ROLE_RE.search(body)
-    return {m.group(1)} if m else set()
+def roles_for(body: str, module: str = "") -> set[str]:
+    """Roles that can reach this handler.
+
+    Follows ONE level of indirection: messages/automated delegates its check to a
+    local authorizeStaffOrService() helper, and reading only the handler body
+    made an owner/admin-only route look unguarded. A role call inside a
+    file-level helper the handler awaits counts as the handler's own.
+    """
+
+    def parse(src: str) -> set[str]:
+        m = ROLES_RE.search(src)
+        if m:
+            return {r.strip().strip("'\"") for r in m.group(1).split(",") if r.strip()}
+        m = SINGLE_ROLE_RE.search(src)
+        if m:
+            return {m.group(1)}
+        a = ACTOR_RE.search(src)
+        if a:
+            return {"worker", "owner", "admin"} if a.group(1) == "Worker" else {"owner", "admin"}
+        return set()
+
+    direct = parse(body)
+    if direct:
+        return direct
+
+    for helper in set(re.findall(r"await\s+(\w+)\s*\(\s*request", body)):
+        # Match the helper function body up to the next top-level declaration.
+        stop = r"(?:export|async function|function)"
+        pattern = (r"(?:async\s+)?function\s+" + re.escape(helper)
+                   + r"\b(.*?)(?=" + chr(10) + stop + r")")
+        hm = re.search(pattern, module, re.S)
+        if hm:
+            found = parse(hm.group(1))
+            if found:
+                return found
+    return set()
 
 
 def main() -> int:
@@ -98,13 +145,26 @@ def main() -> int:
                 continue
             scanned += 1
 
-            roles = roles_for(body)
+            roles = roles_for(body, source)
             # No non-owner role can reach it -> not a tenant-isolation risk here.
             if roles and roles <= {"owner", "admin"}:
                 owner_only += 1
                 continue
 
-            if any(g in body for g in GUARDS):
+            # Look for the ownership check in the handler AND in any helper it
+            # awaits: dispatch/tasks/[id] keeps both its role guard and its
+            # ownership narrowing inside getVisibleWorkOrder(), so scanning only
+            # the handler body missed a guard that was plainly there.
+            searchable = body
+            for helper in set(re.findall(r"await\s+(\w+)\s*\(\s*request", body)):
+                hm = re.search(
+                    r"(?:async\s+)?function\s+" + re.escape(helper) + r"(.*?)(?="
+                    + chr(10) + r"(?:export|async function|function))",
+                    source, re.S)
+                if hm:
+                    searchable += hm.group(1)
+
+            if any(g in searchable for g in GUARDS):
                 guarded += 1
                 continue
 
