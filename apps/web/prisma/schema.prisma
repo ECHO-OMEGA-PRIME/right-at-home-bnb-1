@@ -607,6 +607,19 @@ model WorkerProfile {
   id                    String   @id @default(cuid())
   userId                String   @unique
   workerType            String
+  /// Which cleaning crew this worker belongs to ("A" / "B").
+  ///
+  /// The P0 acceptance matrix froze Crew A and Crew B as a requirement and the
+  /// schema had NO crew concept at all -- only a `// CLEANING & CREW` section
+  /// comment. Scheduling, dispatch and the turnover workflows all talk about
+  /// crews, so the grouping has to exist somewhere other than in people's heads.
+  ///
+  /// Deliberately a nullable String on WorkerProfile rather than a Crew model:
+  /// there are two crews and no evidence yet that a crew carries attributes of
+  /// its own (a lead, a rate, a schedule). Adding a table for a two-value
+  /// grouping would be inventing structure the business has not asked for. If
+  /// crews later need their own fields, this promotes to a relation cleanly.
+  crew                  String?
   employmentClass       String   @default("EMPLOYEE")
   dispatchPriority      Int      @default(100)
   autoDispatchEligible  Boolean  @default(true)
