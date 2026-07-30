@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireOneOfRoles } from '@/lib/api-auth';
 import { prisma } from '@/lib/prisma';
+import { propertyScopeFor, scopeAllows } from '@/lib/tenant-scope';
 
 // Real Thermostat rows (queue #26855). This route held an in-memory array of
 // two invented devices, reported them is_online: true with live-looking
@@ -137,7 +138,11 @@ export async function POST(request: NextRequest) {
     const thermostat = await prisma.thermostat.findUnique({
       where: { id: body.thermostat_id },
     });
-    if (!thermostat) {
+    // Addressing a thermostat by id skipped every filter, so a worker could
+    // change settings at any property. 404 rather than 403 -- a 403 confirms the
+    // device exists at a property this caller may not see.
+    const scope = await propertyScopeFor(auth.user);
+    if (!thermostat || !scopeAllows(scope, thermostat.propertyId)) {
       return NextResponse.json({ error: 'Thermostat not found' }, { status: 404 });
     }
 

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireOneOfRoles } from '@/lib/api-auth';
-import { propertyScopeFor, scopedWhere } from '@/lib/tenant-scope';
+import { propertyScopeFor, scopeAllows, scopedWhere } from '@/lib/tenant-scope';
 import { prisma } from '@/lib/prisma';
 
 // Real InventoryMovement rows (queue #26855). Movements were pushed onto an
@@ -93,6 +93,14 @@ export async function POST(request: NextRequest) {
       where: { id: body.item_id },
       select: { id: true, name: true, propertyId: true },
     });
+    // An item addressed by id skipped the scope, so a worker could record stock
+    // movements against inventory at any property. Items with a NULL propertyId
+    // are shared/general supplies -- those stay available to everyone, because
+    // they belong to no property rather than to someone else's.
+    const writeScope = await propertyScopeFor(auth.user);
+    if (item && item.propertyId && !scopeAllows(writeScope, item.propertyId)) {
+      return NextResponse.json({ error: 'Item not found' }, { status: 404 });
+    }
     if (!item) {
       return NextResponse.json({ error: 'Inventory item not found' }, { status: 404 });
     }
