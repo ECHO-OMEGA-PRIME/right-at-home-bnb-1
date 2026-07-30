@@ -17,7 +17,6 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { requireTwilioSignature } from '@/lib/twilio-webhook';
 
 const STEVEN_PHONE = process.env.STEVEN_PHONE || '+14325591904';
 const BASE_URL = process.env.NEXT_PUBLIC_URL || 'https://rah-midland.com';
@@ -138,8 +137,6 @@ function aiGreeting(settings: typeof FALLBACK_SETTINGS): string {
 }
 
 export async function POST(request: NextRequest) {
-  const sigError = await requireTwilioSignature(request);
-  if (sigError) return sigError;
   try {
     const formData = await request.formData();
 
