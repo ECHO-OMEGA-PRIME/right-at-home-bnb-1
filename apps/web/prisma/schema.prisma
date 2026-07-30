@@ -1189,12 +1189,20 @@ model TaxPeriod {
 }
 
 model InventoryItem {
-  id           String @id @default(cuid())
-  sku          String @unique
+  id           String  @id @default(cuid())
+  /// Optional: the API contract allows an item with no SKU. Postgres permits
+  /// multiple NULLs in a unique column, so uniqueness still holds for real SKUs.
+  sku          String? @unique
   name         String
-  unit         String @default("each")
-  parLevel     Int    @default(0)
-  unitCostCents Int   @default(0)
+  category     String  @default("other")
+  unit         String  @default("each")
+  /// parLevel is the reorder threshold; reorderQuantity is how much to buy.
+  parLevel     Int     @default(0)
+  reorderQuantity Int  @default(10)
+  unitCostCents Int    @default(0)
+  supplier     String?
+  storageLocation String?
+  lastCountedAt DateTime?
   propertyId   String?
   isActive     Boolean @default(true)
 
