@@ -1,68 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireOneOfRoles } from '@/lib/api-auth';
+import {
+  LedgerImbalanceError,
+  UnknownAccountError,
+  listJournalEntries,
+  postJournalEntry,
+} from '@/lib/ledger';
 
-// ── Mock journal entries ─────────────────────────────────────────────────
-const journalEntries: any[] = [
-  {
-    id: 'JE-001',
-    date: '2026-03-10',
-    reference_type: 'booking',
-    reference_id: 'BK-001',
-    description: 'Booking BK-001 — 3 nights at Sunset Retreat',
-    lines: [
-      { account_code: '1100', account_name: 'Accounts Receivable', debit_cents: 70363, credit_cents: 0 },
-      { account_code: '4000', account_name: 'Rental Revenue', debit_cents: 0, credit_cents: 65000 },
-      { account_code: '2100', account_name: 'Sales Tax Payable', debit_cents: 0, credit_cents: 5363 },
-    ],
-    created_at: '2026-03-10T14:30:00Z',
-  },
-  {
-    id: 'JE-002',
-    date: '2026-03-10',
-    reference_type: 'payment',
-    reference_id: 'PAY-001',
-    description: 'Payment received for BK-001 via Stripe',
-    lines: [
-      { account_code: '1000', account_name: 'Cash — Operating', debit_cents: 70363, credit_cents: 0 },
-      { account_code: '1100', account_name: 'Accounts Receivable', debit_cents: 0, credit_cents: 70363 },
-    ],
-    created_at: '2026-03-10T15:00:00Z',
-  },
-  {
-    id: 'JE-003',
-    date: '2026-03-12',
-    reference_type: 'expense',
-    reference_id: 'EXP-001',
-    description: 'Cleaning supplies purchased — H-E-B',
-    lines: [
-      { account_code: '5200', account_name: 'Cleaning Supplies', debit_cents: 8450, credit_cents: 0 },
-      { account_code: '1000', account_name: 'Cash — Operating', debit_cents: 0, credit_cents: 8450 },
-    ],
-    created_at: '2026-03-12T10:00:00Z',
-  },
-  {
-    id: 'JE-004',
-    date: '2026-03-15',
-    reference_type: 'payroll',
-    reference_id: 'PR-001',
-    description: 'Payroll run — March 1-15',
-    lines: [
-      { account_code: '5100', account_name: 'Wages Expense', debit_cents: 320000, credit_cents: 0 },
-      { account_code: '5110', account_name: 'Payroll Tax Expense', debit_cents: 24480, credit_cents: 0 },
-      { account_code: '2200', account_name: 'Federal Tax Withholding', debit_cents: 0, credit_cents: 44800 },
-      { account_code: '2210', account_name: 'FICA Withholding', debit_cents: 0, credit_cents: 24480 },
-      { account_code: '2220', account_name: 'Employer FICA Payable', debit_cents: 0, credit_cents: 24480 },
-      { account_code: '1000', account_name: 'Cash — Operating', debit_cents: 0, credit_cents: 250720 },
-    ],
-    created_at: '2026-03-15T12:00:00Z',
-  },
-];
+// Real JournalEntry / JournalEntryLine rows (queue #26855). This route pushed
+// onto an in-memory array, so entries vanished on the next cold start -- an
+// accounting ledger that forgot everything.
+//
+// The route already validated debits == credits; that rule now lives in
+// postJournalEntry, which is the single door into the ledger, so the invariant
+// is enforced identically no matter which caller writes an entry.
 
-function generateId(): string {
-  return `JE-${Date.now().toString(36).toUpperCase()}`;
-}
-
-// ── GET /api/accounting/journal-entries ───────────────────────────────────
+// ── GET /api/accounting/journal-entries ────────────────────────────────────
 export async function GET(request: NextRequest) {
   const auth = await requireOneOfRoles(request, ['owner', 'admin']);
   if (auth.error) return auth.error;
@@ -70,24 +23,14 @@ export async function GET(request: NextRequest) {
     const params = request.nextUrl.searchParams;
     const startDate = params.get('start_date');
     const endDate = params.get('end_date');
-    const referenceType = params.get('reference_type');
 
-    let filtered = [...journalEntries];
-
-    if (startDate) {
-      filtered = filtered.filter((je) => je.date >= startDate);
-    }
-    if (endDate) {
-      filtered = filtered.filter((je) => je.date <= endDate);
-    }
-    if (referenceType) {
-      filtered = filtered.filter((je) => je.reference_type === referenceType);
-    }
-
-    return NextResponse.json({
-      journal_entries: filtered,
-      total: filtered.length,
+    const entries = await listJournalEntries({
+      from: startDate ? new Date(`${startDate}T00:00:00.000Z`) : undefined,
+      to: endDate ? new Date(`${endDate}T23:59:59.999Z`) : undefined,
+      referenceType: params.get('reference_type'),
     });
+
+    return NextResponse.json({ journal_entries: entries, total: entries.length });
   } catch (error: any) {
     return NextResponse.json(
       { error: 'Failed to list journal entries', detail: error.message },
@@ -96,7 +39,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// ── POST /api/accounting/journal-entries ──────────────────────────────────
+// ── POST /api/accounting/journal-entries ───────────────────────────────────
 export async function POST(request: NextRequest) {
   const auth = await requireOneOfRoles(request, ['owner', 'admin']);
   if (auth.error) return auth.error;
@@ -110,13 +53,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate each line
     for (const line of body.lines) {
-      if (!line.account_code || !line.account_name) {
-        return NextResponse.json(
-          { error: 'Each line must have account_code and account_name' },
-          { status: 400 },
-        );
+      if (!line.account_code) {
+        return NextResponse.json({ error: 'Each line must have account_code' }, { status: 400 });
       }
       if (typeof line.debit_cents !== 'number' || typeof line.credit_cents !== 'number') {
         return NextResponse.json(
@@ -132,35 +71,52 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // CRITICAL: Validate debits = credits (double-entry accounting)
-    const totalDebits = body.lines.reduce((s: number, l: any) => s + l.debit_cents, 0);
-    const totalCredits = body.lines.reduce((s: number, l: any) => s + l.credit_cents, 0);
+    const referenceType = body.reference_type || 'manual';
+    const reference = body.reference_id ? `${referenceType}:${body.reference_id}` : referenceType;
 
-    if (totalDebits !== totalCredits) {
-      return NextResponse.json(
-        {
-          error: 'Journal entry is unbalanced. Total debits must equal total credits.',
-          total_debits_cents: totalDebits,
-          total_credits_cents: totalCredits,
-          difference_cents: Math.abs(totalDebits - totalCredits),
-        },
-        { status: 400 },
-      );
+    try {
+      const entry = await postJournalEntry({
+        entryDate: new Date(`${body.date}T00:00:00.000Z`),
+        memo: body.description,
+        reference,
+        propertyId: body.property_id ?? null,
+        lines: body.lines.map((l: any) => ({
+          accountCode: l.account_code,
+          debitCents: l.debit_cents,
+          creditCents: l.credit_cents,
+          propertyId: l.property_id ?? null,
+          memo: l.memo ?? null,
+        })),
+      });
+
+      // Re-read through the same mapper the list endpoint uses so a created
+      // entry and a listed entry are never different shapes.
+      const [created] = await listJournalEntries({
+        from: new Date(`${body.date}T00:00:00.000Z`),
+        to: new Date(`${body.date}T23:59:59.999Z`),
+      });
+
+      return NextResponse.json({ journal_entry: created ?? entry }, { status: 201 });
+    } catch (e) {
+      if (e instanceof LedgerImbalanceError) {
+        const totalDebits = body.lines.reduce((s: number, l: any) => s + l.debit_cents, 0);
+        const totalCredits = body.lines.reduce((s: number, l: any) => s + l.credit_cents, 0);
+        return NextResponse.json(
+          {
+            error: 'Journal entry is unbalanced. Total debits must equal total credits.',
+            total_debits_cents: totalDebits,
+            total_credits_cents: totalCredits,
+          },
+          { status: 400 },
+        );
+      }
+      if (e instanceof UnknownAccountError) {
+        // A code that is not in the chart of accounts is a client error, not a
+        // server fault -- and saying which code is missing is the whole point.
+        return NextResponse.json({ error: (e as Error).message }, { status: 400 });
+      }
+      throw e;
     }
-
-    const entry = {
-      id: generateId(),
-      date: body.date,
-      reference_type: body.reference_type || 'manual',
-      reference_id: body.reference_id || null,
-      description: body.description,
-      lines: body.lines,
-      created_at: new Date().toISOString(),
-    };
-
-    journalEntries.push(entry);
-
-    return NextResponse.json({ journal_entry: entry }, { status: 201 });
   } catch (error: any) {
     return NextResponse.json(
       { error: 'Failed to create journal entry', detail: error.message },

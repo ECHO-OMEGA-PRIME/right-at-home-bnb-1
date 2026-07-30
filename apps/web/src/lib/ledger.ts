@@ -276,6 +276,52 @@ export async function reportJournalLines(opts: { from?: Date; to?: Date } = {}):
   }));
 }
 
+/**
+ * Journal entries in the shape /api/accounting/journal-entries returns.
+ *
+ * `reference` is stored as a single "type:id" string (e.g. "expense:abc123")
+ * because one column keeps the pair atomic; it is split back out here so the
+ * API contract keeps its separate reference_type / reference_id fields.
+ */
+export async function listJournalEntries(opts: {
+  from?: Date;
+  to?: Date;
+  referenceType?: string | null;
+} = {}) {
+  const entries = await prisma.journalEntry.findMany({
+    where: {
+      ...(opts.from || opts.to
+        ? { entryDate: { ...(opts.from ? { gte: opts.from } : {}), ...(opts.to ? { lte: opts.to } : {}) } }
+        : {}),
+      ...(opts.referenceType ? { reference: { startsWith: `${opts.referenceType}:` } } : {}),
+    },
+    include: { lines: { include: { account: true } } },
+    orderBy: { entryDate: 'desc' },
+  });
+
+  return entries.map((e) => {
+    const [refType, ...refRest] = (e.reference ?? '').split(':');
+    return {
+      id: e.id,
+      date: e.entryDate.toISOString().slice(0, 10),
+      reference_type: e.reference ? refType : 'manual',
+      reference_id: refRest.join(':') || null,
+      description: e.memo,
+      property_id: e.propertyId,
+      reverses_id: e.reversesId,
+      lines: e.lines.map((l) => ({
+        account_code: l.account.code,
+        account_name: l.account.name,
+        debit_cents: l.debitCents,
+        credit_cents: l.creditCents,
+        property_id: l.propertyId,
+        memo: l.memo,
+      })),
+      created_at: e.postedAt.toISOString(),
+    };
+  });
+}
+
 /** True when the whole ledger balances. A cheap integrity check for monitoring. */
 export async function ledgerIsBalanced(): Promise<{ balanced: boolean; debits: number; credits: number }> {
   const agg = await prisma.journalEntryLine.aggregate({
