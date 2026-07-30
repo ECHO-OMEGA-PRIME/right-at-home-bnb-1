@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireOneOfRoles } from '@/lib/api-auth';
 
 // ── Invoices store (empty - populated via API in production) ──────────────
 const invoices: any[] = [];
@@ -11,6 +12,8 @@ function generateId(): string {
 
 // ── GET /api/invoices ────────────────────────────────────────────────────
 export async function GET(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const params = request.nextUrl.searchParams;
     const status = params.get('status');
@@ -34,6 +37,8 @@ export async function GET(request: NextRequest) {
 
 // ── POST /api/invoices — Create from booking ─────────────────────────────
 export async function POST(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const body = await request.json();
 

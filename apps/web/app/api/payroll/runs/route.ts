@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireOneOfRoles } from '@/lib/api-auth';
 
 // ── Tax calculation helpers ──────────────────────────────────────────────
 function calculateFederalWithholding(annualizedGrossCents: number): number {
@@ -62,6 +63,8 @@ const payrollRuns: any[] = [
 
 // ── GET /api/payroll/runs ────────────────────────────────────────────────
 export async function GET(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     return NextResponse.json({
       payroll_runs: payrollRuns,
@@ -77,6 +80,8 @@ export async function GET(request: NextRequest) {
 
 // ── POST /api/payroll/runs ───────────────────────────────────────────────
 export async function POST(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const body = await request.json();
 

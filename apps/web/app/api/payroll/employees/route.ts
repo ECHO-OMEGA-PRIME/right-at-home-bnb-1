@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireOneOfRoles } from '@/lib/api-auth';
 
 const employees: any[] = [
   {
@@ -37,6 +38,8 @@ const employees: any[] = [
 
 // ── GET /api/payroll/employees ───────────────────────────────────────────
 export async function GET(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const params = request.nextUrl.searchParams;
     const role = params.get('role');
@@ -67,6 +70,8 @@ export async function GET(request: NextRequest) {
 
 // ── POST /api/payroll/employees ──────────────────────────────────────────
 export async function POST(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const body = await request.json();
 

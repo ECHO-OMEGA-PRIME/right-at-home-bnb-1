@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireOneOfRoles } from '@/lib/api-auth';
 
 // ── Account balances (derived from journal entries in production) ─────────
 // In production, these would be SQL aggregations over the journal_entry_lines table.
@@ -53,6 +54,8 @@ const accountBalances: AccountBalance[] = [
 
 // ── GET /api/accounting/summary ──────────────────────────────────────────
 export async function GET(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     // Revenue: 4xxx accounts this month
     const totalRevenueCents = accountBalances

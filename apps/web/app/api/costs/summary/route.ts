@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireOneOfRoles } from '@/lib/api-auth';
 
 // ── Reference cost data (mirrors costs/route.ts store) ─────────────────────
 const costs: any[] = [
@@ -97,6 +98,8 @@ const costs: any[] = [
 
 // ── GET /api/costs/summary ──────────────────────────────────────────────────
 export async function GET(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const params = request.nextUrl.searchParams;
     const propertyId = params.get('property_id');

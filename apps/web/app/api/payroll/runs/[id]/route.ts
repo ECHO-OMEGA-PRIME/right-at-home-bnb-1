@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireOneOfRoles } from '@/lib/api-auth';
 
 const payrollRuns: any[] = [
   {
@@ -36,6 +37,8 @@ type RouteContext = { params: Promise<{ id: string }> };
 
 // ── GET /api/payroll/runs/[id] ───────────────────────────────────────────
 export async function GET(request: NextRequest, context: RouteContext) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const { id } = await context.params;
     const run = payrollRuns.find((r) => r.id === id);
@@ -55,6 +58,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
 // ── PATCH /api/payroll/runs/[id] ─────────────────────────────────────────
 export async function PATCH(request: NextRequest, context: RouteContext) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const { id } = await context.params;
     const idx = payrollRuns.findIndex((r) => r.id === id);

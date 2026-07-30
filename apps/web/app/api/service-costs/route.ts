@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireOneOfRoles } from '@/lib/api-auth';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface ServiceCost {
@@ -197,6 +198,8 @@ function buildSummary(costs: ServiceCost[]) {
 
 // ── GET /api/service-costs ───────────────────────────────────────────────────
 export async function GET(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const params = request.nextUrl.searchParams;
     const category = params.get('category');
@@ -227,6 +230,8 @@ export async function GET(request: NextRequest) {
 
 // ── POST /api/service-costs ──────────────────────────────────────────────────
 export async function POST(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const body = await request.json();
 

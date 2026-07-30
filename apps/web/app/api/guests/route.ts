@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { requireOneOfRoles } from '@/lib/api-auth';
 
 export interface GuestResponse {
   id: string;
@@ -32,6 +33,8 @@ export interface GuestResponse {
 
 // GET /api/guests - List guests with filters
 export async function GET(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
@@ -180,6 +183,8 @@ export async function GET(request: NextRequest) {
 
 // POST /api/guests - Create new guest
 export async function POST(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const body = await request.json();
 
@@ -254,6 +259,8 @@ export async function POST(request: NextRequest) {
 
 // PATCH /api/guests - Update guest
 export async function PATCH(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const body = await request.json();
     const { id, ...updates } = body;
@@ -330,6 +337,8 @@ export async function PATCH(request: NextRequest) {
 
 // DELETE /api/guests - Delete guest (soft delete by anonymizing)
 export async function DELETE(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');

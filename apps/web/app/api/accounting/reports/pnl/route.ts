@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireOneOfRoles } from '@/lib/api-auth';
 
 // ── Mock journal data for P&L computation ────────────────────────────────
 const journalLines: any[] = [
@@ -30,6 +31,8 @@ const journalLines: any[] = [
 
 // ── GET /api/accounting/reports/pnl ──────────────────────────────────────
 export async function GET(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const params = request.nextUrl.searchParams;
     const startDate = params.get('start') ?? new Date().toISOString().slice(0, 8) + '01';

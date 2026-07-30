@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireOneOfRoles } from '@/lib/api-auth';
 
 // ── Mock invoices (shared reference) ─────────────────────────────────────
 const invoices: any[] = [
@@ -32,6 +33,8 @@ type RouteContext = { params: Promise<{ id: string }> };
 
 // ── GET /api/invoices/[id] ───────────────────────────────────────────────
 export async function GET(request: NextRequest, context: RouteContext) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const { id } = await context.params;
     const invoice = invoices.find((i) => i.id === id);
@@ -51,6 +54,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
 // ── PUT /api/invoices/[id] — Update status, record payment ──────────────
 export async function PUT(request: NextRequest, context: RouteContext) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const { id } = await context.params;
     const idx = invoices.findIndex((i) => i.id === id);
@@ -115,6 +120,8 @@ export async function PUT(request: NextRequest, context: RouteContext) {
 
 // ── DELETE /api/invoices/[id] — Void invoice ─────────────────────────────
 export async function DELETE(request: NextRequest, context: RouteContext) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const { id } = await context.params;
     const idx = invoices.findIndex((i) => i.id === id);

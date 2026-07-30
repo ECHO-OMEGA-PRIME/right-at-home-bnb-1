@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireOneOfRoles } from '@/lib/api-auth';
 
 const guests: any[] = [
   {
@@ -32,6 +33,8 @@ type RouteContext = { params: Promise<{ id: string }> };
 
 // ── GET /api/crm/guests/[id] ────────────────────────────────────────────
 export async function GET(request: NextRequest, context: RouteContext) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const { id } = await context.params;
     const guest = guests.find((g) => g.id === id);
@@ -60,6 +63,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
 // ── PATCH /api/crm/guests/[id] ──────────────────────────────────────────
 export async function PATCH(request: NextRequest, context: RouteContext) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const { id } = await context.params;
     const idx = guests.findIndex((g) => g.id === id);

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireOneOfRoles } from '@/lib/api-auth';
 
 // ── Payroll employee lookup (mirrors payroll/employees store) ─────────────
 
@@ -161,6 +162,8 @@ function computeSUTACents(periodGrossCents: number, ytdSutaWagesCents: number): 
 // ── POST /api/payroll/calculate ──────────────────────────────────────────
 
 export async function POST(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const body = await request.json();
 

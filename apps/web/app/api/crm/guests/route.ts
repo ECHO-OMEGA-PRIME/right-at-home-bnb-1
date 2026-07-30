@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireOneOfRoles } from '@/lib/api-auth';
 
 // ── In-memory guest store ───────────────────────────────────────────────────
 const guests: any[] = [
@@ -82,6 +83,8 @@ function generateId(prefix: string): string {
 
 // ── GET /api/crm/guests ─────────────────────────────────────────────────────
 export async function GET(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const params = request.nextUrl.searchParams;
     const segment = params.get('segment');
@@ -133,6 +136,8 @@ export async function GET(request: NextRequest) {
 
 // ── POST /api/crm/guests ────────────────────────────────────────────────────
 export async function POST(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const body = await request.json();
 

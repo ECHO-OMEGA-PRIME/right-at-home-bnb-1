@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireOneOfRoles } from '@/lib/api-auth';
 
 // ── Mock journal entries ─────────────────────────────────────────────────
 const journalEntries: any[] = [
@@ -63,6 +64,8 @@ function generateId(): string {
 
 // ── GET /api/accounting/journal-entries ───────────────────────────────────
 export async function GET(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const params = request.nextUrl.searchParams;
     const startDate = params.get('start_date');
@@ -95,6 +98,8 @@ export async function GET(request: NextRequest) {
 
 // ── POST /api/accounting/journal-entries ──────────────────────────────────
 export async function POST(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const body = await request.json();
 
