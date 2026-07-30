@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
 
 // ---------------------------------------------------------------------------
 // iCal Export Endpoint
@@ -26,11 +27,33 @@ interface Booking {
  * Fetch bookings for a property. In production this queries the database;
  * for development / demo purposes it returns mock data.
  */
-function getBookingsForProperty(propertyId: string): Booking[] {
-  // Empty mock store - replace with a real DB query in production.
-  const mockBookings: Record<string, Booking[]> = {};
+async function getBookingsForProperty(propertyId: string): Promise<Booking[]> {
+  // Real bookings. This previously returned an EMPTY mock store for every
+  // property, so the feed told Airbnb/VRBO that every date was free -- a
+  // double-booking vector, since channel managers block dates from exactly
+  // this calendar (queue #26855).
+  const rows = await prisma.booking.findMany({
+    where: { propertyId },
+    select: {
+      id: true, propertyId: true, checkIn: true, checkOut: true,
+      status: true, platform: true,
+      guest: { select: { name: true } },
+    },
+    orderBy: { checkIn: 'asc' },
+  });
 
-  return mockBookings[propertyId] ?? [];
+  return rows.map((b) => ({
+    id: b.id,
+    propertyId: b.propertyId,
+    // Guest names are deliberately NOT published. This feed is fetched with a
+    // shared key by third-party platforms; a blocked date needs no PII.
+    guestName: 'Reserved',
+    checkIn: b.checkIn.toISOString().slice(0, 10),
+    checkOut: b.checkOut.toISOString().slice(0, 10),
+    // Stored upper-case; the generator filters on lower-case 'cancelled'.
+    status: ((b.status || '').toLowerCase() as Booking['status']),
+    source: (b.platform || 'direct').toLowerCase(),
+  }));
 }
 
 /**
@@ -173,10 +196,14 @@ export async function GET(request: NextRequest) {
   }
 
   // --- Key-based authentication ---
-  const expectedKey = process.env.ICAL_EXPORT_KEY ?? 'rah-midland-ical-2026';
+  // Fail CLOSED. The previous fallback literal 'rah-midland-ical-2026' meant
+  // that if ICAL_EXPORT_KEY were ever unset, anyone who guessed that published
+  // string could pull the booking calendar -- the same missing-env-var
+  // short-circuit that left the cron routes open.
+  const expectedKey = process.env.ICAL_EXPORT_KEY?.trim();
   const providedKey = searchParams.get('key');
 
-  if (!providedKey || providedKey !== expectedKey) {
+  if (!expectedKey || !providedKey || providedKey !== expectedKey) {
     return NextResponse.json(
       { error: 'Unauthorized: invalid or missing key parameter' },
       { status: 401 },
@@ -184,7 +211,7 @@ export async function GET(request: NextRequest) {
   }
 
   // --- Fetch bookings ---
-  const bookings = getBookingsForProperty(propertyId);
+  const bookings = await getBookingsForProperty(propertyId);
 
   console.log(
     `[ical-export] Generating iCal for property=${propertyId}, bookings=${bookings.length}`,
