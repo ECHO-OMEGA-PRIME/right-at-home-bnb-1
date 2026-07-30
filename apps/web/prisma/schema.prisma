@@ -1140,9 +1140,19 @@ model Invoice {
   number      String @unique
   propertyId  String?
   guestId     String?
+  /// The stay this invoice bills for, so an invoice can be re-derived from and
+  /// reconciled against its booking rather than trusting client-sent figures.
+  bookingId   String?
   status      String  @default("draft")
   issueDate   DateTime
   dueDate     DateTime?
+  /// When it was actually settled -- needed to place the payment in the right
+  /// accounting/tax period, which updatedAt cannot be trusted to represent.
+  paidDate    DateTime?
+  /// Stored alongside totalCents because tax is a reported figure, not one to
+  /// re-derive later from a rate that may since have changed.
+  subtotalCents Int   @default(0)
+  taxCents      Int   @default(0)
   totalCents  Int     @default(0)
   paidCents   Int     @default(0)
   currency    String  @default("USD")
