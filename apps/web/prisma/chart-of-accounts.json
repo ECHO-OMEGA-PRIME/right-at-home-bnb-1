@@ -1,0 +1,164 @@
+[
+  {
+    "code": "1000",
+    "name": "Operating Checking",
+    "normalSide": "debit",
+    "type": "asset"
+  },
+  {
+    "code": "1010",
+    "name": "Savings Account",
+    "normalSide": "debit",
+    "type": "asset"
+  },
+  {
+    "code": "1020",
+    "name": "Petty Cash",
+    "normalSide": "debit",
+    "type": "asset"
+  },
+  {
+    "code": "1100",
+    "name": "Accounts Receivable",
+    "normalSide": "debit",
+    "type": "asset"
+  },
+  {
+    "code": "1200",
+    "name": "Security Deposits Held",
+    "normalSide": "debit",
+    "type": "asset"
+  },
+  {
+    "code": "1500",
+    "name": "Furniture & Equipment",
+    "normalSide": "debit",
+    "type": "asset"
+  },
+  {
+    "code": "1510",
+    "name": "Accumulated Depreciation",
+    "normalSide": "debit",
+    "type": "asset"
+  },
+  {
+    "code": "2000",
+    "name": "Accounts Payable",
+    "normalSide": "credit",
+    "type": "liability"
+  },
+  {
+    "code": "2100",
+    "name": "Sales Tax Payable",
+    "normalSide": "credit",
+    "type": "liability"
+  },
+  {
+    "code": "2110",
+    "name": "HOT Tax Payable",
+    "normalSide": "credit",
+    "type": "liability"
+  },
+  {
+    "code": "2200",
+    "name": "Payroll Tax Payable",
+    "normalSide": "credit",
+    "type": "liability"
+  },
+  {
+    "code": "2300",
+    "name": "Guest Deposits",
+    "normalSide": "credit",
+    "type": "liability"
+  },
+  {
+    "code": "3100",
+    "name": "Retained Earnings",
+    "normalSide": "credit",
+    "type": "equity"
+  },
+  {
+    "code": "4000",
+    "name": "Rental Revenue",
+    "normalSide": "credit",
+    "type": "revenue"
+  },
+  {
+    "code": "4010",
+    "name": "Cleaning Fee Revenue",
+    "normalSide": "credit",
+    "type": "revenue"
+  },
+  {
+    "code": "4020",
+    "name": "Pet Fee Revenue",
+    "normalSide": "credit",
+    "type": "revenue"
+  },
+  {
+    "code": "4100",
+    "name": "Late Fee Revenue",
+    "normalSide": "credit",
+    "type": "revenue"
+  },
+  {
+    "code": "5000",
+    "name": "Wage Expense",
+    "normalSide": "debit",
+    "type": "expense"
+  },
+  {
+    "code": "5010",
+    "name": "Employer Payroll Tax",
+    "normalSide": "debit",
+    "type": "expense"
+  },
+  {
+    "code": "5100",
+    "name": "Utilities Expense",
+    "normalSide": "debit",
+    "type": "expense"
+  },
+  {
+    "code": "5200",
+    "name": "Cleaning Supplies",
+    "normalSide": "debit",
+    "type": "expense"
+  },
+  {
+    "code": "5300",
+    "name": "Maintenance & Repairs",
+    "normalSide": "debit",
+    "type": "expense"
+  },
+  {
+    "code": "5400",
+    "name": "Insurance Expense",
+    "normalSide": "debit",
+    "type": "expense"
+  },
+  {
+    "code": "6000",
+    "name": "Platform Fees (VRBO/Airbnb)",
+    "normalSide": "debit",
+    "type": "expense"
+  },
+  {
+    "code": "6100",
+    "name": "Marketing & Advertising",
+    "normalSide": "debit",
+    "type": "expense"
+  },
+  {
+    "code": "6200",
+    "name": "Software & Subscriptions",
+    "normalSide": "debit",
+    "type": "expense"
+  },
+  {
+    "code": "6300",
+    "name": "Property Management",
+    "normalSide": "debit",
+    "type": "expense"
+  }
+]
