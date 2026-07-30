@@ -103,6 +103,50 @@ def access_token(sa: dict) -> str:
     return r.json()["access_token"]
 
 
+def firestore_roles(access_token: str) -> list[tuple[str, str, str, bool]]:
+    """Read explicit roles from the Firestore `users` collection.
+
+    This is the source the app itself uses (api-auth reads users/{uid}.role), so
+    it is authoritative in a way Postgres is not.
+
+    Deliberately returns ONLY users carrying an explicit `role` field. Most
+    accounts have no role field and the app treats them as 'guest' by default;
+    writing an explicit 'guest' claim for them would be a latent trap, because
+    the claim now takes precedence over Firestore, so a later promotion to
+    owner/admin in Firestore would be silently overridden by the stale claim.
+    Mirroring only explicit roles keeps the claim a faithful copy of a real
+    decision rather than a copy of a default.
+    """
+    rows: list[tuple[str, str, str, bool]] = []
+    page = None
+    while True:
+        params = {"pageSize": 300}
+        if page:
+            params["pageToken"] = page
+        r = requests.get(
+            f"https://firestore.googleapis.com/v1/projects/{PROJECT_ID}"
+            "/databases/(default)/documents/users",
+            headers={"Authorization": f"Bearer {access_token}"},
+            params=params,
+            timeout=TIMEOUT,
+        )
+        if r.status_code != 200:
+            raise RuntimeError(f"Firestore users read failed {r.status_code}: {r.text[:200]}")
+        body = r.json()
+        for doc in body.get("documents", []):
+            fields = doc.get("fields", {})
+            role = fields.get("role", {}).get("stringValue")
+            if not role:
+                continue  # no explicit decision to mirror
+            uid = doc["name"].rsplit("/", 1)[-1]
+            email = fields.get("email", {}).get("stringValue", "")
+            rows.append((uid, email, role, True))
+        page = body.get("nextPageToken")
+        if not page:
+            break
+    return rows
+
+
 def postgres_roles() -> list[tuple[str, str, str, bool]]:
     dsn = env("DIRECT_URL") or env("DATABASE_URL")
     if not dsn:
@@ -154,16 +198,26 @@ def set_claim(at: str, uid: str, claims: dict) -> tuple[bool, str]:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--apply", action="store_true", help="actually write claims")
+    ap.add_argument("--source", choices=("firestore", "postgres"), default="firestore",
+                    help="where to read authoritative roles from "
+                         "(firestore is what the app itself reads)")
     args = ap.parse_args()
-
-    rows = postgres_roles()
-    print(f"Postgres users with a Firebase authUid: {len(rows)}")
-    print("role distribution:", dict(Counter(r[2] for r in rows)))
-    print("active:", dict(Counter(bool(r[3]) for r in rows)))
-    print()
 
     sa = service_account()
     at = access_token(sa)
+
+    if args.source == "firestore":
+        rows = firestore_roles(at)
+        print(f"Firestore users with an EXPLICIT role field: {len(rows)}")
+        print("(users without a role field are omitted on purpose - the app "
+              "defaults them to guest, and a stale claim would outrank a later "
+              "promotion)")
+    else:
+        rows = postgres_roles()
+        print(f"Postgres users with a Firebase authUid: {len(rows)}")
+    print("role distribution:", dict(Counter(r[2] for r in rows)))
+    print("active:", dict(Counter(bool(r[3]) for r in rows)))
+    print()
 
     planned: list[tuple[str, str, str]] = []
     skipped: list[tuple[str, str, str]] = []
