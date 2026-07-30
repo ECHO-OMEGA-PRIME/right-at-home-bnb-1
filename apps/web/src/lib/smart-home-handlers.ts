@@ -174,9 +174,19 @@ export async function safeSmartHomeGet(request: NextRequest) {
         locks: locks.map((lock: any) => ({
           id: maskedDeviceId(lock.id || lock.device_id),
           name: lock.name,
-          online: lock.online,
+          // The proxy reports `status: "online"`, not an `online` boolean.
+          // Reading only `lock.online` yielded undefined, which JSON drops
+          // entirely -- so every lock rendered as unknown/offline on screen
+          // while the hardware was reporting itself online.
+          online:
+            typeof lock.online === 'boolean'
+              ? lock.online
+              : typeof lock.status === 'string'
+                ? lock.status.toLowerCase() === 'online'
+                : null,
           batteryLevel: lock.battery_level ?? lock.battery_percent ?? null,
           locked: lock.locked ?? null,
+          lastSync: lock.last_sync ?? null,
         })),
         source: 'tuya',
       });
