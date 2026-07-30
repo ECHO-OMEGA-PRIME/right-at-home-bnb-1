@@ -414,7 +414,7 @@ model Message {
 
 model Expense {
   id          String  @id @default(cuid())
-  propertyId  String
+  propertyId  String?
   createdById String?
 
   // Expense Details
@@ -437,6 +437,9 @@ model Expense {
   // Status
   status String @default("PENDING")
 
+  // Payment
+  paymentMethod String?
+
   // Notes
   notes String?
 
@@ -444,7 +447,7 @@ model Expense {
   updatedAt DateTime @updatedAt
 
   // Relations
-  property  Property @relation(fields: [propertyId], references: [id])
+  property  Property? @relation(fields: [propertyId], references: [id])
   createdBy User?    @relation(fields: [createdById], references: [id])
 
   // Performance indexes
