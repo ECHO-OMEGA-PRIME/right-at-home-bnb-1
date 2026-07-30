@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import {
   capturePayPalOrder,
   createAndSendInvoice,
+  getPayPalOrder,
 } from "@/lib/integrations/paypal-client";
 import { PROPERTIES } from "@/lib/property-data";
 
@@ -30,10 +31,64 @@ export async function POST(req: NextRequest) {
     // dollar for a $2,000 stay, or confirming a booking they do not own.
     const existing = await prisma.booking.findUnique({
       where: { id: bookingId },
-      select: { id: true, confirmCode: true, totalPrice: true, status: true },
+      select: {
+        id: true,
+        confirmCode: true,
+        paypalOrderRef: true,
+        paypalCaptureId: true,
+        totalPrice: true,
+        status: true,
+      },
     });
     if (!existing) {
       return NextResponse.json({ error: "Booking not found" }, { status: 404 });
+    }
+
+    // IDEMPOTENCY. A guest whose browser times out after PayPal has already
+    // captured will retry. Without this the retry either double-charges or --
+    // once confirmCode has been overwritten with the transaction id -- fails the
+    // reference check and strands them on a booking that IS paid.
+    //
+    // Answer the repeat with the original result and do not touch PayPal again.
+    if (existing.paypalCaptureId && existing.status === "CONFIRMED") {
+      return NextResponse.json({
+        success: true,
+        alreadyCaptured: true,
+        confirmCode: existing.confirmCode,
+        transactionId: existing.paypalCaptureId,
+      });
+    }
+
+    // ── Verify BEFORE taking the money ───────────────────────────
+    // The order is read first so a request that will be refused never results
+    // in a captured payment. The same two facts are re-checked after capture
+    // below: this pre-check is the courtesy, the post-check is the control.
+    const order = await getPayPalOrder(paypalOrderId);
+    const expectedRefPre = existing.paypalOrderRef ?? existing.confirmCode;
+
+    if (!order.referenceId || order.referenceId !== expectedRefPre) {
+      console.error("[bookings/capture] pre-capture order/booking mismatch", {
+        bookingId,
+        paypalOrderId,
+        orderRef: order.referenceId,
+      });
+      return NextResponse.json(
+        { error: "This payment does not belong to that booking" },
+        { status: 400 }
+      );
+    }
+
+    const owedPre = existing.totalPrice ?? 0;
+    if (order.amount == null || Math.abs(order.amount - owedPre) > 0.01) {
+      console.error("[bookings/capture] pre-capture amount mismatch", {
+        bookingId,
+        offered: order.amount,
+        owed: owedPre,
+      });
+      return NextResponse.json(
+        { error: "Payment amount does not match the booking total" },
+        { status: 400 }
+      );
     }
 
     // ── Capture payment ──────────────────────────────────────────
@@ -46,9 +101,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // The order must be the one created FOR THIS BOOKING. checkout stores that
-    // reference as booking.confirmCode, so the two must agree.
-    if (!capture.referenceId || capture.referenceId !== existing.confirmCode) {
+    // The order must be the one created FOR THIS BOOKING. Checked against
+    // paypalOrderRef, NOT confirmCode: confirmCode is overwritten with the
+    // transaction id below, so verifying against it worked exactly once and
+    // then broke every retry. Older bookings predate the column, so fall back
+    // to confirmCode for those rather than rejecting a legitimate payment.
+    const expectedRef = existing.paypalOrderRef ?? existing.confirmCode;
+    if (!capture.referenceId || capture.referenceId !== expectedRef) {
       console.error(
         "[bookings/capture] order/booking mismatch",
         { bookingId, paypalOrderId, orderRef: capture.referenceId },
@@ -86,6 +145,7 @@ export async function POST(req: NextRequest) {
       data: {
         status: "CONFIRMED",
         confirmCode: capture.transactionId,
+        paypalCaptureId: capture.transactionId,
         internalNotes: `PayPal Order: ${paypalOrderId} | Transaction: ${capture.transactionId}`,
       },
       include: { guest: true },

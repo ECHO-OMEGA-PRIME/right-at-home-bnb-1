@@ -242,6 +242,39 @@ export async function createPayPalOrder(
 /**
  * Capture payment after the customer has approved via PayPal.
  */
+/**
+ * Read an order WITHOUT capturing it.
+ *
+ * Exists so the caller can verify an order belongs to the booking it is about
+ * to confirm, and is for the right money, BEFORE taking the payment. Verifying
+ * after capture means money can be taken on a request that is then correctly
+ * refused -- safer than confirming wrongly, but still the wrong order of events.
+ */
+export async function getPayPalOrder(orderId: string): Promise<{
+  status: string;
+  referenceId: string | null;
+  amount: number | null;
+  currency: string | null;
+}> {
+  const res = await paypalFetch(`/v2/checkout/orders/${orderId}`, { method: "GET" });
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`PayPal getOrder failed (${res.status}): ${err}`);
+  }
+
+  const data = await res.json();
+  const unit = data.purchase_units?.[0] ?? {};
+  const amount = unit.amount ?? {};
+
+  return {
+    status: data.status as string,
+    referenceId: (unit.reference_id as string) ?? null,
+    amount: amount.value != null ? Number(amount.value) : null,
+    currency: (amount.currency_code as string) ?? null,
+  };
+}
+
 export async function capturePayPalOrder(
   orderId: string
 ): Promise<{

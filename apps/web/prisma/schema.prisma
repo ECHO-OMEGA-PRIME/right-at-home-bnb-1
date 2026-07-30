@@ -232,6 +232,17 @@ model Booking {
   taxes       Float?
   totalPrice  Float
 
+  /// The reference stamped onto the PayPal order at checkout (RAH-xxxx), kept
+  /// in its OWN column. It used to live in confirmCode, which the capture route
+  /// then overwrote with the transaction id -- destroying the only proof that a
+  /// given PayPal order belonged to this booking, and breaking legitimate
+  /// retries. confirmCode is also read by the invoice path, so it could not
+  /// simply be repurposed.
+  paypalOrderRef String?
+  /// PayPal capture id, so a repeated capture of the SAME transaction can be
+  /// recognised and answered idempotently instead of charging again.
+  paypalCaptureId String?
+
   // Access
   accessCode    String?
   codeExpiresAt DateTime?
