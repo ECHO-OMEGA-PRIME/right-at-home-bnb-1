@@ -67,8 +67,28 @@ export function segmentOf(g: Pick<GuestRow, 'totalStays' | 'tags'>): GuestSegmen
   return g.totalStays > 1 ? 'returning' : 'first_time';
 }
 
-export function toGuestContract(g: GuestRow) {
+/**
+ * Actual stays and spend for a guest.
+ *
+ * Guest.totalStays / Guest.totalSpent are denormalised columns that are NOT
+ * maintained -- verified in production, where every one of the 494 guests reads
+ * 0 while their bookings clearly say otherwise (one sampled guest has 2
+ * bookings worth $1,884 and still reported 0/0). Trusting them made every guest
+ * look first_time and made the segment breakdown meaningless.
+ *
+ * Derived from Booking instead, so the figure cannot drift from the rows it
+ * summarises. Passed in by the caller as a single groupBy rather than a query
+ * per guest.
+ */
+export interface GuestActivity {
+  stays: number;
+  spentCents: number;
+}
+
+export function toGuestContract(g: GuestRow, activity?: GuestActivity) {
   const [first, ...rest] = (g.name || '').trim().split(/\s+/);
+  const stays = activity?.stays ?? g.totalStays;
+  const spentCents = activity ? activity.spentCents : dollarsToCents(g.totalSpent);
   return {
     id: g.id,
     first_name: first || '',
@@ -76,11 +96,11 @@ export function toGuestContract(g: GuestRow) {
     name: g.name,
     email: g.email,
     phone: g.phone,
-    segment: segmentOf(g),
+    segment: segmentOf({ totalStays: stays, tags: g.tags }),
     is_vip: g.isVip,
     vip_tier: g.vipTier,
-    total_stays: g.totalStays,
-    total_spent_cents: dollarsToCents(g.totalSpent),
+    total_stays: stays,
+    total_spent_cents: spentCents,
     avg_rating_given: g.avgRating,
     first_stay_date: g.firstStay ? g.firstStay.toISOString().slice(0, 10) : null,
     last_stay_date: g.lastStay ? g.lastStay.toISOString().slice(0, 10) : null,
@@ -116,7 +136,20 @@ export async function listGuests(opts: {
     orderBy: { lastStay: 'desc' },
   })) as GuestRow[];
 
-  const mapped = rows.map(toGuestContract);
+  // One aggregate for every guest, rather than a query per row.
+  const agg = await prisma.booking.groupBy({
+    by: ['guestId'],
+    _count: { _all: true },
+    _sum: { totalPrice: true },
+  });
+  const activity = new Map<string, GuestActivity>(
+    agg.map((a) => [
+      a.guestId,
+      { stays: a._count._all, spentCents: dollarsToCents(a._sum.totalPrice) },
+    ]),
+  );
+
+  const mapped = rows.map((g) => toGuestContract(g, activity.get(g.id) ?? { stays: 0, spentCents: 0 }));
   // Segment is derived, so it cannot be filtered in SQL without duplicating the
   // rule. Filtering after mapping keeps one definition of what a segment means.
   const filtered = opts.segment ? mapped.filter((g) => g.segment === opts.segment) : mapped;
@@ -133,5 +166,14 @@ export async function listGuests(opts: {
 
 export async function getGuest(id: string) {
   const g = (await prisma.guest.findUnique({ where: { id } })) as GuestRow | null;
-  return g ? toGuestContract(g) : null;
+  if (!g) return null;
+  const agg = await prisma.booking.aggregate({
+    where: { guestId: id },
+    _count: { _all: true },
+    _sum: { totalPrice: true },
+  });
+  return toGuestContract(g, {
+    stays: agg._count._all,
+    spentCents: dollarsToCents(agg._sum.totalPrice),
+  });
 }
