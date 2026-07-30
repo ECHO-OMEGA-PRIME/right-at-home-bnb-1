@@ -1,75 +1,115 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireOneOfRoles } from '@/lib/api-auth';
+import { prisma } from '@/lib/prisma';
 
-// ── In-memory thermostat store ──────────────────────────────────────────────
-const thermostats: any[] = [
-  {
-    id: 'THERM-001',
-    property_id: 'PROP-001',
-    name: 'Main Thermostat',
-    device_type: 'ecobee_smart_thermostat',
-    is_online: true,
-    mode: 'cool',
-    target_temp_f: 72,
-    current_temp_f: 73,
-    humidity_percent: 45,
-    fan_mode: 'auto',
-    schedule_enabled: true,
-    schedule: {
-      occupied: { heat_to: 70, cool_to: 74 },
-      unoccupied: { heat_to: 60, cool_to: 82 },
-    },
-    readings: [
-      { temp_f: 73, humidity_percent: 45, recorded_at: '2026-03-17T22:00:00Z' },
-      { temp_f: 74, humidity_percent: 44, recorded_at: '2026-03-17T21:00:00Z' },
-      { temp_f: 75, humidity_percent: 43, recorded_at: '2026-03-17T20:00:00Z' },
-      { temp_f: 76, humidity_percent: 42, recorded_at: '2026-03-17T19:00:00Z' },
-    ],
-    created_at: '2025-06-01T00:00:00Z',
-    updated_at: '2026-03-17T22:00:00Z',
-  },
-  {
-    id: 'THERM-002',
-    property_id: 'PROP-002',
-    name: 'Main Thermostat',
-    device_type: 'nest_learning_thermostat',
-    is_online: true,
-    mode: 'heat',
-    target_temp_f: 68,
-    current_temp_f: 67,
-    humidity_percent: 38,
-    fan_mode: 'auto',
-    schedule_enabled: true,
-    schedule: {
-      occupied: { heat_to: 70, cool_to: 74 },
-      unoccupied: { heat_to: 55, cool_to: 85 },
-    },
-    readings: [
-      { temp_f: 67, humidity_percent: 38, recorded_at: '2026-03-17T22:00:00Z' },
-      { temp_f: 66, humidity_percent: 39, recorded_at: '2026-03-17T21:00:00Z' },
-      { temp_f: 65, humidity_percent: 40, recorded_at: '2026-03-17T20:00:00Z' },
-    ],
-    created_at: '2025-08-15T00:00:00Z',
-    updated_at: '2026-03-17T22:00:00Z',
-  },
-];
+// Real Thermostat rows (queue #26855). This route held an in-memory array of
+// two invented devices, reported them is_online: true with live-looking
+// temperature readings, and answered every write with "Thermostat settings
+// updated". Nothing was ever sent anywhere.
+//
+// That is the most physically consequential lie in this codebase: someone
+// setting a vacant Midland property to 82F cooling to save money in July would
+// have been told it worked. It did not. The house stays at whatever the device
+// was already doing.
+//
+// There is no thermostat integration to fix this with. The Tuya client in this
+// repo (src/lib/integrations/tuya-client.ts) speaks to LOCKS only -- getLocks,
+// setLockState, createGuestCode. It has no thermostat surface at all.
+//
+// So this route now does the two honest things available:
+//   GET  lists thermostats that are actually registered, and does not claim to
+//        know their current temperature or whether they are online.
+//   POST records the DESIRED settings and returns 503 with an explicit
+//        applied:false, because a write that cannot reach the device must not
+//        report success.
+
+function toContract(t: {
+  id: string;
+  propertyId: string;
+  name: string;
+  deviceType: string;
+  deviceId: string | null;
+  targetTempF: number | null;
+  mode: string;
+  fanMode: string;
+  scheduleEnabled: boolean;
+  schedule: string | null;
+  lastTempF: number | null;
+  lastHumidity: number | null;
+  lastSeenAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}) {
+  let schedule: unknown = null;
+  if (t.schedule) {
+    try {
+      schedule = JSON.parse(t.schedule);
+    } catch {
+      schedule = null;
+    }
+  }
+
+  return {
+    id: t.id,
+    property_id: t.propertyId,
+    name: t.name,
+    device_type: t.deviceType,
+    device_id: t.deviceId,
+
+    // null, not true. We have no way to reach the device, so its online state
+    // is unknown -- and "unknown" must not render as "fine".
+    is_online: null,
+    current_temp_f: null,
+    humidity_percent: null,
+
+    // Desired settings as recorded here. See settings_applied_to_device.
+    mode: t.mode,
+    target_temp_f: t.targetTempF,
+    fan_mode: t.fanMode,
+    schedule_enabled: t.scheduleEnabled,
+    schedule,
+
+    settings_applied_to_device: false,
+    device_integration: 'none',
+
+    // Last values genuinely observed, if anything ever observed them.
+    last_reading:
+      t.lastSeenAt !== null
+        ? {
+            temp_f: t.lastTempF,
+            humidity_percent: t.lastHumidity,
+            recorded_at: t.lastSeenAt.toISOString(),
+          }
+        : null,
+
+    created_at: t.createdAt.toISOString(),
+    updated_at: t.updatedAt.toISOString(),
+  };
+}
+
+const NO_INTEGRATION =
+  'No thermostat integration exists. The Tuya client in this deployment ' +
+  'supports locks only, so thermostat settings cannot be sent to any device. ' +
+  'The requested settings have been recorded but are NOT in effect at the property.';
 
 // ── GET /api/smart-home/thermostats ─────────────────────────────────────────
 export async function GET(request: NextRequest) {
   const auth = await requireOneOfRoles(request, ['worker', 'owner', 'admin']);
   if (auth.error) return auth.error;
   try {
-    const params = request.nextUrl.searchParams;
-    const propertyId = params.get('property_id');
+    const propertyId = request.nextUrl.searchParams.get('property_id');
 
-    let filtered = [...thermostats];
-    if (propertyId) {
-      filtered = filtered.filter((t) => t.property_id === propertyId);
-    }
+    const rows = await prisma.thermostat.findMany({
+      where: propertyId ? { propertyId } : {},
+      orderBy: [{ propertyId: 'asc' }, { name: 'asc' }],
+    });
+    const thermostats = rows.map(toContract);
 
     return NextResponse.json({
-      thermostats: filtered,
-      total: filtered.length,
+      thermostats,
+      total: thermostats.length,
+      device_integration: 'none',
+      note: NO_INTEGRATION,
     });
   } catch (error: any) {
     return NextResponse.json(
@@ -93,29 +133,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const thermostat = thermostats.find((t) => t.id === body.thermostat_id);
+    const thermostat = await prisma.thermostat.findUnique({
+      where: { id: body.thermostat_id },
+    });
     if (!thermostat) {
       return NextResponse.json({ error: 'Thermostat not found' }, { status: 404 });
     }
 
-    if (!thermostat.is_online) {
-      return NextResponse.json({ error: 'Thermostat is offline' }, { status: 503 });
-    }
+    // Validation runs before the write, and is unchanged.
+    const data: Record<string, unknown> = {};
 
-    const now = new Date().toISOString();
-
-    // Set target temperature
     if (body.target_temp_f !== undefined) {
-      if (typeof body.target_temp_f !== 'number' || body.target_temp_f < 50 || body.target_temp_f > 90) {
+      if (
+        typeof body.target_temp_f !== 'number' ||
+        body.target_temp_f < 50 ||
+        body.target_temp_f > 90
+      ) {
         return NextResponse.json(
           { error: 'target_temp_f must be between 50 and 90' },
           { status: 400 },
         );
       }
-      thermostat.target_temp_f = body.target_temp_f;
+      data.targetTempF = body.target_temp_f;
     }
 
-    // Set mode
     if (body.mode) {
       const validModes = ['heat', 'cool', 'auto', 'off'];
       if (!validModes.includes(body.mode)) {
@@ -124,10 +165,9 @@ export async function POST(request: NextRequest) {
           { status: 400 },
         );
       }
-      thermostat.mode = body.mode;
+      data.mode = body.mode;
     }
 
-    // Set fan mode
     if (body.fan_mode) {
       const validFanModes = ['auto', 'on', 'circulate'];
       if (!validFanModes.includes(body.fan_mode)) {
@@ -136,25 +176,42 @@ export async function POST(request: NextRequest) {
           { status: 400 },
         );
       }
-      thermostat.fan_mode = body.fan_mode;
+      data.fanMode = body.fan_mode;
     }
 
-    // Toggle schedule
     if (body.schedule_enabled !== undefined) {
-      thermostat.schedule_enabled = Boolean(body.schedule_enabled);
+      data.scheduleEnabled = Boolean(body.schedule_enabled);
     }
 
-    // Update schedule
     if (body.schedule) {
-      thermostat.schedule = { ...thermostat.schedule, ...body.schedule };
+      let current: Record<string, unknown> = {};
+      if (thermostat.schedule) {
+        try {
+          current = JSON.parse(thermostat.schedule);
+        } catch {
+          current = {};
+        }
+      }
+      data.schedule = JSON.stringify({ ...current, ...body.schedule });
     }
 
-    thermostat.updated_at = now;
-
-    return NextResponse.json({
-      thermostat,
-      message: 'Thermostat settings updated',
+    const updated = await prisma.thermostat.update({
+      where: { id: thermostat.id },
+      data,
     });
+
+    // 503, not 200. The settings are recorded; the device did not receive them.
+    // Returning success here is what let an operator believe a vacant house had
+    // been set back to 82F when it had not.
+    return NextResponse.json(
+      {
+        thermostat: toContract(updated),
+        applied: false,
+        error: 'Settings recorded but NOT applied to the device',
+        detail: NO_INTEGRATION,
+      },
+      { status: 503 },
+    );
   } catch (error: any) {
     return NextResponse.json(
       { error: 'Failed to update thermostat', detail: error.message },

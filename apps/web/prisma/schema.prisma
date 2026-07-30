@@ -114,6 +114,7 @@ model Property {
   invoices           Invoice[]
   inventoryItems     InventoryItem[]
   reviews            Review[]
+  thermostats        Thermostat[]
 
   // Performance indexes
   @@index([status])
@@ -1413,4 +1414,47 @@ model Review {
   @@index([platform])
   @@index([rating])
   @@index([respondedAt])
+}
+
+/// A registered thermostat.
+///
+/// Replaces an in-memory array that invented two devices, reported them
+/// is_online: true, and answered every write with "Thermostat settings
+/// updated". Nothing was ever sent anywhere. Someone setting a vacant Midland
+/// property to 82F cooling to save money would have believed it took effect.
+///
+/// This table records which thermostats EXIST. It deliberately does not store a
+/// current temperature or an online flag as truth: those are properties of a
+/// device we cannot currently reach (the Tuya client in this repo speaks to
+/// locks only), and a cached reading presented as live is the same lie in a
+/// slower form. lastSeenAt/lastTempF are nullable and explicitly historical.
+model Thermostat {
+  id         String @id @default(cuid())
+  propertyId String
+  name       String @default("Main Thermostat")
+  /// e.g. ecobee_smart_thermostat, nest_learning_thermostat
+  deviceType String
+  /// Vendor device identifier, once an integration exists to use it.
+  deviceId   String? @unique
+
+  /// Desired settings, as recorded here. NOT proof the device is running them.
+  targetTempF     Int?
+  mode            String  @default("off")
+  fanMode         String  @default("auto")
+  scheduleEnabled Boolean @default(false)
+  /// Occupied/unoccupied setpoints as JSON.
+  schedule        String?
+
+  /// Last values actually observed from a device, and when. Null until an
+  /// integration exists to observe anything.
+  lastTempF     Int?
+  lastHumidity  Int?
+  lastSeenAt    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId])
 }
