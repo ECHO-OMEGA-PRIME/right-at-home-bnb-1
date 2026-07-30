@@ -51,6 +51,7 @@ ALT_CONTROL_PATTERNS = {
         r"verif(y|ies)?(Webhook|Signature)|stripe\.webhooks|constructEvent|"
         r"x-hub-signature|paypal.*verify|hmac", re.I),
     "admin shared secret": re.compile(r"ADMIN_API_SECRET|DEBUG_SECRET_KEY|ICAL_EXPORT_KEY", re.I),
+    "twilio signature": re.compile(r"requireTwilioSignature|isValidTwilioRequest"),
 }
 
 # Routes that are meant to be reachable without a session. Keep the reason with
