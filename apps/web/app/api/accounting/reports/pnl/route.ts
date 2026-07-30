@@ -1,35 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireOneOfRoles } from '@/lib/api-auth';
+import { reportJournalLines } from '@/lib/ledger';
 
 // ── Mock journal data for P&L computation ────────────────────────────────
-const journalLines: any[] = [
-  // Revenue entries
-  { date: '2026-03-01', account_code: '4000', account_name: 'Rental Revenue', debit_cents: 0, credit_cents: 175000, property_id: 'PROP-001' },
-  { date: '2026-03-05', account_code: '4000', account_name: 'Rental Revenue', debit_cents: 0, credit_cents: 225000, property_id: 'PROP-002' },
-  { date: '2026-03-10', account_code: '4000', account_name: 'Rental Revenue', debit_cents: 0, credit_cents: 350000, property_id: 'PROP-001' },
-  { date: '2026-03-12', account_code: '4000', account_name: 'Rental Revenue', debit_cents: 0, credit_cents: 125000, property_id: 'PROP-002' },
-  { date: '2026-03-01', account_code: '4010', account_name: 'Cleaning Fee Revenue', debit_cents: 0, credit_cents: 25000, property_id: 'PROP-001' },
-  { date: '2026-03-05', account_code: '4010', account_name: 'Cleaning Fee Revenue', debit_cents: 0, credit_cents: 37500, property_id: 'PROP-002' },
-  { date: '2026-03-08', account_code: '4020', account_name: 'Pet Fee Revenue', debit_cents: 0, credit_cents: 15000, property_id: 'PROP-001' },
+// Journal lines come from real JournalEntryLine rows via @/lib/ledger. This
+// route previously aggregated a hardcoded `journalLines` array, so the P&L it
+// reported was invented (queue #26855). The aggregation and filtering below
+// are unchanged -- only the source is.
 
-  // Expense entries
-  { date: '2026-03-01', account_code: '5000', account_name: 'Wage Expense', debit_cents: 160000, credit_cents: 0, property_id: null },
-  { date: '2026-03-15', account_code: '5000', account_name: 'Wage Expense', debit_cents: 160000, credit_cents: 0, property_id: null },
-  { date: '2026-03-01', account_code: '5010', account_name: 'Employer Payroll Tax', debit_cents: 12240, credit_cents: 0, property_id: null },
-  { date: '2026-03-15', account_code: '5010', account_name: 'Employer Payroll Tax', debit_cents: 12240, credit_cents: 0, property_id: null },
-  { date: '2026-03-02', account_code: '5100', account_name: 'Utilities', debit_cents: 22000, credit_cents: 0, property_id: 'PROP-001' },
-  { date: '2026-03-02', account_code: '5100', account_name: 'Utilities', debit_cents: 23000, credit_cents: 0, property_id: 'PROP-002' },
-  { date: '2026-03-05', account_code: '5200', account_name: 'Cleaning Supplies', debit_cents: 8500, credit_cents: 0, property_id: 'PROP-001' },
-  { date: '2026-03-07', account_code: '5200', account_name: 'Cleaning Supplies', debit_cents: 10000, credit_cents: 0, property_id: 'PROP-002' },
-  { date: '2026-03-10', account_code: '5300', account_name: 'Maintenance & Repairs', debit_cents: 32000, credit_cents: 0, property_id: 'PROP-001' },
-  { date: '2026-03-01', account_code: '5400', account_name: 'Insurance', debit_cents: 25000, credit_cents: 0, property_id: null },
-  { date: '2026-03-08', account_code: '6000', account_name: 'Platform Fees', debit_cents: 43750, credit_cents: 0, property_id: null },
-  { date: '2026-03-10', account_code: '6100', account_name: 'Marketing', debit_cents: 15000, credit_cents: 0, property_id: null },
-  { date: '2026-03-01', account_code: '6200', account_name: 'Software & Subs', debit_cents: 8500, credit_cents: 0, property_id: null },
-  { date: '2026-03-01', account_code: '6300', account_name: 'Property Management', debit_cents: 12000, credit_cents: 0, property_id: null },
-];
-
-// ── GET /api/accounting/reports/pnl ──────────────────────────────────────
 export async function GET(request: NextRequest) {
   const auth = await requireOneOfRoles(request, ['owner', 'admin']);
   if (auth.error) return auth.error;
@@ -38,6 +16,11 @@ export async function GET(request: NextRequest) {
     const startDate = params.get('start') ?? new Date().toISOString().slice(0, 8) + '01';
     const endDate = params.get('end') ?? new Date().toISOString().split('T')[0];
     const propertyFilter = params.get('property_id');
+
+    const journalLines = await reportJournalLines({
+      from: new Date(`${startDate}T00:00:00.000Z`),
+      to: new Date(`${endDate}T23:59:59.999Z`),
+    });
 
     // Filter by date range and optional property
     let filtered = journalLines.filter(

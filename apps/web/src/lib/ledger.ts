@@ -232,6 +232,50 @@ export async function propertyPnL(opts: { from?: Date; to?: Date } = {}) {
   }));
 }
 
+export interface ReportJournalLine {
+  date: string;
+  account_code: string;
+  account_name: string;
+  debit_cents: number;
+  credit_cents: number;
+  property_id: string | null;
+  memo: string | null;
+}
+
+/**
+ * Flat journal lines for reporting, shaped exactly like the array the
+ * accounting report routes previously hardcoded. Returning the existing shape
+ * means those routes keep their aggregation and filtering logic untouched --
+ * only the data source changes, so there is no behaviour to re-verify beyond
+ * "is it real now".
+ *
+ * `date` is YYYY-MM-DD because the routes compare it as a string.
+ */
+export async function reportJournalLines(opts: { from?: Date; to?: Date } = {}): Promise<ReportJournalLine[]> {
+  const lines = await prisma.journalEntryLine.findMany({
+    where:
+      opts.from || opts.to
+        ? {
+            journalEntry: {
+              entryDate: { ...(opts.from ? { gte: opts.from } : {}), ...(opts.to ? { lte: opts.to } : {}) },
+            },
+          }
+        : {},
+    include: { account: true, journalEntry: true },
+    orderBy: { journalEntry: { entryDate: 'asc' } },
+  });
+
+  return lines.map((l) => ({
+    date: l.journalEntry.entryDate.toISOString().slice(0, 10),
+    account_code: l.account.code,
+    account_name: l.account.name,
+    debit_cents: l.debitCents,
+    credit_cents: l.creditCents,
+    property_id: l.propertyId,
+    memo: l.memo,
+  }));
+}
+
 /** True when the whole ledger balances. A cheap integrity check for monitoring. */
 export async function ledgerIsBalanced(): Promise<{ balanced: boolean; debits: number; credits: number }> {
   const agg = await prisma.journalEntryLine.aggregate({
