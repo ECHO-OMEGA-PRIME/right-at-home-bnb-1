@@ -63,8 +63,12 @@ export async function POST(request: NextRequest, context: RouteContext) {
       );
     }
 
-    const updated = await prisma.review.update({
-      where: { id },
+    // updateMany with respondedAt:null in the WHERE makes this atomic. The
+    // read-then-write version let two concurrent responds both pass the check
+    // above, both return 200, and the second silently overwrite the first
+    // operator's reply. Caught by Fable in review.
+    const claimed = await prisma.review.updateMany({
+      where: { id, respondedAt: null },
       data: {
         response: text,
         respondedAt: new Date(),
@@ -74,6 +78,20 @@ export async function POST(request: NextRequest, context: RouteContext) {
         status: review.status === 'needs_response' ? 'published' : review.status,
       },
     });
+
+    if (claimed.count === 0) {
+      // Another request won the race between our read and this write.
+      const current = await prisma.review.findUnique({ where: { id } });
+      return NextResponse.json(
+        {
+          error: 'Review already has a response',
+          responded_at: current?.respondedAt?.toISOString() ?? null,
+        },
+        { status: 409 },
+      );
+    }
+
+    const updated = (await prisma.review.findUnique({ where: { id } }))!;
 
     return NextResponse.json({
       review: toRespondContract(updated),

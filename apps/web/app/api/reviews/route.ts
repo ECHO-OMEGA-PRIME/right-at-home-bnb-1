@@ -62,8 +62,34 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    if (typeof body.rating !== 'number' || body.rating < 1 || body.rating > 5) {
-      return NextResponse.json({ error: 'rating must be between 1 and 5' }, { status: 400 });
+    // Integer, not just 1..5. `rating: 4.5` passed the range check and then hit
+    // Prisma's Int column as an opaque 500 -- the same class of failure the
+    // property pre-check below exists to avoid.
+    if (
+      typeof body.rating !== 'number' ||
+      !Number.isInteger(body.rating) ||
+      body.rating < 1 ||
+      body.rating > 5
+    ) {
+      return NextResponse.json(
+        { error: 'rating must be a whole number between 1 and 5' },
+        { status: 400 },
+      );
+    }
+
+    // Same reasoning: a malformed date became `Invalid Date` and 500'd on write.
+    const parseDay = (v: unknown): Date | null | undefined => {
+      if (!v) return null;
+      const d = new Date(`${v}T00:00:00.000Z`);
+      return Number.isNaN(d.getTime()) ? undefined : d;
+    };
+    const checkIn = parseDay(body.stay_dates?.check_in);
+    const checkOut = parseDay(body.stay_dates?.check_out);
+    if (checkIn === undefined || checkOut === undefined) {
+      return NextResponse.json(
+        { error: 'stay_dates must use YYYY-MM-DD' },
+        { status: 400 },
+      );
     }
 
     // Reviews now carry a real foreign key, so a bad property_id has to be
@@ -89,12 +115,8 @@ export async function POST(request: NextRequest) {
         rating: body.rating,
         comment: body.comment,
         categories: body.categories ? JSON.stringify(body.categories) : null,
-        checkIn: body.stay_dates?.check_in
-          ? new Date(`${body.stay_dates.check_in}T00:00:00.000Z`)
-          : null,
-        checkOut: body.stay_dates?.check_out
-          ? new Date(`${body.stay_dates.check_out}T00:00:00.000Z`)
-          : null,
+        checkIn,
+        checkOut,
         status: body.rating <= NEEDS_RESPONSE_AT_OR_BELOW ? 'needs_response' : 'published',
       },
     });

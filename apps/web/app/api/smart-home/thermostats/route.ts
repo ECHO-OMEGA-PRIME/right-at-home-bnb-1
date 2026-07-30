@@ -12,16 +12,17 @@ import { prisma } from '@/lib/prisma';
 // have been told it worked. It did not. The house stays at whatever the device
 // was already doing.
 //
-// There is no thermostat integration to fix this with. The Tuya client in this
-// repo (src/lib/integrations/tuya-client.ts) speaks to LOCKS only -- getLocks,
-// setLockState, createGuestCode. It has no thermostat surface at all.
+// There is no THERMOSTAT integration to fix this with. The Tuya client in this
+// repo (src/lib/integrations/tuya-client.ts) is live and speaks to LOCKS --
+// getLocks, setLockState, createGuestCode -- but has no thermostat surface at
+// all. Locks can be driven; thermostats cannot.
 //
 // So this route now does the two honest things available:
 //   GET  lists thermostats that are actually registered, and does not claim to
 //        know their current temperature or whether they are online.
-//   POST records the DESIRED settings and returns 503 with an explicit
+//   POST records the DESIRED settings and returns 501 with an explicit
 //        applied:false, because a write that cannot reach the device must not
-//        report success.
+//        report success. 501 (permanent) rather than 503 (transient/retry me).
 
 function toContract(t: {
   id: string;
@@ -200,9 +201,12 @@ export async function POST(request: NextRequest) {
       data,
     });
 
-    // 503, not 200. The settings are recorded; the device did not receive them.
-    // Returning success here is what let an operator believe a vacant house had
-    // been set back to 82F when it had not.
+    // 501, not 200 -- and deliberately not 503. The settings are recorded; the
+    // device did not receive them. 200 is what let an operator believe a vacant
+    // house had been set back to 82F when it had not. But 503 means "transient,
+    // retry me": uptime monitors page on it and generic fetch wrappers throw
+    // before anyone reads `applied:false`, losing the "it WAS recorded" nuance.
+    // 501 Not Implemented is the truthful code -- permanent, not retryable.
     return NextResponse.json(
       {
         thermostat: toContract(updated),
@@ -210,7 +214,7 @@ export async function POST(request: NextRequest) {
         error: 'Settings recorded but NOT applied to the device',
         detail: NO_INTEGRATION,
       },
-      { status: 503 },
+      { status: 501 },
     );
   } catch (error: any) {
     return NextResponse.json(

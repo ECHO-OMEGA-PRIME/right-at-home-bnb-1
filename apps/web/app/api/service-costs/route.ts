@@ -162,11 +162,17 @@ export async function POST(request: NextRequest) {
     // Match on id first, then case-insensitively on service name -- the same
     // upsert-by-name behaviour the in-memory version had, so re-posting Twilio
     // updates Twilio instead of creating a second row.
-    const existing = body.id
-      ? await prisma.serviceSubscription.findUnique({ where: { id: body.id } })
-      : await prisma.serviceSubscription.findFirst({
-          where: { service: { equals: body.service, mode: 'insensitive' } },
-        });
+    // id first, then FALL BACK to the name. Looking up by id ALONE meant that
+    // {id:'new-thing', service:'Twilio'} missed the id, tried to create, and hit
+    // the unique constraint on `service` as an opaque 500 -- where the old
+    // in-memory version matched either and updated Twilio.
+    const byName = {
+      where: { service: { equals: body.service, mode: 'insensitive' as const } },
+    };
+    const existing =
+      (body.id
+        ? await prisma.serviceSubscription.findUnique({ where: { id: body.id } })
+        : null) ?? (await prisma.serviceSubscription.findFirst(byName));
 
     const data = {
       service: body.service,

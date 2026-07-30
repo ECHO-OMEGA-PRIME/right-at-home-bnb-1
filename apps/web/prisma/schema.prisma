@@ -89,6 +89,13 @@ model Property {
   airbnbId String?
   vrboId   String?
 
+  /// Cross-system property key (#26898). The public catalogue publishes ids
+  /// like `Humble-3106` and the lock hardware names its devices `garfield`,
+  /// `castleford`, `lincolngreen` -- both use this scheme, not Property.id.
+  /// Added rather than renaming Property.id, because a published id that
+  /// Airbnb/VRBO configs may reference must not change underneath them.
+  slug     String? @unique
+
   // Status
   status    String   @default("ACTIVE")
   createdAt DateTime @default(now())
