@@ -126,7 +126,16 @@ export async function getLocks(): Promise<any[]> {
  */
 export async function getLockStatus(deviceId: string): Promise<any> {
   const data = await rahFetch('GET', `/locks/status?lock=${encodeURIComponent(deviceId)}`);
-  return data?.status ?? data?.device ?? data;
+  // Return the DEVICE, not the top-level `status`.
+  //
+  // The proxy responds {ok, lock, device_id, device:{...}, status:[...]} where
+  // `status` is the raw Tuya dps ARRAY. The old `data?.status ?? data?.device`
+  // therefore always short-circuited on that array, so every caller asking for
+  // device metadata (online, update_time, battery) silently got a list of
+  // unlock-method datapoints and read `undefined` off it.
+  //
+  // The device carries the dps at `device.status`, so nothing is lost.
+  return data?.device ?? data?.status ?? data;
 }
 
 /**
