@@ -188,18 +188,20 @@ export async function safeSmartHomeGet(request: NextRequest) {
           locks.map((l: any) => getLockStatus(String(l.id ?? l.device_id))),
         );
         results.forEach((res, i) => {
-          const key = String(locks[i].id ?? locks[i].device_id);
-          if (res.status === 'fulfilled') {
-            const dev = (res.value as any)?.device ?? res.value;
-            live.set(key, {
-              online: typeof dev?.online === 'boolean' ? dev.online : null,
-              updatedAt: dev?.update_time
-                ? new Date(dev.update_time * 1000).toISOString()
-                : null,
-            });
-          } else {
-            live.set(key, { online: null, updatedAt: null });
-          }
+          // ONLY record an entry when the device actually answered. Setting a
+          // placeholder on rejection made `live.has(key)` true for failures
+          // too, so the response claimed onlineSource:'live' while serving the
+          // cached value -- the exact mislabelling this whole change exists to
+          // remove, reintroduced in the instrument itself.
+          if (res.status !== 'fulfilled') return;
+          const dev = (res.value as any)?.device ?? res.value;
+          if (typeof dev?.online !== 'boolean') return;
+          live.set(String(locks[i].id ?? locks[i].device_id), {
+            online: dev.online,
+            updatedAt: dev.update_time
+              ? new Date(dev.update_time * 1000).toISOString()
+              : null,
+          });
         });
       }
 
