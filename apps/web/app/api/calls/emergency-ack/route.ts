@@ -6,8 +6,11 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { requireTwilioSignature } from '@/lib/twilio-webhook';
 
 export async function POST(request: NextRequest) {
+  const sigError = await requireTwilioSignature(request);
+  if (sigError) return sigError;
   try {
     const formData = await request.formData();
 
