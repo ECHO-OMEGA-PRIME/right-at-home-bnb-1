@@ -13,6 +13,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requireOneOfRoles } from '@/lib/api-auth';
+import { isUnrestricted, propertyScopeFor, scopeAllows } from '@/lib/tenant-scope';
 import {
   checkForLateCleaners,
   getActiveCleanerAlerts
@@ -69,7 +70,14 @@ export async function GET(request: NextRequest) {
   console.log('[Monitor API] Getting active cleaner alerts...');
 
   try {
-    const alerts = await getActiveCleanerAlerts();
+    // Property-level isolation (#26919). These alerts name a cleaner, the house
+    // they are late to, and by how long. Unscoped, a worker could read the
+    // whereabouts and performance of every crew at every property.
+    const scope = await propertyScopeFor(auth.user);
+    const all = await getActiveCleanerAlerts();
+    const alerts = isUnrestricted(scope)
+      ? all
+      : all.filter((a) => scopeAllows(scope, a.propertyId));
 
     return NextResponse.json({
       success: true,

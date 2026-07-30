@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireOneOfRoles, requireRole } from '@/lib/api-auth';
+import { isUnrestricted, propertyScopeFor } from '@/lib/tenant-scope';
 import {
   getLocks,
   getUnlockHistory,
@@ -169,8 +170,29 @@ export async function safeSmartHomeGet(request: NextRequest) {
       });
     }
 
+    // Property-level isolation (#26919). A lock list names the doors a person
+    // can see; a worker should see the ones at properties they work at.
+    //
+    // The Tuya branch returns DEVICES, which carry no propertyId, so the scope
+    // is applied by looking up which registered SmartLocks fall in scope and
+    // filtering the device list to those deviceIds. A device with no SmartLock
+    // row is EXCLUDED for a restricted caller: unregistered hardware cannot be
+    // shown to belong to anyone.
+    const lockScope = await propertyScopeFor(auth.user);
+    let allowedDeviceIds: Set<string> | null = null;
+    if (!isUnrestricted(lockScope)) {
+      const rows = await prisma.smartLock.findMany({
+        where: { propertyId: { in: lockScope } },
+        select: { deviceId: true },
+      });
+      allowedDeviceIds = new Set(rows.map((r) => r.deviceId));
+    }
+
     if (isTuyaConfigured()) {
-      const locks = await getLocks();
+      const all = await getLocks();
+      const locks = allowedDeviceIds
+        ? all.filter((l: any) => allowedDeviceIds!.has(String(l.id ?? l.device_id)))
+        : all;
 
       // GET /locks on the proxy serves a STORED row, not a live poll: its
       // last_sync was 18 days old while every device was in fact online and
@@ -237,6 +259,7 @@ export async function safeSmartHomeGet(request: NextRequest) {
     }
 
     const locks = await prisma.smartLock.findMany({
+      where: isUnrestricted(lockScope) ? {} : { propertyId: { in: lockScope } },
       include: { property: { select: { name: true, address: true } } },
       orderBy: { property: { name: 'asc' } },
     });
