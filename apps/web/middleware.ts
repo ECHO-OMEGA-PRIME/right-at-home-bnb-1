@@ -121,7 +121,11 @@ function looksLikeLiveIdToken(token: string): boolean {
   try {
     const b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
     const payload = JSON.parse(atob(b64.padEnd(b64.length + ((4 - (b64.length % 4)) % 4), '=')));
-    const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+    // Trim: env values on this project have been observed carrying a trailing
+    // newline (ALLOW_DEV_LOGIN is literally "true\n"). An untrimmed project id
+    // would fail the aud/iss compare for EVERY real token and lock out every
+    // user -- a self-inflicted outage from a stray byte.
+    const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID?.trim();
     if (typeof payload.exp !== 'number' || payload.exp * 1000 <= Date.now()) return false;
     if (projectId && payload.aud !== projectId) return false;
     if (projectId && payload.iss !== `https://securetoken.google.com/${projectId}`) return false;
@@ -232,7 +236,7 @@ export function middleware(request: NextRequest) {
     // 2026-07-30. The header must be checked here, against the real secret.
     const apiSecret = request.headers.get('x-api-secret');
     if (apiSecret) {
-      if (secretMatches(apiSecret, process.env.ADMIN_API_SECRET ?? '')) {
+      if (secretMatches(apiSecret.trim(), (process.env.ADMIN_API_SECRET ?? '').trim())) {
         return NextResponse.next();
       }
       return NextResponse.json(
