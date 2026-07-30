@@ -5,6 +5,7 @@ import {
   SsnPolicyError,
   auditPiiAccess,
   getEmployee,
+  normaliseCrew,
   normaliseSsnLast4,
   normaliseW4Status,
   toEmployeeContract,
@@ -99,8 +100,10 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     // Policy checks run before any write, so a rejected SSN never lands.
     let ssnLast4: string | null | undefined;
     let w4FilingStatus: string | null | undefined;
+    let crew: string | null | undefined;
     try {
       if (body.ssn_last4 !== undefined) ssnLast4 = normaliseSsnLast4(body.ssn_last4);
+      if (body.crew !== undefined) crew = normaliseCrew(body.crew);
       if (body.w4_filing_status !== undefined) {
         w4FilingStatus = normaliseW4Status(body.w4_filing_status);
       }
@@ -119,6 +122,9 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     if (body.address !== undefined) profileData.addressLine = body.address;
     if (body.w4_allowances !== undefined) profileData.w4Allowances = body.w4_allowances;
     if (ssnLast4 !== undefined) profileData.ssnLast4 = ssnLast4;
+    // Crew A / Crew B — the grouping P0 froze as a requirement. Without this the
+    // WorkerProfile.crew column added for P1-2 is unreachable and therefore inert.
+    if (crew !== undefined) profileData.crew = crew;
     if (w4FilingStatus !== undefined) profileData.w4FilingStatus = w4FilingStatus;
     if (body.status !== undefined) profileData.isAvailable = body.status === 'active';
 

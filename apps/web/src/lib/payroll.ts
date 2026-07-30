@@ -55,6 +55,23 @@ export function normaliseSsnLast4(input: unknown): string | null {
 
 const VALID_W4 = ['single', 'married', 'married_separate', 'head_of_household'];
 
+/**
+ * Normalise a crew designation.
+ *
+ * The business runs Crew A and Crew B (frozen in the P0 acceptance matrix). A
+ * free-text crew field would drift into "A", "a", "Crew A", "crew-a" within a
+ * week and quietly break every crew filter, so this narrows to a single form or
+ * rejects. null clears the assignment, which is a legitimate operation.
+ */
+export function normaliseCrew(input: unknown): string | null {
+  if (input === null || input === undefined || input === '') return null;
+  const v = String(input).trim().toUpperCase().replace(/^CREW[\s-]*/, '');
+  if (!/^[AB]$/.test(v)) {
+    throw new SsnPolicyError('crew must be "A" or "B" (or null to clear it)');
+  }
+  return v;
+}
+
 export function normaliseW4Status(input: unknown): string | null {
   if (input === null || input === undefined || input === '') return null;
   const v = String(input).trim().toLowerCase();
@@ -68,6 +85,8 @@ interface ProfileRow {
   id: string;
   userId: string;
   workerType: string;
+  /** "A" or "B", or null when unassigned. See normaliseCrew. */
+  crew: string | null;
   employmentClass: string;
   defaultPayType: string;
   hourlyRateCents: number | null;
@@ -97,6 +116,7 @@ export function toEmployeeContract(p: ProfileRow, includeSensitive: boolean) {
     email: p.user?.email ?? null,
     phone: p.user?.phone ?? null,
     role: (p.workerType || '').toLowerCase(),
+    crew: p.crew ?? null,
     employment_class: p.employmentClass,
     status: p.user?.isActive === false ? 'inactive' : p.isAvailable ? 'active' : 'unavailable',
     pay_type: (p.defaultPayType || '').toLowerCase(),

@@ -12,7 +12,13 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { SsnPolicyError, normaliseSsnLast4, normaliseW4Status, toEmployeeContract } from '../payroll';
+import {
+  SsnPolicyError,
+  normaliseCrew,
+  normaliseSsnLast4,
+  normaliseW4Status,
+  toEmployeeContract,
+} from '../payroll';
 
 describe('normaliseSsnLast4 — refuses more than the last four digits', () => {
   it('REJECTS a full 9-digit SSN rather than truncating it', () => {
@@ -97,5 +103,40 @@ describe('toEmployeeContract — sensitive fields', () => {
     const out = toEmployeeContract(row, true) as Record<string, unknown>;
     expect(Object.keys(out)).not.toContain('ssn');
     expect(Object.keys(out)).not.toContain('ssn_full');
+  });
+});
+
+/**
+ * Crew normalisation.
+ *
+ * The business runs Crew A and Crew B. A free-text field drifts into "A", "a",
+ * "Crew A", "crew-a" within a week and every crew filter silently stops
+ * matching — the filter still runs, still returns rows, just the wrong ones.
+ * Normalising at the boundary is what stops that.
+ */
+describe('normaliseCrew', () => {
+  it('accepts the two real crews', () => {
+    expect(normaliseCrew('A')).toBe('A');
+    expect(normaliseCrew('B')).toBe('B');
+  });
+
+  it('collapses the spellings that would otherwise drift apart', () => {
+    for (const v of ['a', ' a ', 'Crew A', 'crew a', 'CREW-A', 'crew-a']) {
+      expect(normaliseCrew(v), `${v} should normalise to A`).toBe('A');
+    }
+  });
+
+  it('clears the assignment on null, undefined or empty string', () => {
+    expect(normaliseCrew(null)).toBeNull();
+    expect(normaliseCrew(undefined)).toBeNull();
+    expect(normaliseCrew('')).toBeNull();
+  });
+
+  it('rejects a crew that does not exist rather than storing it', () => {
+    // Storing "C" would create a third crew nobody staffs, and it would only
+    // surface as jobs assigned to nobody.
+    for (const v of ['C', 'AB', 'Crew C', '1', 'A B']) {
+      expect(() => normaliseCrew(v), `${v} should be rejected`).toThrow();
+    }
   });
 });
