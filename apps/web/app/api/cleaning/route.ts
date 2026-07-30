@@ -18,6 +18,29 @@ import {
 // GET - List cleaning jobs or get specific job
 // ============================================================================
 
+
+/**
+ * Parse a JSON column that may be malformed.
+ *
+ * checklistProgress / photos / issues are JSON STRINGS on CleaningJob rather
+ * than relations (see queue #26966). Every read site called JSON.parse bare, so
+ * a single malformed row 500'd the whole request -- including the LIST endpoint,
+ * where one bad row would take out every other job with it.
+ *
+ * Returns [] and logs, so one damaged row degrades to an empty list instead of
+ * an outage. It does NOT silently hide the problem: the row id is logged.
+ */
+function parseJsonColumn(raw: string | null, jobId: string, field: string): unknown[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    console.error('[cleaning] malformed JSON column', { jobId, field });
+    return [];
+  }
+}
+
 export async function GET(request: NextRequest) {
   const auth = await requireOneOfRoles(request, ['worker', 'owner', 'admin']);
   if (auth.error) return auth.error;
@@ -51,9 +74,9 @@ export async function GET(request: NextRequest) {
 
       return NextResponse.json({
         ...job,
-        checklistProgress: job.checklistProgress ? JSON.parse(job.checklistProgress) : [],
-        photos: job.photos ? JSON.parse(job.photos) : [],
-        issues: job.issues ? JSON.parse(job.issues) : [],
+        checklistProgress: parseJsonColumn(job.checklistProgress, job.id, 'checklistProgress'),
+        photos: parseJsonColumn(job.photos, job.id, 'photos'),
+        issues: parseJsonColumn(job.issues, job.id, 'issues'),
       });
     }
 
@@ -76,9 +99,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       reports: jobs.map((j) => ({
         ...j,
-        checklistProgress: j.checklistProgress ? JSON.parse(j.checklistProgress) : [],
-        photos: j.photos ? JSON.parse(j.photos) : [],
-        issues: j.issues ? JSON.parse(j.issues) : [],
+        checklistProgress: parseJsonColumn(j.checklistProgress, j.id, 'checklistProgress'),
+        photos: parseJsonColumn(j.photos, j.id, 'photos'),
+        issues: parseJsonColumn(j.issues, j.id, 'issues'),
       })),
       total: jobs.length,
     });
@@ -176,7 +199,7 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ error: 'Job not found' }, { status: 404 });
         }
 
-        const checklist = job.checklistProgress ? JSON.parse(job.checklistProgress) : [];
+        const checklist = parseJsonColumn(job.checklistProgress, job.id, 'checklistProgress') as any[];
         const item = checklist.find((i: any) => i.itemId === itemId);
         if (!item) {
           return NextResponse.json({ error: 'Checklist item not found' }, { status: 404 });
@@ -220,7 +243,7 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ error: 'Job not found' }, { status: 404 });
         }
 
-        const issues = job.issues ? JSON.parse(job.issues) : [];
+        const issues = parseJsonColumn(job.issues, job.id, 'issues') as any[];
         const newIssue = {
           ...issue,
           id: `issue-${Date.now()}`,
@@ -249,7 +272,7 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ error: 'Job not found' }, { status: 404 });
         }
 
-        const photos = job.photos ? JSON.parse(job.photos) : [];
+        const photos = parseJsonColumn(job.photos, job.id, 'photos') as any[];
         const photo = {
           area: location || description || 'General',
           photoUrl,
@@ -277,7 +300,7 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ error: 'Job not found' }, { status: 404 });
         }
 
-        const checklist = job.checklistProgress ? JSON.parse(job.checklistProgress) : [];
+        const checklist = parseJsonColumn(job.checklistProgress, job.id, 'checklistProgress') as any[];
 
         // Check required items
         const incompleteRequired = checklist.filter((item: any) => {
@@ -303,7 +326,7 @@ export async function POST(request: NextRequest) {
         // Calculate quality score
         const completedItems = checklist.filter((i: any) => i.completed).length;
         const totalItems = checklist.length;
-        const issues = job.issues ? JSON.parse(job.issues) : [];
+        const issues = parseJsonColumn(job.issues, job.id, 'issues') as any[];
         const issueDeduction = issues.filter((i: any) => i.severity === 'high' || i.severity === 'urgent').length * 10;
         const score = Math.max(0, Math.round(((completedItems / totalItems) * 100) - issueDeduction));
 
@@ -329,7 +352,7 @@ export async function POST(request: NextRequest) {
             completedItems,
             totalItems,
             issuesReported: issues.length,
-            photosUploaded: (job.photos ? JSON.parse(job.photos) : []).length +
+            photosUploaded: parseJsonColumn(job.photos, job.id, 'photos').length +
               checklist.filter((i: any) => i.photoUrl).length,
             timeSpentMinutes: durationMins,
             score,
