@@ -12,6 +12,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { requireOneOfRoles } from '@/lib/api-auth';
 import {
   checkForLateCleaners,
   getActiveCleanerAlerts
@@ -19,6 +20,8 @@ import {
 
 // Run the late cleaner check
 export async function POST(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['worker', 'owner', 'admin']);
+  if (auth.error) return auth.error;
   console.log('[Monitor API] Running late cleaner check...');
 
   try {
@@ -60,7 +63,9 @@ export async function POST(request: NextRequest) {
 }
 
 // Get active cleaner alerts
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['worker', 'owner', 'admin']);
+  if (auth.error) return auth.error;
   console.log('[Monitor API] Getting active cleaner alerts...');
 
   try {

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireOneOfRoles } from '@/lib/api-auth';
 
 // ── In-memory inventory store ───────────────────────────────────────────────
 const inventory: any[] = [
@@ -90,6 +91,8 @@ function generateId(prefix: string): string {
 
 // ── GET /api/inventory ──────────────────────────────────────────────────────
 export async function GET(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['worker', 'owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const params = request.nextUrl.searchParams;
     const category = params.get('category');
@@ -139,6 +142,8 @@ export async function GET(request: NextRequest) {
 
 // ── POST /api/inventory ─────────────────────────────────────────────────────
 export async function POST(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['worker', 'owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const body = await request.json();
 

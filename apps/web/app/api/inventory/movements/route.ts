@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireOneOfRoles } from '@/lib/api-auth';
 
 // ── In-memory movements store ───────────────────────────────────────────────
 const movements: any[] = [
@@ -54,6 +55,8 @@ function generateId(prefix: string): string {
 
 // ── GET /api/inventory/movements ────────────────────────────────────────────
 export async function GET(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['worker', 'owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const params = request.nextUrl.searchParams;
     const itemId = params.get('item_id');
@@ -89,6 +92,8 @@ export async function GET(request: NextRequest) {
 
 // ── POST /api/inventory/movements ───────────────────────────────────────────
 export async function POST(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['worker', 'owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const body = await request.json();
 

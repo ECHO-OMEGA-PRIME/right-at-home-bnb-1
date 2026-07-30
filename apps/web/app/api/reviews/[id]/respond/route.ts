@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireOneOfRoles } from '@/lib/api-auth';
 
 const reviews: any[] = [
   {
@@ -37,6 +38,8 @@ type RouteContext = { params: Promise<{ id: string }> };
 
 // ── POST /api/reviews/[id]/respond ────────────────────────────────────────
 export async function POST(request: NextRequest, context: RouteContext) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const { id } = await context.params;
     const idx = reviews.findIndex((r) => r.id === id);

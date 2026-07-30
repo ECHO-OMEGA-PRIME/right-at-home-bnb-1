@@ -5,9 +5,12 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { requireOneOfRoles } from '@/lib/api-auth';
 
 // Sync VRBO calendar for a property
 export async function POST(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const { listingId } = await request.json();
 
@@ -45,6 +48,8 @@ export async function POST(request: NextRequest) {
 
 // Get sync status
 export async function GET(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const backendUrl = process.env.BACKEND_URL || 'http://localhost:8000';
     const response = await fetch(`${backendUrl}/api/vrbo/status`);

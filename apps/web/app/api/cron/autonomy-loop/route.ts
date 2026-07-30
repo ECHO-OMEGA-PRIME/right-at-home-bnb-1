@@ -43,6 +43,14 @@ function generateCode(): string {
 
 // ── GET /api/cron/autonomy-loop ───────────────────────────────────────────
 export async function GET(request: NextRequest) {
+  // Vercel's documented cron pattern, fail-closed: an unset CRON_SECRET must
+  // DENY, not allow. This route previously had no check at all and returned
+  // 200 to anonymous callers on production (verified 2026-07-30).
+  const authHeader = request.headers.get('authorization');
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   try {
     const now = new Date();
     const todayStr = now.toISOString().split('T')[0];

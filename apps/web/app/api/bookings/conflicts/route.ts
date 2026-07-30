@@ -3,9 +3,12 @@
  * GET /api/bookings/conflicts — returns overlapping bookings across platforms
  */
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { requireOneOfRoles } from '@/lib/api-auth';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   // For now return empty conflicts array
   // When real bookings exist, this will query Prisma for overlapping date ranges
   try {

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireOneOfRoles } from '@/lib/api-auth';
 
 // ── Bookings store (empty - in production this is DB) ────────────────────
 const bookings: any[] = [];
@@ -18,6 +19,8 @@ type RouteContext = { params: Promise<{ id: string }> };
 
 // ── GET /api/bookings/[id] ───────────────────────────────────────────────
 export async function GET(request: NextRequest, context: RouteContext) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const { id } = await context.params;
     const booking = bookings.find((b) => b.id === id);
@@ -37,6 +40,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
 // ── PUT /api/bookings/[id] ───────────────────────────────────────────────
 export async function PUT(request: NextRequest, context: RouteContext) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const { id } = await context.params;
     const idx = bookings.findIndex((b) => b.id === id);
@@ -99,6 +104,8 @@ export async function PUT(request: NextRequest, context: RouteContext) {
 
 // ── DELETE /api/bookings/[id] — Cancel booking ───────────────────────────
 export async function DELETE(request: NextRequest, context: RouteContext) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const { id } = await context.params;
     const idx = bookings.findIndex((b) => b.id === id);

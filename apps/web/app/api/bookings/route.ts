@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { requireOneOfRoles } from '@/lib/api-auth';
 
 export interface BookingResponse {
   id: string;
@@ -51,6 +52,8 @@ function generateConfirmationCode(): string {
 
 // GET /api/bookings - List bookings with filters
 export async function GET(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const { searchParams } = new URL(request.url);
     const propertyId = searchParams.get('propertyId');
@@ -185,6 +188,8 @@ export async function GET(request: NextRequest) {
 
 // POST /api/bookings - Create new booking
 export async function POST(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const body = await request.json();
 
@@ -299,6 +304,8 @@ export async function POST(request: NextRequest) {
 
 // PATCH /api/bookings - Update booking
 export async function PATCH(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const body = await request.json();
     const { id, ...updates } = body;
@@ -375,6 +382,8 @@ export async function PATCH(request: NextRequest) {
 
 // DELETE /api/bookings - Cancel booking
 export async function DELETE(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');

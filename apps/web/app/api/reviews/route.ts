@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireOneOfRoles } from '@/lib/api-auth';
 
 // ── In-memory reviews store ─────────────────────────────────────────────────
 const reviews: any[] = [
@@ -79,6 +80,8 @@ function generateId(prefix: string): string {
 
 // ── GET /api/reviews ────────────────────────────────────────────────────────
 export async function GET(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const params = request.nextUrl.searchParams;
     const propertyId = params.get('property_id');
@@ -135,6 +138,8 @@ export async function GET(request: NextRequest) {
 
 // ── POST /api/reviews (import) ──────────────────────────────────────────────
 export async function POST(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const body = await request.json();
 

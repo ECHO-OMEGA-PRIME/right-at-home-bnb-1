@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
+import { requireOneOfRoles } from '@/lib/api-auth';
 
 // Initialize Stripe with secret key
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
@@ -28,6 +29,8 @@ export interface CheckoutRequest {
 }
 
 export async function POST(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const body: CheckoutRequest = await request.json();
     const {
@@ -165,6 +168,8 @@ export async function POST(request: NextRequest) {
 
 // GET - Retrieve session details (for success page)
 export async function GET(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const { searchParams } = new URL(request.url);
     const sessionId = searchParams.get('session_id');

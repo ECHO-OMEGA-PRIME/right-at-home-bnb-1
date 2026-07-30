@@ -59,6 +59,29 @@ PUBLIC_BY_DESIGN = {
     "health/route.ts": "liveness probe; returns no tenant data",
 }
 
+MIDDLEWARE = Path("apps/web/middleware.ts")
+
+
+def _public_api_prefixes() -> list[str]:
+    """Read PUBLIC_API_PREFIXES out of middleware.ts.
+
+    Middleware default-denies /api/* EXCEPT these prefixes, so anything under
+    them is reachable with no session by design (Twilio call webhooks, Stripe/
+    VRBO webhooks, cron, checkout). Treating those as "unprotected, go add a
+    session guard" would be actively harmful -- adding one breaks inbound calls
+    and checkout. They need a signature/secret check instead, and a route under
+    a public prefix with NO such check is the real finding.
+
+    Parsed rather than duplicated so the audit cannot drift from the middleware.
+    """
+    if not MIDDLEWARE.is_file():
+        return []
+    text = MIDDLEWARE.read_text(encoding="utf-8", errors="replace")
+    block = re.search(r"const PUBLIC_API_PREFIXES\s*=\s*\[(.*?)\]", text, re.S)
+    if not block:
+        return []
+    return [m.group(1) for m in re.finditer(r"['\"]/api/([^'\"]+)['\"]", block.group(1))]
+
 # Both handler styles. Missing the `export const GET = handler` form made this
 # audit report the smart-home routes as having no handler at all, when they are
 # in fact guarded inside their delegate -- verify the instrument before
@@ -92,9 +115,14 @@ def _delegated_guards(text: str, seen: set[str] | None = None) -> list[str]:
     return sorted(set(found))
 
 
-def classify(path: Path) -> dict:
+def classify(path: Path, public_prefixes: list[str] | None = None) -> dict:
+    public_prefixes = public_prefixes or []
     text = path.read_text(encoding="utf-8", errors="replace")
     rel = path.relative_to(API_ROOT).as_posix()
+    route_path = rel[: -len("/route.ts")] if rel.endswith("/route.ts") else rel
+    under_public = any(
+        route_path == p or route_path.startswith(f"{p}/") for p in public_prefixes
+    )
     methods = sorted(set(HANDLER_RE.findall(text)))
     guards = sorted({g for g in SESSION_GUARDS if re.search(rf"\b{g}\s*\(", text)})
     delegated = [] if guards else _delegated_guards(text)
@@ -108,6 +136,13 @@ def classify(path: Path) -> dict:
     elif rel in PUBLIC_BY_DESIGN:
         status = "PUBLIC_BY_DESIGN"
         detail = PUBLIC_BY_DESIGN[rel]
+    elif under_public and alts:
+        status = "PUBLIC_VERIFIED"
+        detail = f"public prefix, verified by {'+'.join(alts)}"
+    elif under_public:
+        # Reachable with no session AND nothing verifying the caller.
+        status = "PUBLIC_UNVERIFIED"
+        detail = "under a middleware public prefix with no signature/secret check"
     elif alts:
         status = "ALT_CONTROL"
         detail = "+".join(alts)
@@ -143,7 +178,8 @@ def main() -> int:
         print(f"run from the repo root; {API_ROOT} not found", file=sys.stderr)
         return 2
 
-    rows = sorted((classify(p) for p in API_ROOT.rglob("route.ts")),
+    public_prefixes = _public_api_prefixes()
+    rows = sorted((classify(p, public_prefixes) for p in API_ROOT.rglob("route.ts")),
                   key=lambda r: (r["status"], r["route"]))
 
     if args.json:
@@ -153,8 +189,8 @@ def main() -> int:
         for r in rows:
             counts[r["status"]] = counts.get(r["status"], 0) + 1
         print(f"RAH API route RBAC coverage - {len(rows)} routes\n")
-        for status in ("UNPROTECTED", "ALT_CONTROL", "PUBLIC_BY_DESIGN",
-                       "PROTECTED", "NO_HANDLER"):
+        for status in ("UNPROTECTED", "PUBLIC_UNVERIFIED", "PUBLIC_VERIFIED",
+                       "ALT_CONTROL", "PUBLIC_BY_DESIGN", "PROTECTED", "NO_HANDLER"):
             group = [r for r in rows if r["status"] == status]
             if not group:
                 continue
@@ -162,7 +198,7 @@ def main() -> int:
             for r in group:
                 methods = ",".join(r["methods"]) or "-"
                 print(f"  {methods:<24} {r['route']}")
-                if status in ("UNPROTECTED", "NO_HANDLER"):
+                if status in ("UNPROTECTED", "NO_HANDLER", "PUBLIC_UNVERIFIED"):
                     print(f"  {'':<24}   {r['detail']}")
             print()
         partials = [r for r in rows if r["partial_coverage"]]

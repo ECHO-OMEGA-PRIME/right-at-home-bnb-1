@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requireOneOfRoles } from '@/lib/api-auth';
 import {
   masterChecklist,
   getChecklistForProperty
@@ -17,6 +18,8 @@ import {
 // ============================================================================
 
 export async function GET(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['worker', 'owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const { searchParams } = new URL(request.url);
     const jobId = searchParams.get('id');
@@ -83,6 +86,8 @@ export async function GET(request: NextRequest) {
 // ============================================================================
 
 export async function POST(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['worker', 'owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const body = await request.json();
     const { action } = body;
@@ -337,6 +342,8 @@ export async function POST(request: NextRequest) {
 // ============================================================================
 
 export async function PUT(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['worker', 'owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const body = await request.json();
     const { reportId, updates } = body;
@@ -368,6 +375,8 @@ export async function PUT(request: NextRequest) {
 // ============================================================================
 
 export async function DELETE(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['worker', 'owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const { searchParams } = new URL(request.url);
     const jobId = searchParams.get('id');

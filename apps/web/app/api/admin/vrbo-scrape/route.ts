@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireOneOfRoles } from '@/lib/api-auth';
 
 /**
  * VRBO Image Scraper API
@@ -153,6 +154,8 @@ function extractFromGalleryData(html: string): string[] {
 }
 
 export async function POST(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const { vrboId, vrboUrl } = await request.json();
 

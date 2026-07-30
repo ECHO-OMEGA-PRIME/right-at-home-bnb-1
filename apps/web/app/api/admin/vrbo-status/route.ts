@@ -7,8 +7,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { syncAllProperties, syncPropertyIcal, initializeVrboMappings } from '@/lib/integrations/vrbo-sync-service';
+import { requireOneOfRoles } from '@/lib/api-auth';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     // Get all VRBO sync records with property info
     const syncs = await prisma.vrboSync.findMany({
@@ -72,6 +75,8 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const body = await request.json();
     const { action, propertyId } = body;

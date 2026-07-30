@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { fetchICalFeed, parseICalContent } from '@/lib/calendar-sync';
+import { requireOneOfRoles } from '@/lib/api-auth';
 
 interface SyncResult {
   platform: string;
@@ -266,6 +267,8 @@ async function syncICal(propertyIds: string[]): Promise<SyncResult> {
 
 // GET /api/sync - Get sync status
 export async function GET(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const settings = await prisma.setting.findFirst({
       where: { key: 'lastSync' },
@@ -307,6 +310,8 @@ export async function GET(request: NextRequest) {
 
 // POST /api/sync - Trigger manual sync
 export async function POST(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const body = await request.json().catch(() => ({}));
     const { platforms, propertyIds } = body;
@@ -395,6 +400,8 @@ export async function POST(request: NextRequest) {
 
 // DELETE /api/sync - Cancel running sync
 export async function DELETE(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const { searchParams } = new URL(request.url);
     const syncId = searchParams.get('syncId');

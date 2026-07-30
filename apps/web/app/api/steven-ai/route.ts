@@ -12,6 +12,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { requireOneOfRoles } from '@/lib/api-auth';
 import {
   getOrCreateGuestMemory,
   addConversationEntry,
@@ -173,6 +174,8 @@ interface ConversationMessage {
  * Main chat endpoint with voice, memory, and ops context
  */
 export async function POST(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const body: StevenAIRequest = await request.json();
     const {
@@ -590,7 +593,9 @@ async function generateStevenVoice(
  * GET /api/steven-ai
  * API status and capabilities
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   return NextResponse.json({
     name: 'Steven AI',
     version: '1.0.0',

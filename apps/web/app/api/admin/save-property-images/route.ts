@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db, storage } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import type { Storage } from 'firebase-admin/storage';
+import { requireOneOfRoles } from '@/lib/api-auth';
 
 /**
  * Save Property Images API
@@ -69,6 +70,8 @@ async function downloadAndUpload(
 }
 
 export async function POST(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const { propertyId, images } = await request.json() as {
       propertyId: string;

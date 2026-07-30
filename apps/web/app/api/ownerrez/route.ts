@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { OwnerRezClient } from '@/lib/ownerrez-client';
+import { requireOneOfRoles } from '@/lib/api-auth';
 
 function getClient(): OwnerRezClient | null {
   try {
@@ -17,6 +18,8 @@ function getClient(): OwnerRezClient | null {
 
 // GET /api/ownerrez — Health check + property list
 export async function GET(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   const client = getClient();
   if (!client) {
     return NextResponse.json(
@@ -116,6 +119,8 @@ export async function GET(request: NextRequest) {
 
 // POST /api/ownerrez — Create quotes, bookings
 export async function POST(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   const client = getClient();
   if (!client) {
     return NextResponse.json(

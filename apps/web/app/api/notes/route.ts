@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireOneOfRoles } from '@/lib/api-auth';
 
 const notes: any[] = [
   {
@@ -61,6 +62,8 @@ const notes: any[] = [
 
 // ── GET /api/notes ────────────────────────────────────────────────────────
 export async function GET(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['worker', 'owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const params = request.nextUrl.searchParams;
     const type = params.get('type');
@@ -122,6 +125,8 @@ export async function GET(request: NextRequest) {
 
 // ── POST /api/notes ───────────────────────────────────────────────────────
 export async function POST(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['worker', 'owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const body = await request.json();
 

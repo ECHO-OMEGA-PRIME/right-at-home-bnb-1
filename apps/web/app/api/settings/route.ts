@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requireOneOfRoles } from '@/lib/api-auth';
 
 // Default call routing settings
 const DEFAULT_CALL_ROUTING = {
@@ -56,7 +57,9 @@ async function getSettings() {
   return { callRouting, updatedAt };
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const settings = await getSettings();
     return NextResponse.json(settings);
@@ -71,6 +74,8 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const body = await request.json();
     const callRouting = body.callRouting || body;
@@ -101,6 +106,8 @@ export async function POST(request: NextRequest) {
 
 // Check current AI status (used by phone system)
 export async function PUT(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const { action } = await request.json();
 

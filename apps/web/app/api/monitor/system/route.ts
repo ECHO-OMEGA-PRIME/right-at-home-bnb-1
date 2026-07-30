@@ -16,12 +16,15 @@ import {
   flagUpdateNeeded
 } from '@/lib/system-monitor';
 import { getBusinessContext } from '@/lib/business-context';
+import { requireOneOfRoles } from '@/lib/api-auth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 // GET - Get system health and active alerts
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   console.log('[System Monitor API] Getting system status...');
 
   try {
@@ -52,6 +55,8 @@ export async function GET() {
 
 // POST - Run system health check or trigger call
 export async function POST(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   console.log('[System Monitor API] Processing request...');
 
   try {
@@ -126,6 +131,8 @@ export async function POST(request: NextRequest) {
 
 // PATCH - Acknowledge an alert
 export async function PATCH(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   console.log('[System Monitor API] Acknowledging alert...');
 
   try {

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireOneOfRoles } from '@/lib/api-auth';
 
 // ── Bookings store (shared with bookings route in production via DB) ─────
 const bookings = [
@@ -31,6 +32,8 @@ function addDays(dateStr: string, days: number): string {
 
 // ── GET /api/bookings/availability ───────────────────────────────────────
 export async function GET(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const params = request.nextUrl.searchParams;
     const propertyId = params.get('property_id');

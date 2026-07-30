@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireOneOfRoles } from '@/lib/api-auth';
 
 // ── Mock data for a realistic Midland TX short-term rental operation ────────
 
@@ -118,6 +119,8 @@ function getPropertyPerformance() {
 
 // ── GET /api/dashboard/stats ───────────────────────────────────────────────
 export async function GET(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['worker', 'owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const params = request.nextUrl.searchParams;
     const period = params.get('period') ?? 'current_month';

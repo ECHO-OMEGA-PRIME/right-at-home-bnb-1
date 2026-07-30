@@ -4,8 +4,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { fetchReservations, updateAvailability, getVrboConfig, type SyncResult } from '@/lib/integrations/vrbo-client';
 import { syncAllChannels, syncEverything } from '@/lib/integrations/channel-manager';
+import { requireOneOfRoles } from '@/lib/api-auth';
 
 export async function GET(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   const params = new URL(request.url).searchParams;
   const propertyId = params.get('propertyId');
   const mode = params.get('mode') || 'ical';
@@ -21,6 +24,8 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const body = await request.json();
     const { action } = body;

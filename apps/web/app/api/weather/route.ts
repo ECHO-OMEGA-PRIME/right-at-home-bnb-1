@@ -3,13 +3,16 @@
  * GET /api/weather - Get weather for Midland, TX (79705)
  */
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getWeather, checkWeatherImpact } from '@/lib/weather';
+import { requireOneOfRoles } from '@/lib/api-auth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   console.log('[Weather API] Fetching weather for 79705...');
 
   try {
