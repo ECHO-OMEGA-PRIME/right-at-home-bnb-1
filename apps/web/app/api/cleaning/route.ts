@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireOneOfRoles } from '@/lib/api-auth';
+import { propertyScopeFor, scopeAllows, scopedWhere } from '@/lib/tenant-scope';
 import {
   masterChecklist,
   getChecklistForProperty
@@ -27,6 +28,9 @@ export async function GET(request: NextRequest) {
     const propertyId = searchParams.get('propertyId');
     const status = searchParams.get('status');
 
+    // Property-level isolation (#26919).
+    const scope = await propertyScopeFor(auth.user);
+
     // Get specific job
     if (jobId) {
       const job = await prisma.cleaningJob.findUnique({
@@ -38,7 +42,10 @@ export async function GET(request: NextRequest) {
         },
       });
 
-      if (!job) {
+      // Fetching by id bypassed every filter: a worker could read ANY cleaning
+      // job, at any property, just by knowing its id. 404 rather than 403 --
+      // a 403 confirms the job exists, which is itself a disclosure.
+      if (!job || !scopeAllows(scope, job.propertyId)) {
         return NextResponse.json({ error: 'Job not found' }, { status: 404 });
       }
 
@@ -57,7 +64,7 @@ export async function GET(request: NextRequest) {
     if (status) where.status = status;
 
     const jobs = await prisma.cleaningJob.findMany({
-      where,
+      where: scopedWhere(where, scope),
       include: {
         property: { select: { name: true, address: true } },
         cleaner: { select: { name: true, email: true } },

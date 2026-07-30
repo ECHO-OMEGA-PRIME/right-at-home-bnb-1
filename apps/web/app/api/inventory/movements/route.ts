@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireOneOfRoles } from '@/lib/api-auth';
+import { propertyScopeFor, scopedWhere } from '@/lib/tenant-scope';
 import { prisma } from '@/lib/prisma';
 
 // Real InventoryMovement rows (queue #26855). Movements were pushed onto an
@@ -21,12 +22,22 @@ export async function GET(request: NextRequest) {
     const type = params.get('type');
     const propertyId = params.get('property_id');
 
+    // Property-level isolation (#26919): stock movements reveal what is being
+    // consumed at each house, so they scope like everything else.
+    //
+    // InventoryMovement.propertyId is NULLABLE -- general supplies are recorded
+    // with no property. A restricted caller therefore does NOT see unattributed
+    // movements, because `propertyId: { in: [...] }` excludes nulls. That is the
+    // right way round: an unattributed movement is not evidence of entitlement.
+    // Owners are unaffected (their scope is null, so no filter is applied).
+    const scope = await propertyScopeFor(auth.user);
+
     const rows = await prisma.inventoryMovement.findMany({
-      where: {
+      where: scopedWhere({
         ...(itemId ? { itemId } : {}),
         ...(type ? { reason: type } : {}),
         ...(propertyId ? { propertyId } : {}),
-      },
+      }, scope),
       include: { item: { select: { name: true } } },
       orderBy: { createdAt: 'desc' },
       take: 500,
