@@ -89,6 +89,48 @@ function extractRoleFromToken(token: string): TokenRole | null {
   return role && VALID_ROLES.has(role) ? role : null;
 }
 
+/**
+ * Constant-time string compare.
+ *
+ * Edge runtime has no `crypto.timingSafeEqual`, so do it by hand. Length is
+ * allowed to leak (it always does via the compare loop); the value is not.
+ */
+function secretMatches(provided: string, expected: string): boolean {
+  if (!expected || provided.length !== expected.length) return false;
+  let diff = 0;
+  for (let i = 0; i < provided.length; i += 1) {
+    diff |= provided.charCodeAt(i) ^ expected.charCodeAt(i);
+  }
+  return diff === 0;
+}
+
+/**
+ * Structural validation of a Firebase ID token.
+ *
+ * Middleware runs on the Edge runtime and cannot load firebase-admin, so it
+ * cannot verify the RSA signature -- `verifyAuthToken` in the route handlers
+ * does that. What middleware CAN do is reject anything that is not even a
+ * plausible, unexpired token for our project, which is what stops an attacker
+ * simply setting `rah-auth-token=anything`.
+ *
+ * This is a gate, not the authorization decision. Route handlers still verify.
+ */
+function looksLikeLiveIdToken(token: string): boolean {
+  const parts = token.split('.');
+  if (parts.length !== 3) return false;
+  try {
+    const b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const payload = JSON.parse(atob(b64.padEnd(b64.length + ((4 - (b64.length % 4)) % 4), '=')));
+    const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+    if (typeof payload.exp !== 'number' || payload.exp * 1000 <= Date.now()) return false;
+    if (projectId && payload.aud !== projectId) return false;
+    if (projectId && payload.iss !== `https://securetoken.google.com/${projectId}`) return false;
+    return typeof payload.sub === 'string' && payload.sub.length > 0;
+  } catch {
+    return false;
+  }
+}
+
 function clearAuthCookie(response: NextResponse): NextResponse {
   response.cookies.delete(AUTH_COOKIE_NAME);
   return response;
@@ -182,8 +224,22 @@ export function middleware(request: NextRequest) {
   if (pathname.startsWith('/api/')) {
     if (isPublicApi(request)) return NextResponse.next();
 
+    // SECURITY: this previously accepted ANY x-api-secret header value and
+    // returned next(), deferring validation to "the route handler" -- but most
+    // API routes have no session guard of their own, so
+    //     curl -H 'x-api-secret: anything' /api/bookings
+    // returned 200 with live guest PII. Verified against production on
+    // 2026-07-30. The header must be checked here, against the real secret.
     const apiSecret = request.headers.get('x-api-secret');
-    if (apiSecret) return NextResponse.next(); // The route handler must validate the value.
+    if (apiSecret) {
+      if (secretMatches(apiSecret, process.env.ADMIN_API_SECRET ?? '')) {
+        return NextResponse.next();
+      }
+      return NextResponse.json(
+        { error: 'Invalid API secret', code: 'UNAUTHORIZED' },
+        { status: 401 },
+      );
+    }
 
     const authToken = request.cookies.get(AUTH_COOKIE_NAME)?.value;
     if (!authToken) {
@@ -193,6 +249,21 @@ export function middleware(request: NextRequest) {
       );
     }
     if (isDevToken(authToken) && !devLoginEnabled()) return rejectDevApiToken();
+
+    // SECURITY: presence of a cookie was previously treated as authentication.
+    // Any value passed -- `rah-auth-token=x` returned 200 with live guest PII on
+    // production (verified 2026-07-30) -- because the unguarded route handlers
+    // never looked at it. Reject anything that is not a structurally valid,
+    // unexpired token for this Firebase project. Signature verification still
+    // happens in the route handlers via verifyAuthToken.
+    if (!isDevToken(authToken) && !looksLikeLiveIdToken(authToken)) {
+      return clearAuthCookie(
+        NextResponse.json(
+          { error: 'Authentication required', code: 'UNAUTHORIZED' },
+          { status: 401 },
+        ),
+      );
+    }
 
     if (isAdminOnly(pathname)) {
       const role = extractRoleFromToken(authToken);
@@ -227,6 +298,11 @@ export function middleware(request: NextRequest) {
 
   return NextResponse.next();
 }
+
+// Exposed for the regression tests in src/lib/__tests__/middleware-auth.test.ts.
+// These two predicates are what closed the 2026-07-30 production auth bypass,
+// so they are worth testing directly rather than only through a full request.
+export const __testing__ = { secretMatches, looksLikeLiveIdToken };
 
 export const config = {
   matcher: [
