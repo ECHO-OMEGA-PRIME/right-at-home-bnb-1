@@ -1,36 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireOneOfRoles } from '@/lib/api-auth';
+import { prisma } from '@/lib/prisma';
 
-// ── Bookings store (shared with bookings route in production via DB) ─────
-const bookings = [
-  {
-    id: 'BK-001', property_id: 'PROP-001', status: 'confirmed',
-    check_in: '2026-03-20', check_out: '2026-03-23',
-  },
-  {
-    id: 'BK-002', property_id: 'PROP-001', status: 'confirmed',
-    check_in: '2026-03-25', check_out: '2026-03-28',
-  },
-  {
-    id: 'BK-003', property_id: 'PROP-002', status: 'pending',
-    check_in: '2026-03-22', check_out: '2026-03-24',
-  },
-];
+// Availability is checked against the real Booking table (761 rows).
+//
+// This route previously answered from a small hardcoded array, which meant it
+// would report dates as AVAILABLE that were in fact booked -- a double-booking
+// hazard, not merely a cosmetic mock (queue #26855).
+//
+// Statuses in the database are upper-case ('CONFIRMED'); the API contract is
+// lower-case. Comparisons are case-insensitive so a casing mismatch cannot
+// silently make every existing booking invisible to the overlap check, which
+// would fail OPEN in exactly the wrong direction.
 
-function datesOverlap(
-  aStart: string, aEnd: string,
-  bStart: string, bEnd: string,
-): boolean {
-  return aStart < bEnd && bStart < aEnd;
-}
+const BLOCKING_STATUSES = ['confirmed', 'pending', 'checked_in'];
+
+const iso = (d: Date) => d.toISOString().slice(0, 10);
 
 function addDays(dateStr: string, days: number): string {
-  const d = new Date(dateStr);
-  d.setDate(d.getDate() + days);
-  return d.toISOString().split('T')[0];
+  const d = new Date(`${dateStr}T00:00:00.000Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return iso(d);
 }
 
-// ── GET /api/bookings/availability ───────────────────────────────────────
+function datesOverlap(aIn: string, aOut: string, bIn: string, bOut: string): boolean {
+  // Half-open ranges: a checkout on the same day as another check-in is fine.
+  return aIn < bOut && aOut > bIn;
+}
+
+// ── GET /api/bookings/availability ─────────────────────────────────────────
 export async function GET(request: NextRequest) {
   const auth = await requireOneOfRoles(request, ['owner', 'admin']);
   if (auth.error) return auth.error;
@@ -42,90 +40,75 @@ export async function GET(request: NextRequest) {
 
     if (!propertyId || !checkIn || !checkOut) {
       return NextResponse.json(
-        { error: 'Missing required params: property_id, check_in, check_out' },
+        { error: 'Missing required: property_id, check_in, check_out' },
         { status: 400 },
       );
     }
-
-    if (new Date(checkOut) <= new Date(checkIn)) {
+    if (!(checkIn < checkOut)) {
       return NextResponse.json(
         { error: 'check_out must be after check_in' },
         { status: 400 },
       );
     }
 
-    // Find conflicting bookings for this property
-    const conflicts = bookings
-      .filter(
-        (b) =>
-          b.property_id === propertyId &&
-          ['confirmed', 'pending', 'checked_in'].includes(b.status) &&
-          datesOverlap(checkIn, checkOut, b.check_in, b.check_out),
-      )
+    // Every blocking booking for this property, mapped to the contract shape.
+    const rows = await prisma.booking.findMany({
+      where: { propertyId },
+      select: { id: true, checkIn: true, checkOut: true, status: true },
+      orderBy: { checkIn: 'asc' },
+    });
+
+    const bookedRanges = rows
+      .filter((b) => BLOCKING_STATUSES.includes((b.status || '').toLowerCase()))
       .map((b) => ({
         booking_id: b.id,
-        check_in: b.check_in,
-        check_out: b.check_out,
-        status: b.status,
+        check_in: iso(b.checkIn),
+        check_out: iso(b.checkOut),
+        status: (b.status || '').toLowerCase(),
       }));
 
+    const conflicts = bookedRanges.filter((b) =>
+      datesOverlap(checkIn, checkOut, b.check_in, b.check_out),
+    );
     const available = conflicts.length === 0;
 
-    // Generate suggested alternative dates if not available
     const suggestedDates: { check_in: string; check_out: string }[] = [];
     if (!available) {
       const requestedNights = Math.ceil(
-        (new Date(checkOut).getTime() - new Date(checkIn).getTime()) /
+        (new Date(`${checkOut}T00:00:00.000Z`).getTime() -
+          new Date(`${checkIn}T00:00:00.000Z`).getTime()) /
           (1000 * 60 * 60 * 24),
       );
 
-      // Collect all booked ranges for this property, sorted by check_in
-      const bookedRanges = bookings
-        .filter(
-          (b) =>
-            b.property_id === propertyId &&
-            ['confirmed', 'pending', 'checked_in'].includes(b.status),
-        )
-        .sort((a, b) => a.check_in.localeCompare(b.check_in));
-
-      // Suggest: right after the last conflicting checkout
+      // Right after each conflicting checkout, if that window is itself free.
       for (const conflict of conflicts) {
         const altCheckIn = conflict.check_out;
         const altCheckOut = addDays(altCheckIn, requestedNights);
-
-        // Verify the suggested window is also free
-        const altConflicts = bookedRanges.filter((b) =>
+        const clash = bookedRanges.some((b) =>
           datesOverlap(altCheckIn, altCheckOut, b.check_in, b.check_out),
         );
-        if (altConflicts.length === 0) {
-          suggestedDates.push({ check_in: altCheckIn, check_out: altCheckOut });
-        }
+        if (!clash) suggestedDates.push({ check_in: altCheckIn, check_out: altCheckOut });
       }
 
-      // Also suggest: right before the first conflict
-      const firstConflict = conflicts.sort((a, b) =>
+      // And immediately before the first conflict, if that is not in the past.
+      const firstConflict = [...conflicts].sort((a, b) =>
         a.check_in.localeCompare(b.check_in),
       )[0];
       if (firstConflict) {
         const altCheckOut = firstConflict.check_in;
         const altCheckIn = addDays(altCheckOut, -requestedNights);
-        if (altCheckIn >= new Date().toISOString().split('T')[0]) {
-          const priorConflicts = bookedRanges.filter((b) =>
+        if (altCheckIn >= iso(new Date())) {
+          const clash = bookedRanges.some((b) =>
             datesOverlap(altCheckIn, altCheckOut, b.check_in, b.check_out),
           );
-          if (priorConflicts.length === 0) {
-            suggestedDates.push({ check_in: altCheckIn, check_out: altCheckOut });
-          }
+          if (!clash) suggestedDates.push({ check_in: altCheckIn, check_out: altCheckOut });
         }
       }
     }
 
-    // Deduplicate suggested dates
     const unique = suggestedDates.filter(
       (s, i, arr) =>
-        arr.findIndex(
-          (x) => x.check_in === s.check_in && x.check_out === s.check_out,
-        ) === i,
+        arr.findIndex((x) => x.check_in === s.check_in && x.check_out === s.check_out) === i,
     );
 
     return NextResponse.json({
@@ -137,7 +120,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error: any) {
     return NextResponse.json(
-      { error: 'Availability check failed', detail: error.message },
+      { error: 'Failed to check availability', detail: error.message },
       { status: 500 },
     );
   }
