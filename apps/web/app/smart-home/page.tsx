@@ -828,18 +828,88 @@ export default function SmartHomePage() {
   const [sensors, setSensors] = useState<SensorDevice[]>(MOCK_SENSORS);
   const [scenes, setScenes] = useState<Scene[]>(MOCK_SCENES);
 
+  // Real backend state. loadError exists so a failed fetch reads as FAILED
+  // rather than as "this property has no devices".
+  const [locks, setLocks] = useState<any[]>([]);
+  const [lockSource, setLockSource] = useState<string | null>(null);
+  const [thermostatIntegration, setThermostatIntegration] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
   // UI state
   const [showCodeValues, setShowCodeValues] = useState<Record<string, boolean>>({});
   const [showAddCodeModal, setShowAddCodeModal] = useState(false);
 
-  // Load data
+  // Load data.
+  //
+  // This used to be `await sleep(500)` and nothing else: a loading spinner
+  // played, then the page rendered whatever the MOCK_ constants held. It never
+  // called an API, so a fixed backend changed nothing on screen -- and an empty
+  // grid was indistinguishable from a failed load.
+  //
+  // Only locks and thermostats have a backend. Cameras, lights, sensors and
+  // scenes have no API in this deployment at all, so they are reported as
+  // NOT INTEGRATED rather than rendered as an ambiguous empty list.
   useEffect(() => {
+    let cancelled = false;
+
     const loadData = async () => {
       setIsLoading(true);
-      await new Promise(resolve => setTimeout(resolve, 500));
-      setIsLoading(false);
+      setLoadError(null);
+      try {
+        const [lockRes, thermRes] = await Promise.all([
+          fetch('/api/smart-home/locks', { credentials: 'include' }),
+          fetch('/api/smart-home/thermostats', { credentials: 'include' }),
+        ]);
+
+        if (!lockRes.ok || !thermRes.ok) {
+          const which = !lockRes.ok ? `locks (${lockRes.status})` : `thermostats (${thermRes.status})`;
+          throw new Error(`Could not load ${which}`);
+        }
+
+        const lockJson = await lockRes.json();
+        const thermJson = await thermRes.json();
+        if (cancelled) return;
+
+        setLocks(Array.isArray(lockJson.locks) ? lockJson.locks : []);
+        setLockSource(lockJson.source ?? null);
+
+        // The thermostat API reports is_online/current_temp as null on purpose:
+        // there is no thermostat integration, so their live state is UNKNOWN.
+        // Carry the nulls through instead of substituting a comfortable number.
+        setThermostats(
+          (Array.isArray(thermJson.thermostats) ? thermJson.thermostats : []).map((t: any) => ({
+            id: t.id,
+            propertyId: t.property_id,
+            propertyName: '',
+            name: t.name,
+            type: 'thermostat' as const,
+            brand: t.device_type ?? '',
+            model: '',
+            status: 'offline' as const,
+            lastActivity: t.last_reading?.recorded_at
+              ? new Date(t.last_reading.recorded_at)
+              : new Date(t.updated_at),
+            features: [],
+            currentTemp: t.current_temp_f,
+            targetTemp: t.target_temp_f,
+            humidity: t.humidity_percent,
+            mode: t.mode,
+            fanMode: t.fan_mode,
+            schedule: [],
+          })) as ThermostatDevice[],
+        );
+        setThermostatIntegration(thermJson.device_integration ?? 'none');
+      } catch (e: any) {
+        if (!cancelled) setLoadError(e?.message ?? 'Failed to load smart-home devices');
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
     };
+
     loadData();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Keyboard shortcuts
@@ -986,6 +1056,43 @@ export default function SmartHomePage() {
     <DashboardShell>
       <div className="min-h-screen bg-[#F5F5F0]">
         <Toaster position="top-right" />
+
+        {/* A failed load must never render as "no devices". */}
+        {loadError && (
+          <div className="max-w-7xl mx-auto px-6 pt-6">
+            <div className="rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">
+              <span className="font-semibold">Devices could not be loaded.</span>{' '}
+              {loadError}. What you see below is incomplete &mdash; it is not a
+              statement that these properties have no devices.
+            </div>
+          </div>
+        )}
+
+        {/* Say plainly which device classes have no backend, rather than
+            showing an empty grid that reads as "nothing installed". */}
+        {!loadError &&
+          ['cameras', 'lights', 'sensors', 'scenes'].includes(activeTab) && (
+            <div className="max-w-7xl mx-auto px-6 pt-6">
+              <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                <span className="font-semibold">Not integrated.</span> There is no{' '}
+                {activeTab} backend in this deployment, so nothing can be listed or
+                controlled here yet. This panel is empty because the integration
+                does not exist &mdash; not because no {activeTab} are installed.
+              </div>
+            </div>
+          )}
+
+        {/* Thermostats exist as records but cannot be reached. */}
+        {!loadError && activeTab === 'thermostat' && thermostatIntegration === 'none' && (
+          <div className="max-w-7xl mx-auto px-6 pt-6">
+            <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              <span className="font-semibold">Read-only.</span> No thermostat
+              integration exists, so current temperature and online state are
+              unknown, and changes made here are recorded but{' '}
+              <span className="font-semibold">not sent to the device</span>.
+            </div>
+          </div>
+        )}
 
         {/* Header */}
         <header className="bg-white border-b border-[#2D2D2D]/10 sticky top-0 z-40">
