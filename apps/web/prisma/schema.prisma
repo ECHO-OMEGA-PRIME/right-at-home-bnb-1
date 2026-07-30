@@ -593,6 +593,20 @@ model WorkerProfile {
   isAvailable           Boolean  @default(true)
   maxConcurrentJobs     Int      @default(1)
   scheduleJson          String?
+
+  // ---- Employment / HR (added 2026-07-30) --------------------------------
+  hireDate              DateTime?
+  defaultHours          Int?
+  addressLine           String?
+
+  /// LAST FOUR DIGITS ONLY. The full SSN is deliberately NOT stored anywhere in
+  /// this system: the only consumer is a masked display, and data you do not
+  /// hold cannot be leaked, subpoenaed, or mis-handled. The API layer rejects
+  /// any input longer than 4 digits so a full SSN cannot be quietly written
+  /// into this column. Owner/admin only, never logged.
+  ssnLast4              String?
+  w4FilingStatus        String?
+  w4Allowances          Int?
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 
