@@ -73,6 +73,17 @@ jobs:
       - name: Install JavaScript dependencies
         run: pnpm install --frozen-lockfile
 
+      # Fails the build if any API route regains a handler with no session
+      # guard and no alternative control. Added after an audit found only
+      # 19 of 103 routes guarded, which is what let a middleware bug expose
+      # live guest PII -- this stops the coverage silently eroding again.
+      - name: RBAC route coverage gate
+        run: python tools/rbac_coverage_audit.py --strict
+
+      - name: Web unit tests
+        working-directory: apps/web
+        run: pnpm exec vitest run --config vitest.config.ts
+
       - name: Install focused backend test dependencies
         run: >-
           python -m pip install
