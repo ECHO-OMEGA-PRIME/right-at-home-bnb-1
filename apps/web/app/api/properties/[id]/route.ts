@@ -60,6 +60,7 @@ function toContract(p: any) {
 
 // ── GET /api/properties/[id] — public ──────────────────────────────────────
 export async function GET(_request: NextRequest, context: RouteContext) {
+  // @public-by-design — the marketing site reads listings unauthenticated.
   try {
     const { id } = await context.params;
     const property = await prisma.property.findUnique({

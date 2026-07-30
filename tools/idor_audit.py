@@ -47,6 +47,24 @@ SINGLE_ROLE_RE = re.compile(r"requireRole\s*\(\s*request\s*,\s*['\"](\w+)['\"]")
 # does not. Neither is shaped like requireOneOfRoles, so the first version of this
 # audit saw dispatch/tasks/[id] as having no role guard at all.
 ACTOR_RE = re.compile(r"require(Worker|Owner)Actor\s*\(")
+# requireAuth admits ANY authenticated user, guest included. It is a real guard
+# for "is someone logged in", but says nothing about which properties they may
+# see -- so a handler using it still needs an ownership check.
+ANY_AUTH_RE = re.compile(r"requireAuth\s*\(\s*request")
+# Service-credential routes. admin/property-info and admin/vrbo-ical both
+# authenticate a machine caller with a constant-time ADMIN_API_SECRET compare
+# rather than a user role; that is an ALT_CONTROL, not an absence of one.
+SECRET_GUARD_RE = re.compile(r"adminSecretMatches\s*\(|verifySecret\s*\(|x-api-secret")
+# An explicit, greppable declaration that a handler is public on purpose.
+PUBLIC_MARKER = "@public-by-design"
+# A HUMAN-verified exemption, for ownership checks this regex cannot see --
+# typically because the check lives in a service module the handler calls, or
+# inside a role-gated branch rather than at handler level.
+#
+# This is a fail-OPEN mechanism and is treated as such: it must carry a stated
+# reason, and every use is listed in the output so it can never accumulate
+# silently. Prefer moving the check somewhere the audit CAN see it.
+SCOPE_VERIFIED_RE = re.compile(r"@scope-verified:\s*(\S.*)")
 
 # Prisma access addressed by primary key.
 BY_ID_RE = re.compile(
@@ -134,6 +152,9 @@ def main() -> int:
     scanned = 0
     guarded = 0
     owner_only = 0
+    public_by_design = 0
+    secret_guarded = 0
+    scope_verified: list[tuple[str, str, str]] = []
 
     for path in sorted(API_ROOT.rglob("route.ts")):
         source = path.read_text(encoding="utf-8", errors="replace")
@@ -145,7 +166,27 @@ def main() -> int:
                 continue
             scanned += 1
 
+            # Declared public on purpose (marketing listings, PayPal return).
+            # Counted separately so "public" never hides among "unclassified".
+            if PUBLIC_MARKER in body:
+                public_by_design += 1
+                continue
+
+            sv = SCOPE_VERIFIED_RE.search(body)
+            if sv:
+                scope_verified.append((rel, verb, sv.group(1).strip()))
+                continue
+
+            # Authenticated as a machine via ADMIN_API_SECRET rather than a user
+            # role. A real control, just not a role-shaped one.
+            if SECRET_GUARD_RE.search(body) or SECRET_GUARD_RE.search(source):
+                secret_guarded += 1
+                continue
+
             roles = roles_for(body, source)
+            if not roles and ANY_AUTH_RE.search(body):
+                roles = {"guest", "worker", "owner", "admin"}
+
             # No non-owner role can reach it -> not a tenant-isolation risk here.
             if roles and roles <= {"owner", "admin"}:
                 owner_only += 1
@@ -183,6 +224,12 @@ def main() -> int:
     print(f"scanned {scanned} handlers containing by-id access")
     print(f"  {guarded} already carry an ownership check")
     print(f"  {owner_only} are owner/admin-only (out of scope by design)")
+    print(f"  {secret_guarded} authenticate with ADMIN_API_SECRET (service callers)")
+    print(f"  {public_by_design} are declared @public-by-design")
+    if scope_verified:
+        print(f"  {len(scope_verified)} carry a HUMAN @scope-verified exemption:")
+        for rel, verb, why in scope_verified:
+            print(f"      {rel} {verb} — {why}")
 
     if findings:
         print(f"\nUNGUARDED BY-ID ACCESS ({len(findings)}):")
@@ -214,7 +261,9 @@ def main() -> int:
     def distinct_handlers(rows):
         return len({(r[0], r[1]) for r in rows})
 
-    total = guarded + owner_only + distinct_handlers(findings) + distinct_handlers(unknown)
+    total = (guarded + owner_only + secret_guarded + public_by_design
+             + len(scope_verified)
+             + distinct_handlers(findings) + distinct_handlers(unknown))
     if total != scanned:
         # Every scanned handler must land in exactly one bucket. Silently losing
         # some is how an audit reports "clean" while missing whole files.

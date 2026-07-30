@@ -8,6 +8,8 @@ import {
 import { PROPERTIES } from "@/lib/property-data";
 
 export async function POST(req: NextRequest) {
+  // @public-by-design — a guest completing a PayPal payment is not logged in.
+  // Its control is payment verification, not a role: see the checks below.
   try {
     const body = await req.json();
     const { paypalOrderId, bookingId } = body;

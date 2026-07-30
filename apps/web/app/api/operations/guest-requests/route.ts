@@ -55,6 +55,10 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  // @scope-verified: the by-id booking lookup below sits inside the owner/admin
+  // branch only (workers get 403), and createGuestRequest re-fetches with
+  // findFirst({ id, guestId }) so a guest cannot name someone else's booking.
+  // Verified by reading src/lib/operations-service.ts, not inferred.
   const auth = await requireAuth(request);
   if (auth.error) return auth.error;
 
