@@ -108,3 +108,6 @@ tools/vrbo-screenshots/
 tools/.vrbo-chrome-profile/
 tools/.edge-vrbo-profile/
 tools/vrbo-screenshots/
+
+# local prod env pulls (never commit - hold SA + DB creds)
+.rah_prod.env
