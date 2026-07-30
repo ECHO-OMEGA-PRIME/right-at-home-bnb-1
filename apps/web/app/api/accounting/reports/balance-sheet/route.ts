@@ -1,5 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireOneOfRoles } from '@/lib/api-auth';
+import { accountBalances } from '@/lib/ledger';
+
+// Real balances aggregated from JournalEntryLine (queue #26855). This report
+// previously returned a hardcoded balance sheet whose own comment admitted
+// "here we simulate with realistic balances" -- a statement of financial
+// position that was entirely invented.
+//
+// Accounts are grouped by code, matching the chart of accounts:
+//   1000-1499 current assets    1500+ fixed assets
+//   2000-2499 current liabs     2500+ long-term liabs
+//   3xxx      equity            4xxx revenue, 5xxx/6xxx expense
+//
+// CURRENT PERIOD NET INCOME is DERIVED (revenue - expenses) and added to
+// equity. Without it the sheet cannot balance for a live ledger: income has not
+// yet been closed to retained earnings, so assets would exceed
+// liabilities + equity by exactly the period's profit. Deriving it is what
+// makes balance_check a real assertion rather than decoration.
+
+const numeric = (code: string) => parseInt(code, 10) || 0;
 
 // ── GET /api/accounting/reports/balance-sheet ─────────────────────────────
 export async function GET(request: NextRequest) {
@@ -9,47 +28,39 @@ export async function GET(request: NextRequest) {
     const params = request.nextUrl.searchParams;
     const asOf = params.get('as_of') ?? new Date().toISOString().split('T')[0];
 
-    // In production, these balances come from aggregating journal_entry_lines
-    // up to the as_of date. Here we simulate with realistic balances.
+    // Balances up to and including the as_of date.
+    const balances = await accountBalances({ to: new Date(`${asOf}T23:59:59.999Z`) });
+    const pick = (predicate: (code: number) => boolean) =>
+      balances
+        .filter((b) => predicate(numeric(b.code)))
+        .map((b) => ({ code: b.code, name: b.name, balance_cents: b.balance_cents }));
 
     const assets = {
-      current: [
-        { code: '1000', name: 'Operating Checking', balance_cents: 4523100 },
-        { code: '1010', name: 'Savings Account', balance_cents: 1500000 },
-        { code: '1020', name: 'Petty Cash', balance_cents: 25000 },
-        { code: '1100', name: 'Accounts Receivable', balance_cents: 140726 },
-        { code: '1110', name: 'Prepaid Insurance', balance_cents: 75000 },
-        { code: '1200', name: 'Security Deposits Receivable', balance_cents: 200000 },
-      ],
-      fixed: [
-        { code: '1500', name: 'Furniture & Equipment', balance_cents: 850000 },
-        { code: '1510', name: 'Accumulated Depreciation', balance_cents: -170000 },
-        { code: '1600', name: 'Leasehold Improvements', balance_cents: 420000 },
-        { code: '1610', name: 'Accum Depreciation — Improvements', balance_cents: -84000 },
-      ],
+      current: pick((c) => c >= 1000 && c < 1500),
+      fixed: pick((c) => c >= 1500 && c < 2000),
+    };
+    const liabilities = {
+      current: pick((c) => c >= 2000 && c < 2500),
+      long_term: pick((c) => c >= 2500 && c < 3000),
     };
 
-    const liabilities = {
-      current: [
-        { code: '2000', name: 'Accounts Payable', balance_cents: 35200 },
-        { code: '2100', name: 'Sales Tax Payable', balance_cents: 42500 },
-        { code: '2110', name: 'HOT Tax Payable', balance_cents: 28000 },
-        { code: '2200', name: 'Payroll Tax Payable', balance_cents: 15300 },
-        { code: '2300', name: 'Guest Deposits', balance_cents: 75000 },
-        { code: '2400', name: 'Accrued Expenses', balance_cents: 18000 },
-      ],
-      long_term: [
-        { code: '2500', name: 'Owner Loan Payable', balance_cents: 0 },
-      ],
-    };
+    const revenueTotal = balances
+      .filter((b) => numeric(b.code) >= 4000 && numeric(b.code) < 5000)
+      .reduce((s, b) => s + b.balance_cents, 0);
+    const expenseTotal = balances
+      .filter((b) => numeric(b.code) >= 5000 && numeric(b.code) < 7000)
+      .reduce((s, b) => s + b.balance_cents, 0);
+    const netIncomeCents = revenueTotal - expenseTotal;
 
     const equity = [
-      { code: '3000', name: "Owner's Equity", balance_cents: 500000 },
-      { code: '3100', name: 'Retained Earnings', balance_cents: 2100000 },
-      { code: '3200', name: 'Current Period Net Income', balance_cents: 413270 },
+      ...pick((c) => c >= 3000 && c < 4000),
+      {
+        code: '3200',
+        name: 'Current Period Net Income',
+        balance_cents: netIncomeCents,
+      },
     ];
 
-    // Compute totals
     const totalCurrentAssets = assets.current.reduce((s, a) => s + a.balance_cents, 0);
     const totalFixedAssets = assets.fixed.reduce((s, a) => s + a.balance_cents, 0);
     const totalAssets = totalCurrentAssets + totalFixedAssets;
@@ -59,41 +70,24 @@ export async function GET(request: NextRequest) {
     const totalLiabilities = totalCurrentLiabilities + totalLongTermLiabilities;
 
     const totalEquity = equity.reduce((s, e) => s + e.balance_cents, 0);
-
-    // Verify A = L + E (accounting equation)
     const balanceCheck = totalAssets === totalLiabilities + totalEquity;
 
     return NextResponse.json({
       report: 'balance_sheet',
       as_of: asOf,
       assets: {
-        current: {
-          items: assets.current,
-          total_cents: totalCurrentAssets,
-        },
-        fixed: {
-          items: assets.fixed,
-          total_cents: totalFixedAssets,
-        },
+        current: { items: assets.current, total_cents: totalCurrentAssets },
+        fixed: { items: assets.fixed, total_cents: totalFixedAssets },
         total_cents: totalAssets,
       },
       liabilities: {
-        current: {
-          items: liabilities.current,
-          total_cents: totalCurrentLiabilities,
-        },
-        long_term: {
-          items: liabilities.long_term,
-          total_cents: totalLongTermLiabilities,
-        },
+        current: { items: liabilities.current, total_cents: totalCurrentLiabilities },
+        long_term: { items: liabilities.long_term, total_cents: totalLongTermLiabilities },
         total_cents: totalLiabilities,
       },
-      equity: {
-        items: equity,
-        total_cents: totalEquity,
-      },
+      equity: { items: equity, total_cents: totalEquity },
       liabilities_plus_equity_cents: totalLiabilities + totalEquity,
-      balanced: balanceCheck,
+      balance_check: balanceCheck,
       generated_at: new Date().toISOString(),
     });
   } catch (error: any) {
