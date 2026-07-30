@@ -440,6 +440,11 @@ model Expense {
   // Payment
   paymentMethod String?
 
+  /// The stay this cost belongs to, when it is attributable to one.
+  bookingId String?
+  /// A recurring cost (subscription, utility) rather than a one-off.
+  recurring Boolean @default(false)
+
   // Notes
   notes String?
 
