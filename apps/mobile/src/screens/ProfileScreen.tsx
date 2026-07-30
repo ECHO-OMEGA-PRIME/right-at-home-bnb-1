@@ -72,7 +72,7 @@ const SettingRow = ({
     ) : (
       <View style={styles.settingRight}>
         {value && <Text style={styles.settingValue}>{value}</Text>}
-        <Text style={styles.settingArrow}>></Text>
+        <Text style={styles.settingArrow}>{'>'}</Text>
       </View>
     )}
   </TouchableOpacity>
@@ -149,7 +149,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
           email: user.email || prev.email,
           avatar: user.photoURL || prev.avatar,
           initials: user.displayName
-            ? user.displayName.split(' ').map((n) => n[0]).join('').toUpperCase()
+            ? user.displayName.split(' ').map((n: string) => n[0]).join('').toUpperCase()
             : prev.initials,
         }));
       }

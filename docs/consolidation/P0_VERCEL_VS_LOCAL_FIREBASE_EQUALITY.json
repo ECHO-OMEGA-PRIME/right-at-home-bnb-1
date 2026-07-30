@@ -1,0 +1,11 @@
+﻿{
+    "checked_utc":  "2026-07-24T00:11:55.5549597Z",
+    "local_file_exists":  true,
+    "all_six_equal":  false,
+    "project_id_equal":  false,
+    "auth_domain_equal":  false,
+    "storage_bucket_equal":  false,
+    "sender_id_equal":  false,
+    "app_id_equal":  false,
+    "api_key_equal":  false
+}

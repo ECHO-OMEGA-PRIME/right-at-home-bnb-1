@@ -1,0 +1,72 @@
+﻿(node:75004) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+ΓÇ║ Installing 10 SDK 50.0.0 compatible native modules and 1 other package using pnpm
+> pnpm add expo-auth-session@~5.4.0 expo-apple-authentication@~6.3.0 expo-local-authentication@~13.8.0 expo-web-browser@~12.8.2 expo-crypto@~12.8.1 expo-application@~5.8.4 expo-sqlite@~13.4.0 expo-device@~5.9.4 expo-constants@~15.4.6 @react-native-community/netinfo@11.1.0 firebase
+../..                                    | Progress: resolved 1, reused 0, downloaded 0, added 0
+../web                                   | ΓÇëWARNΓÇë deprecated @vercel/postgres@0.7.2
+../../packages/services                  | ΓÇëWARNΓÇë deprecated tsup@7.3.0
+../desktop                               | ΓÇëWARNΓÇë deprecated eslint@8.57.1
+../..                                    | Progress: resolved 119, reused 0, downloaded 0, added 0
+../web                                   | ΓÇëWARNΓÇë deprecated next@14.1.0
+../..                                    | Progress: resolved 225, reused 0, downloaded 0, added 0
+../..                                    | Progress: resolved 410, reused 0, downloaded 0, added 0
+../..                                    | Progress: resolved 818, reused 0, downloaded 0, added 0
+../..                                    | Progress: resolved 1321, reused 1, downloaded 0, added 0
+../..                                    | Progress: resolved 1911, reused 1, downloaded 0, added 0
+../..                                    | Progress: resolved 2103, reused 1, downloaded 0, added 0
+../..                                    | Progress: resolved 2104, reused 1, downloaded 0, added 0
+ΓÇëWARNΓÇë 31 deprecated subdependencies found: @babel/plugin-proposal-async-generator-functions@7.20.7, @babel/plugin-proposal-class-properties@7.18.6, @babel/plugin-proposal-nullish-coalescing-operator@7.18.6, @babel/plugin-proposal-numeric-separator@7.18.6, @babel/plugin-proposal-object-rest-spread@7.20.7, @babel/plugin-proposal-optional-catch-binding@7.18.6, @babel/plugin-proposal-optional-chaining@7.21.0, @esbuild-kit/core-utils@3.3.2, @esbuild-kit/esm-loader@2.6.5, @humanwhocodes/config-array@0.13.0, @humanwhocodes/object-schema@2.0.3, @npmcli/move-file@1.1.2, @npmcli/move-file@2.0.1, @xmldom/xmldom@0.7.13, @xmldom/xmldom@0.8.11, boolean@3.2.0, glob@10.5.0, glob@7.1.6, glob@7.2.3, glob@8.1.0, inflight@1.0.6, lodash.isequal@4.5.0, node-domexception@1.0.0, osenv@0.1.5, rimraf@2.6.3, rimraf@3.0.2, scmp@2.1.0, source-map@0.8.0-beta.0, sudo-prompt@9.2.1, tar@6.2.1, whatwg-encoding@3.1.1
+../..                                    | Progress: resolved 2104, reused 1, downloaded 0, added 0, done
+ΓÇëWARNΓÇë Issues with peer dependencies found
+apps/mobile
+ΓööΓöÇΓö¼ firebase 12.16.0
+  ΓööΓöÇΓö¼ @firebase/auth-compat 0.6.8
+    ΓööΓöÇΓö¼ @firebase/auth 1.13.3
+      ΓööΓöÇΓöÇ Γ£ò unmet peer @react-native-async-storage/async-storage@"^2.2.0 || ^3.0.0": found 1.21.0
+
+apps/web
+Γö£ΓöÇΓö¼ react-dom 18.3.1
+Γöé ΓööΓöÇΓöÇ Γ£ò unmet peer react@^18.3.1: found 18.2.0
+Γö£ΓöÇΓö¼ expo 50.0.21
+Γöé ΓööΓöÇΓö¼ @expo/cli 0.17.13
+Γöé   ΓööΓöÇΓö¼ @react-native/dev-middleware 0.73.8
+Γöé     ΓööΓöÇΓö¼ ws 6.2.3
+Γöé       ΓööΓöÇΓöÇ Γ£ò unmet peer utf-8-validate@^5.0.2: found 6.0.3
+ΓööΓöÇΓö¼ react-native 0.73.2
+  ΓööΓöÇΓö¼ @react-native-community/cli 12.3.0
+    ΓööΓöÇΓö¼ @react-native-community/cli-server-api 12.3.0
+      ΓööΓöÇΓö¼ ws 7.5.10
+        ΓööΓöÇΓöÇ Γ£ò unmet peer utf-8-validate@^5.0.2: found 6.0.3
+
+packages/utils
+ΓööΓöÇΓö¼ date-fns-tz 2.0.1
+  ΓööΓöÇΓöÇ Γ£ò unmet peer date-fns@2.x: found 3.6.0
+
+../..                                    |   +4   -2 +-
+../.. postinstall$ prisma generate
+../.. postinstall: Environment variables loaded from .env
+../.. postinstall: Prisma schema loaded from prisma\schema.prisma
+../.. postinstall: Γ£ö Generated Prisma Client (v5.22.0) to .\node_modules\.pnpm\@prisma+client@5.22.0_prisma@5.22.0\node_modules\@prisma\client in 567ms
+../.. postinstall: Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
+../.. postinstall: Tip: Curious about the SQL queries Prisma ORM generates? Optimize helps you enhance your visibility: https://pris.ly/tip-2-optimize
+../.. postinstall: ΓöîΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÉ
+../.. postinstall: Γöé  Update available 5.22.0 -> 7.9.0                       Γöé
+../.. postinstall: Γöé                                                         Γöé
+../.. postinstall: Γöé  This is a major update - please follow the guide at    Γöé
+../.. postinstall: Γöé  https://pris.ly/d/major-version-upgrade                Γöé
+../.. postinstall: Γöé                                                         Γöé
+../.. postinstall: Γöé  Run the following to update                            Γöé
+../.. postinstall: Γöé    npm i --save-dev prisma@latest                       Γöé
+../.. postinstall: Γöé    npm i @prisma/client@latest                          Γöé
+../.. postinstall: ΓööΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÿ
+../.. postinstall: Done
+Γò¡ Warning ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓò«
+Γöé                                                                              Γöé
+Γöé   Ignored build scripts: @firebase/util@1.13.0, @firebase/util@1.15.1,       Γöé
+Γöé   bufferutil@4.0.8, electron@28.3.3, es5-ext@0.10.64, msw@2.12.14,           Γöé
+Γöé   protobufjs@7.5.4, utf-8-validate@6.0.3.                                    Γöé
+Γöé   Run "pnpm approve-builds" to pick which dependencies should be allowed     Γöé
+Γöé   to run scripts.                                                            Γöé
+Γöé                                                                              Γöé
+Γò░ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓò»
+Done in 17.5s using pnpm v10.33.0

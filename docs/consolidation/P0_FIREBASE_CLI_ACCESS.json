@@ -1,0 +1,17 @@
+﻿{
+    "checked_utc":  "2026-07-24T05:36:24.6100301Z",
+    "firebase_login_exit_code":  0,
+    "firebase_accounts":  [
+
+                          ],
+    "firebase_projects_exit_code":  1,
+    "firebase_project_ids":  [
+
+                             ],
+    "rightathome_visible":  false,
+    "gcloud_exit_code":  0,
+    "gcloud_accounts":  [
+                            "bmcii1976@gmail.com",
+                            "vertex-express@echo-prime-ai.iam.gserviceaccount.com"
+                        ]
+}

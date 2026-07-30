@@ -654,19 +654,19 @@ class DatabaseService {
       pendingCleanings,
       monthlyBookings,
     ] = await Promise.all([
-      window.electronAPI.db.query('properties.count', { where: { status: 'ACTIVE' } }),
-      window.electronAPI.db.query('propertyPhotos.count', {}),
-      window.electronAPI.db.query('guests.count', {}),
-      window.electronAPI.db.query('bookings.count', {
+      window.electronAPI.db.query<number>('properties.count', { where: { status: 'ACTIVE' } }),
+      window.electronAPI.db.query<number>('propertyPhotos.count', {}),
+      window.electronAPI.db.query<number>('guests.count', {}),
+      window.electronAPI.db.query<number>('bookings.count', {
         where: { status: 'CONFIRMED', checkIn: { lte: today }, checkOut: { gte: today } },
       }),
-      window.electronAPI.db.query('bookings.count', {
+      window.electronAPI.db.query<number>('bookings.count', {
         where: { checkIn: { gte: today, lt: tomorrow }, status: { not: 'CANCELLED' } },
       }),
-      window.electronAPI.db.query('bookings.count', {
+      window.electronAPI.db.query<number>('bookings.count', {
         where: { checkOut: { gte: today, lt: tomorrow }, status: { not: 'CANCELLED' } },
       }),
-      window.electronAPI.db.query('cleaningJobs.count', {
+      window.electronAPI.db.query<number>('cleaningJobs.count', {
         where: { status: { in: ['SCHEDULED', 'IN_PROGRESS'] } },
       }),
       window.electronAPI.db.query('bookings.findMany', {

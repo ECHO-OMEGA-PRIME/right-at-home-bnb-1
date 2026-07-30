@@ -72,9 +72,11 @@ const STATUS_COLORS: Record<string, { bg: string; text: string; border: string }
 const GlassCard: React.FC<{
   children: React.ReactNode;
   className?: string;
-}> = ({ children, className = '' }) => (
+  onClick?: React.MouseEventHandler<HTMLDivElement>;
+}> = ({ children, className = '', onClick }) => (
   <div
     className={`relative rounded-2xl ${className}`}
+    onClick={onClick}
     style={{
       background: 'rgba(139, 0, 139, 0.08)',
       backdropFilter: 'blur(12px)',
@@ -383,7 +385,7 @@ export default function BookingCalendar() {
               ...b,
               property: contextProperties.find((p) => p.id === b.propertyId) as any,
               guest: { name: 'Guest', email: '' } as any,
-            })) as BookingWithRelations[]
+            })) as unknown as BookingWithRelations[]
           );
         }
 
@@ -400,7 +402,7 @@ export default function BookingCalendar() {
             ...b,
             property: contextProperties.find((p) => p.id === b.propertyId) as any,
             guest: { name: 'Guest', email: '' } as any,
-          })) as BookingWithRelations[]
+          })) as unknown as BookingWithRelations[]
         );
         setProperties(contextProperties as any);
       } finally {

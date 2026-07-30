@@ -86,19 +86,19 @@ STEVEN_BUSINESS_KNOWLEDGE = """
    - 4BR/3BA, 2800 sqft, Pool, Hot Tub
    - Sleeps 10, Perfect for families
    - Smart locks: Schlage Encode
-   - WiFi: CastlefordGuest / Welcome2024!
+   - Private stay access is excluded from AI context.
 
 2. **Permian Palace** - 456 Basin Blvd, Midland, TX 79701
    - 5BR/4BA, 3200 sqft, Game Room
    - Sleeps 12, Corporate retreats
    - Smart locks: Yale Assure 2
-   - WiFi: PermianPalace / BasinLife2024!
+   - Private stay access is excluded from AI context.
 
 3. **Sunset Retreat** - 789 Desert Rose Dr, Midland, TX 79703
    - 3BR/2BA, 2000 sqft, Mountain views
    - Sleeps 6, Couples/Small families
    - Smart locks: August Smart Lock Pro
-   - WiFi: SunsetGuest / DesertRose2024!
+   - Private stay access is excluded from AI context.
 
 #### STANDARD TIER (4 Star - $120-180/night)
 4. **Basin View Cottage** - 101 Basin View Ct, Midland, TX 79701

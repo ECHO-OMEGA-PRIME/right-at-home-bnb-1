@@ -1,173 +1,143 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { requireOwnerActor, requireWorkerActor, canManageAllWorkOrders } from '@/lib/operations-auth';
 
-// ── Shared tasks reference (in production, use DB) ──────────────────────────
-const tasks: any[] = [
-  {
-    id: 'DSP-001',
-    property_id: 'PROP-001',
-    booking_id: 'BK-001',
-    type: 'cleaning',
-    status: 'pending',
-    priority: 'high',
-    title: 'Post-checkout deep clean',
-    description: 'Full deep clean after guest checkout.',
-    assigned_to: 'EMP-001',
-    assigned_name: 'Maria Garcia',
-    scheduled_date: '2026-03-23',
-    scheduled_time: '11:00',
-    estimated_duration_min: 120,
-    actual_duration_min: null,
-    checklist: [
-      { item: 'Strip beds and start laundry', completed: false },
-      { item: 'Clean all bathrooms', completed: false },
-      { item: 'Kitchen deep clean', completed: false },
-      { item: 'Vacuum and mop all floors', completed: false },
-      { item: 'Restock supplies', completed: false },
-    ],
-    notes: '',
-    created_at: '2026-03-20T10:00:00Z',
-    updated_at: '2026-03-20T10:00:00Z',
-  },
-];
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
-const VALID_STATUSES = ['pending', 'assigned', 'in_progress', 'completed', 'cancelled'];
 const STATUS_TRANSITIONS: Record<string, string[]> = {
-  pending: ['assigned', 'in_progress', 'cancelled'],
-  assigned: ['in_progress', 'cancelled'],
-  in_progress: ['completed', 'cancelled'],
-  completed: [],
-  cancelled: [],
+  PENDING: ['UNASSIGNED', 'ASSIGNED', 'CANCELLED'],
+  UNASSIGNED: ['ASSIGNED', 'CANCELLED'],
+  ASSIGNED: ['ACCEPTED', 'IN_PROGRESS', 'CANCELLED'],
+  ACCEPTED: ['IN_PROGRESS', 'CANCELLED'],
+  IN_PROGRESS: ['COMPLETED', 'CANCELLED'],
+  COMPLETED: [],
+  CANCELLED: [],
 };
 
-// ── GET /api/dispatch/tasks/:id ─────────────────────────────────────────────
-export async function GET(
-  _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  try {
-    const { id } = await params;
-    const task = tasks.find((t) => t.id === id);
-
-    if (!task) {
-      return NextResponse.json({ error: 'Task not found' }, { status: 404 });
-    }
-
-    const completedItems = task.checklist.filter((c: any) => c.completed).length;
-    const totalItems = task.checklist.length;
-
-    return NextResponse.json({
-      task,
-      checklist_progress: {
-        completed: completedItems,
-        total: totalItems,
-        percent: totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0,
-      },
-    });
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: 'Failed to get task', detail: error.message },
-      { status: 500 },
-    );
-  }
+function serialize(task: any) {
+  const total = task.checklistItems.length;
+  const completed = task.checklistItems.filter((item: any) => item.completed).length;
+  return {
+    task: {
+      id: task.id,
+      property_id: task.propertyId,
+      property_name: task.property.name,
+      booking_id: task.bookingId,
+      type: task.serviceType.toLowerCase(),
+      status: task.status.toLowerCase(),
+      priority: task.priority,
+      title: task.title,
+      description: task.description,
+      assigned_to: task.assignedWorkerId,
+      assigned_name: task.assignedWorker?.user?.name || null,
+      scheduled_at: task.scheduledStart,
+      due_at: task.dueAt,
+      timer_seconds: task.timerSeconds,
+      pay_amount_cents: task.payAmountCents,
+      checklist: task.checklistItems.map((item: any) => ({
+        id: item.id,
+        item: item.label,
+        completed: item.completed,
+        requires_photo: item.requiresPhoto,
+        photo_uploaded: Boolean(item.evidencePhotoUrl),
+      })),
+      report_summary: task.reportSummary,
+      created_at: task.createdAt,
+      updated_at: task.updatedAt,
+    },
+    checklist_progress: {
+      completed,
+      total,
+      percent: total ? Math.round((completed / total) * 100) : 0,
+    },
+  };
 }
 
-// ── PUT /api/dispatch/tasks/:id ─────────────────────────────────────────────
+async function getVisibleWorkOrder(request: NextRequest, id: string) {
+  const auth = await requireWorkerActor(request);
+  if (auth.error) return { auth, task: null };
+  const where: any = { id };
+  if (!canManageAllWorkOrders(auth.user!.role)) where.assignedWorkerId = auth.workerProfile!.id;
+  const task = await prisma.workOrder.findFirst({
+    where,
+    include: {
+      property: { select: { name: true } },
+      assignedWorker: { include: { user: { select: { name: true } } } },
+      checklistItems: { orderBy: { sortOrder: 'asc' } },
+    },
+  });
+  return { auth, task };
+}
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } },
+) {
+  const { auth, task } = await getVisibleWorkOrder(request, params.id);
+  if (auth.error) return auth.error;
+  if (!task) return NextResponse.json({ error: 'Task not found' }, { status: 404 });
+  return NextResponse.json(serialize(task));
+}
+
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
+  { params }: { params: { id: string } },
 ) {
-  try {
-    const { id } = await params;
-    const idx = tasks.findIndex((t) => t.id === id);
+  const auth = await requireOwnerActor(request);
+  if (auth.error) return auth.error;
+  const current = await prisma.workOrder.findUnique({ where: { id: params.id } });
+  if (!current) return NextResponse.json({ error: 'Task not found' }, { status: 404 });
 
-    if (idx === -1) {
-      return NextResponse.json({ error: 'Task not found' }, { status: 404 });
-    }
-
-    const body = await request.json();
-    const task = tasks[idx];
-
-    // Validate status transition
-    if (body.status) {
-      if (!VALID_STATUSES.includes(body.status)) {
-        return NextResponse.json(
-          { error: `Invalid status. Must be one of: ${VALID_STATUSES.join(', ')}` },
-          { status: 400 },
-        );
-      }
-      const allowed = STATUS_TRANSITIONS[task.status] || [];
-      if (!allowed.includes(body.status)) {
-        return NextResponse.json(
-          {
-            error: `Cannot transition from '${task.status}' to '${body.status}'. Allowed: ${allowed.join(', ') || 'none'}`,
-          },
-          { status: 400 },
-        );
-      }
-    }
-
-    // Updatable fields
-    const updatable = [
-      'status', 'priority', 'title', 'description', 'assigned_to', 'assigned_name',
-      'scheduled_date', 'scheduled_time', 'estimated_duration_min', 'actual_duration_min',
-      'checklist', 'notes',
-    ];
-    for (const field of updatable) {
-      if (body[field] !== undefined) {
-        task[field] = body[field];
-      }
-    }
-
-    // Auto-set assigned status when assigning
-    if (body.assigned_to && task.status === 'pending') {
-      task.status = 'assigned';
-    }
-
-    task.updated_at = new Date().toISOString();
-    tasks[idx] = task;
-
-    return NextResponse.json({ task });
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: 'Failed to update task', detail: error.message },
-      { status: 500 },
-    );
-  }
-}
-
-// ── DELETE /api/dispatch/tasks/:id ──────────────────────────────────────────
-export async function DELETE(
-  _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  try {
-    const { id } = await params;
-    const idx = tasks.findIndex((t) => t.id === id);
-
-    if (idx === -1) {
-      return NextResponse.json({ error: 'Task not found' }, { status: 404 });
-    }
-
-    const task = tasks[idx];
-
-    if (task.status === 'completed') {
+  const body = await request.json();
+  const data: any = {};
+  if (body.status !== undefined) {
+    const nextStatus = String(body.status).toUpperCase();
+    if (!STATUS_TRANSITIONS[current.status]?.includes(nextStatus)) {
       return NextResponse.json(
-        { error: 'Cannot cancel a completed task' },
+        { error: `Cannot transition from ${current.status} to ${nextStatus}` },
         { status: 400 },
       );
     }
-
-    task.status = 'cancelled';
-    task.updated_at = new Date().toISOString();
-
-    return NextResponse.json({
-      message: 'Task cancelled',
-      task,
-    });
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: 'Failed to cancel task', detail: error.message },
-      { status: 500 },
-    );
+    data.status = nextStatus;
   }
+  if (body.assigned_to !== undefined || body.assignedWorkerId !== undefined) {
+    const workerId = body.assignedWorkerId ?? body.assigned_to ?? null;
+    data.assignedWorkerId = workerId;
+    if (workerId && ['PENDING', 'UNASSIGNED'].includes(current.status) && !data.status) data.status = 'ASSIGNED';
+  }
+  if (body.priority !== undefined) data.priority = Number(body.priority);
+  if (body.title !== undefined) data.title = String(body.title);
+  if (body.description !== undefined) data.description = body.description || null;
+  if (body.scheduledStart !== undefined) data.scheduledStart = body.scheduledStart ? new Date(body.scheduledStart) : null;
+  if (body.dueAt !== undefined) data.dueAt = body.dueAt ? new Date(body.dueAt) : null;
+
+  await prisma.workOrder.update({ where: { id: current.id }, data });
+  const updated = await prisma.workOrder.findUnique({
+    where: { id: current.id },
+    include: {
+      property: { select: { name: true } },
+      assignedWorker: { include: { user: { select: { name: true } } } },
+      checklistItems: { orderBy: { sortOrder: 'asc' } },
+    },
+  });
+  return NextResponse.json(serialize(updated));
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } },
+) {
+  const auth = await requireOwnerActor(request);
+  if (auth.error) return auth.error;
+  const current = await prisma.workOrder.findUnique({ where: { id: params.id } });
+  if (!current) return NextResponse.json({ error: 'Task not found' }, { status: 404 });
+  if (current.status === 'COMPLETED') {
+    return NextResponse.json({ error: 'Completed tasks cannot be cancelled' }, { status: 400 });
+  }
+  const task = await prisma.workOrder.update({
+    where: { id: current.id },
+    data: { status: 'CANCELLED' },
+  });
+  return NextResponse.json({ success: true, task });
 }

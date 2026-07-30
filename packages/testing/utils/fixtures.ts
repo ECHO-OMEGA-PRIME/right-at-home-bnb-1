@@ -421,6 +421,13 @@ export const TEST_CLEANING_JOBS: Partial<CleaningJob>[] = [
 // FACTORY FUNCTIONS
 // ============================================
 
+let fixtureIdSequence = 0;
+
+function nextFixtureId(prefix: string): string {
+  fixtureIdSequence += 1;
+  return `${prefix}_${Date.now()}_${fixtureIdSequence.toString(36)}`;
+}
+
 /**
  * Create a test property with optional overrides
  */
@@ -428,7 +435,7 @@ export function createTestProperty(overrides: Partial<Property> = {}): Partial<P
   const base = REAL_PROPERTIES[Math.floor(Math.random() * REAL_PROPERTIES.length)];
   return {
     ...base,
-    id: `prop_test_${Date.now()}`,
+    id: nextFixtureId('prop_test'),
     ...overrides
   };
 }
@@ -443,7 +450,7 @@ export function createTestBooking(overrides: Partial<Booking> = {}): Partial<Boo
   checkOut.setDate(checkOut.getDate() + 3);
 
   return {
-    id: `book_test_${Date.now()}`,
+    id: nextFixtureId('book_test'),
     propertyId: 'prop_oasis_pool',
     guestName: 'Test Guest',
     guestEmail: 'test@example.com',
@@ -469,8 +476,8 @@ export function createTestBooking(overrides: Partial<Booking> = {}): Partial<Boo
  */
 export function createTestGuest(overrides: Partial<Guest> = {}): Partial<Guest> {
   return {
-    id: `guest_test_${Date.now()}`,
-    email: `test${Date.now()}@example.com`,
+    id: nextFixtureId('guest_test'),
+    email: `${nextFixtureId('test')}@example.com`,
     name: 'Test Guest',
     phone: '+14325550000',
     role: 'guest',
@@ -489,7 +496,7 @@ export function createTestCleaningJob(overrides: Partial<CleaningJob> = {}): Par
   scheduledDate.setDate(scheduledDate.getDate() + 1);
 
   return {
-    id: `clean_test_${Date.now()}`,
+    id: nextFixtureId('clean_test'),
     propertyId: 'prop_oasis_pool',
     scheduledDate,
     scheduledTime: '10:00',

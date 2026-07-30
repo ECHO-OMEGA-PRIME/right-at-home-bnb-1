@@ -329,10 +329,10 @@ def get_booking_data(booking_id: str) -> Optional[Dict[str, Any]]:
                     {"name": "Wagner Noel Performing Arts Center", "distance": "5 miles"}
                 ]
             },
-            "door_code": "4521",
+            "door_code": None,
             "gate_code": "1234#",
             "wifi_network": "RAHB-Guest-001",
-            "wifi_password": "Welcome2Midland!",
+            "wifi_password": None,
             "access_instructions": "Enter the 4-digit code on the front door keypad, then turn the handle. The door unlocks automatically at 3 PM on check-in day.",
             "parking_instructions": "Park in the driveway or on the street. Do not block the neighbor's driveway.",
             "waivers_required": ["liability"],
@@ -735,7 +735,7 @@ def generate_fallback_response(message: str, booking: Dict[str, Any]) -> str:
     message_lower = message.lower()
 
     if any(word in message_lower for word in ["wifi", "internet", "password"]):
-        return f"Your WiFi network is: {booking.get('wifi_network', 'See check-in instructions')}\nPassword: {booking.get('wifi_password', 'See check-in instructions')}"
+        return "Wi-Fi details are available only in the authenticated active-stay dashboard."
 
     if any(word in message_lower for word in ["code", "door", "lock", "access"]):
         return "Your access codes are available in the Check-In tab of this portal. Codes become available the day before your check-in."

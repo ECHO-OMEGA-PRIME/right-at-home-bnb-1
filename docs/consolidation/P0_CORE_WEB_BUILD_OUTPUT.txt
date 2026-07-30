@@ -1,0 +1,204 @@
+﻿step=WEB_BUILD
+started_utc=2026-07-24T00:49:54.3701512Z
+
+> rightathome-web@1.0.0 build C:\ECHO_OMEGA_PRIME\WORKTREES\rah-p0-core-20260723\apps\web
+> prisma generate && next build
+
+Prisma schema loaded from prisma\schema.prisma
+
+Γ£ö Generated Prisma Client (v5.22.0) to .\..\..\node_modules\.pnpm\@prisma+client@5.22.0_prisma@5.22.0\node_modules\@prisma\client in 426ms
+
+Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
+
+Tip: Interested in query caching in just a few lines of code? Try Accelerate today! https://pris.ly/tip-3-accelerate
+
+   Γû▓ Next.js 14.1.0
+
+   Creating an optimized production build ...
+Browserslist: caniuse-lite is outdated. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+Compiler edge-server unexpectedly exited with code: null and signal: SIGTERM
+ Γ£ô Compiled successfully
+   Skipping linting
+   Checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/132) ...
+
+   Generating static pages (33/132) 
+
+   Generating static pages (66/132) 
+
+   Generating static pages (99/132) 
+
+ Γ£ô Generating static pages (132/132) 
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                Size     First Load JS
+Γöî Γùï /                                      55.6 kB         192 kB
+Γö£ Γùï /_not-found                            891 B          85.5 kB
+Γö£ Γùï /admin/accounting                      4.76 kB         195 kB
+Γö£ Γùï /admin/accounting/ap                   5.28 kB        89.9 kB
+Γö£ Γùï /admin/accounting/ar                   4.99 kB        89.6 kB
+Γö£ Γùï /admin/accounting/reports              5.4 kB           90 kB
+Γö£ Γùï /admin/accounting/transactions         4.88 kB        89.5 kB
+Γö£ Γùï /admin/costs                           6.29 kB         132 kB
+Γö£ Γùï /admin/crm                             5.43 kB         138 kB
+Γö£ ╬╗ /admin/crm/[guestId]                   7.36 kB        98.7 kB
+Γö£ Γùï /admin/dispatch                        5.09 kB          94 kB
+Γö£ Γùï /admin/finance                         10.9 kB         424 kB
+Γö£ Γùï /admin/integrations                    6.45 kB          91 kB
+Γö£ Γùï /admin/inventory                       4.41 kB          89 kB
+Γö£ Γùï /admin/paypal                          9.37 kB         135 kB
+Γö£ Γùï /admin/payroll                         5.18 kB        89.8 kB
+Γö£ Γùï /admin/payroll/employees               5.35 kB        89.9 kB
+Γö£ Γùï /admin/payroll/run                     5.49 kB        90.1 kB
+Γö£ Γùï /admin/planner                         5.25 kB         131 kB
+Γö£ Γùï /admin/reviews                         5.15 kB         131 kB
+Γö£ Γùï /admin/service-costs                   6.18 kB        90.8 kB
+Γö£ Γùï /admin/smart-home                      6.75 kB        91.3 kB
+Γö£ Γùï /admin/taxes                           4.66 kB        89.2 kB
+Γö£ Γùï /admin/vrbo-images                     7.79 kB         128 kB
+Γö£ Γùï /admin/workers                         5.03 kB        94.7 kB
+Γö£ Γùï /analytics                             4.05 kB         390 kB
+Γö£ ╬╗ /api/accounting/journal-entries        0 B                0 B
+Γö£ ╬╗ /api/accounting/reports/balance-sheet  0 B                0 B
+Γö£ ╬╗ /api/accounting/reports/pnl            0 B                0 B
+Γö£ Γùï /api/accounting/summary                0 B                0 B
+Γö£ ╬╗ /api/admin/property-info               0 B                0 B
+Γö£ ╬╗ /api/admin/save-property-images        0 B                0 B
+Γö£ ╬╗ /api/admin/vrbo-ical                   0 B                0 B
+Γö£ ╬╗ /api/admin/vrbo-messages               0 B                0 B
+Γö£ ╬╗ /api/admin/vrbo-scrape                 0 B                0 B
+Γö£ ╬╗ /api/admin/vrbo-status                 0 B                0 B
+Γö£ ╬╗ /api/bookings                          0 B                0 B
+Γö£ ╬╗ /api/bookings/[id]                     0 B                0 B
+Γö£ ╬╗ /api/bookings/availability             0 B                0 B
+Γö£ ╬╗ /api/bookings/calendar                 0 B                0 B
+Γö£ ╬╗ /api/bookings/capture                  0 B                0 B
+Γö£ ╬╗ /api/bookings/checkout                 0 B                0 B
+Γö£ Γùï /api/bookings/conflicts                0 B                0 B
+Γö£ ╬╗ /api/bookings/sync                     0 B                0 B
+Γö£ Γùï /api/bookings/sync/status              0 B                0 B
+Γö£ ╬╗ /api/calls                             0 B                0 B
+Γö£ ╬╗ /api/calls/ai-respond                  0 B                0 B
+Γö£ ╬╗ /api/calls/context-call                0 B                0 B
+Γö£ ╬╗ /api/calls/emergency-ack               0 B                0 B
+Γö£ ╬╗ /api/calls/emergency-callback          0 B                0 B
+Γö£ ╬╗ /api/calls/gather                      0 B                0 B
+Γö£ ╬╗ /api/calls/incoming                    0 B                0 B
+Γö£ ╬╗ /api/calls/status                      0 B                0 B
+Γö£ ╬╗ /api/calls/transcribe                  0 B                0 B
+Γö£ ╬╗ /api/calls/tts                         0 B                0 B
+Γö£ ╬╗ /api/checkout                          0 B                0 B
+Γö£ ╬╗ /api/checkout/square                   0 B                0 B
+Γö£ ╬╗ /api/cleaning                          0 B                0 B
+Γö£ ╬╗ /api/concierge                         0 B                0 B
+Γö£ ╬╗ /api/concierge/chat                    0 B                0 B
+Γö£ ╬╗ /api/costs                             0 B                0 B
+Γö£ ╬╗ /api/costs/summary                     0 B                0 B
+Γö£ ╬╗ /api/crm/guests                        0 B                0 B
+Γö£ ╬╗ /api/crm/guests/[id]                   0 B                0 B
+Γö£ Γùï /api/cron/autonomy-loop                0 B                0 B
+Γö£ ╬╗ /api/cron/guest-messages               0 B                0 B
+Γö£ ╬╗ /api/cron/monitor                      0 B                0 B
+Γö£ ╬╗ /api/cron/vrbo-sync                    0 B                0 B
+Γö£ ╬╗ /api/dashboard/stats                   0 B                0 B
+Γö£ ╬╗ /api/debug                             0 B                0 B
+Γö£ ╬╗ /api/dispatch/employees                0 B                0 B
+Γö£ ╬╗ /api/dispatch/tasks                    0 B                0 B
+Γö£ ╬╗ /api/dispatch/tasks/[id]               0 B                0 B
+Γö£ ╬╗ /api/email/send                        0 B                0 B
+Γö£ ╬╗ /api/expenses                          0 B                0 B
+Γö£ ╬╗ /api/guests                            0 B                0 B
+Γö£ ╬╗ /api/health                            0 B                0 B
+Γö£ ╬╗ /api/integrations/ical                 0 B                0 B
+Γö£ ╬╗ /api/integrations/paypal/auth          0 B                0 B
+Γö£ ╬╗ /api/integrations/paypal/balance       0 B                0 B
+Γö£ ╬╗ /api/integrations/paypal/callback      0 B                0 B
+Γö£ ╬╗ /api/integrations/paypal/invoices      0 B                0 B
+Γö£ ╬╗ /api/integrations/paypal/transactions  0 B                0 B
+Γö£ ╬╗ /api/integrations/vrbo/messages        0 B                0 B
+Γö£ ╬╗ /api/integrations/vrbo/sync            0 B                0 B
+Γö£ ╬╗ /api/integrations/vrbo/webhook         0 B                0 B
+Γö£ ╬╗ /api/inventory                         0 B                0 B
+Γö£ ╬╗ /api/inventory/movements               0 B                0 B
+Γö£ ╬╗ /api/invoices                          0 B                0 B
+Γö£ ╬╗ /api/invoices/[id]                     0 B                0 B
+Γö£ ╬╗ /api/messages/automated                0 B                0 B
+Γö£ ╬╗ /api/monitor/late-cleaners             0 B                0 B
+Γö£ ╬╗ /api/monitor/system                    0 B                0 B
+Γö£ ╬╗ /api/notes                             0 B                0 B
+Γö£ ╬╗ /api/ownerrez                          0 B                0 B
+Γö£ ╬╗ /api/ownerrez/webhook                  0 B                0 B
+Γö£ ╬╗ /api/payroll/calculate                 0 B                0 B
+Γö£ ╬╗ /api/payroll/employees                 0 B                0 B
+Γö£ ╬╗ /api/payroll/employees/[id]            0 B                0 B
+Γö£ ╬╗ /api/payroll/runs                      0 B                0 B
+Γö£ ╬╗ /api/payroll/runs/[id]                 0 B                0 B
+Γö£ ╬╗ /api/properties                        0 B                0 B
+Γö£ ╬╗ /api/properties/[id]                   0 B                0 B
+Γö£ ╬╗ /api/properties/new                    0 B                0 B
+Γö£ ╬╗ /api/reviews                           0 B                0 B
+Γö£ ╬╗ /api/reviews/[id]/respond              0 B                0 B
+Γö£ ╬╗ /api/service-costs                     0 B                0 B
+Γö£ ╬╗ /api/settings                          0 B                0 B
+Γö£ ╬╗ /api/smart-home                        0 B                0 B
+Γö£ ╬╗ /api/smart-home/locks                  0 B                0 B
+Γö£ ╬╗ /api/smart-home/thermostats            0 B                0 B
+Γö£ ╬╗ /api/steven-ai                         0 B                0 B
+Γö£ ╬╗ /api/sync                              0 B                0 B
+Γö£ ╬╗ /api/taxes                             0 B                0 B
+Γö£ ╬╗ /api/vrbo/sync                         0 B                0 B
+Γö£ ╬╗ /api/weather                           0 B                0 B
+Γö£ ╬╗ /api/webhooks/stripe                   0 B                0 B
+Γö£ ╬╗ /api/webhooks/vrbo                     0 B                0 B
+Γö£ Γùï /booking/cancelled                     993 B          92.4 kB
+Γö£ Γùï /booking/complete                      2.83 kB        94.2 kB
+Γö£ Γùï /booking/confirm                       3.02 kB        94.4 kB
+Γö£ Γùï /booking/success                       3.43 kB         130 kB
+Γö£ Γùï /bookings                              16.3 kB         289 kB
+Γö£ Γùï /calendar                              3.96 kB         277 kB
+Γö£ Γùï /cleaners                              8.96 kB         308 kB
+Γö£ Γùï /cleaning                              11.1 kB         286 kB
+Γö£ Γùï /concierge                             12.5 kB         284 kB
+Γö£ Γùï /dashboard                             11.5 kB         184 kB
+Γö£ Γùï /dev-login                             4.2 kB          129 kB
+Γö£ Γùï /finance                               3.68 kB         274 kB
+Γö£ Γùï /guests                                10.3 kB         310 kB
+Γö£ Γùï /lawn-service                          6.84 kB         273 kB
+Γö£ Γùï /locks                                 7.19 kB         278 kB
+Γö£ Γùï /login                                 6.72 kB         267 kB
+Γö£ Γùï /maintenance                           8.05 kB         274 kB
+Γö£ Γùï /messages                              7.63 kB         279 kB
+Γö£ Γùï /notifications                         4.34 kB         270 kB
+Γö£ Γùï /owner                                 4.6 kB          413 kB
+Γö£ Γùï /owner/properties                      3.21 kB         269 kB
+Γö£ Γùï /privacy-policy                        183 B          91.6 kB
+Γö£ Γùï /properties                            12.2 kB         318 kB
+Γö£ ╬╗ /properties/[id]                       7.46 kB         151 kB
+Γö£ ╬╗ /properties/[id]/book                  4.64 kB         103 kB
+Γö£ ╬╗ /properties/new                        10.4 kB         140 kB
+Γö£ Γùï /register                              7.6 kB          263 kB
+Γö£ Γùï /robots.txt                            0 B                0 B
+Γö£ Γùï /settings                              14.4 kB         285 kB
+Γö£ Γùï /sitemap.xml                           0 B                0 B
+Γö£ Γùï /smart-home                            11.1 kB         282 kB
+Γö£ Γùï /steven                                5.14 kB         271 kB
+Γö£ Γùï /terms-of-service                      183 B          91.6 kB
+Γöö Γùï /vrbo                                  5.52 kB         271 kB
++ First Load JS shared by all              84.6 kB
+  Γö£ chunks/4083-74157119e7ba55a0.js        29.1 kB
+  Γö£ chunks/f4944d3e-b8851997bfb13409.js    53.4 kB
+  Γöö other shared chunks (total)            2.12 kB
+
+
+╞Æ Middleware                               43 kB
+
+Γùï  (Static)   prerendered as static content
+╬╗  (Dynamic)  server-rendered on demand using Node.js
+
+completed_utc=2026-07-24T00:52:45.3150779Z
+exit_code=0
+WEB_BUILD_GREEN

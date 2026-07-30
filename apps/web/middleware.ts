@@ -1,203 +1,235 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from 'next/server';
 
-// Routes that require authentication
 const PROTECTED_PREFIXES = [
-  "/admin",
-  "/dashboard",
-  "/bookings",
-  "/calendar",
-  "/cleaning",
-  "/concierge",
-  "/finance",
-  "/guests",
-  "/locks",
-  "/maintenance",
-  "/messages",
-  "/notifications",
-  "/settings",
-  "/smart-home",
-  "/steven",
+  '/admin',
+  '/dashboard',
+  '/owner',
+  '/worker',
+  '/guest/dashboard',
+  '/bookings',
+  '/calendar',
+  '/cleaning',
+  '/concierge',
+  '/finance',
+  '/guests',
+  '/locks',
+  '/maintenance',
+  '/messages',
+  '/notifications',
+  '/settings',
+  '/smart-home',
+  '/steven',
+  '/properties/new',
 ];
 
-// Routes that are always public (no auth check)
-const PUBLIC_ROUTES = [
-  "/",
-  "/properties",
-  "/login",
-  "/register",
-  "/dev-login",
-  "/privacy-policy",
-  "/terms-of-service",
-  "/booking/success",
-  "/booking/complete",
-];
+const PUBLIC_ROUTES = new Set([
+  '/',
+  '/properties',
+  '/login',
+  '/register',
+  '/privacy-policy',
+  '/terms-of-service',
+  '/booking/success',
+  '/booking/complete',
+  '/booking/cancelled',
+]);
 
-// API routes that are public (no auth)
-const PUBLIC_API_ROUTES = [
-  "/api/health",
-  "/api/properties",
-  "/api/webhooks/stripe",
-  "/api/webhooks/vrbo",
-  "/api/integrations/vrbo/webhook",
-  "/api/integrations/ical",
-  "/api/cron",
-  "/api/calls",        // Twilio webhooks (incoming, gather, status, ai-respond, transcribe)
-  "/api/concierge",    // AI concierge (public guest access)
-  "/api/bookings/checkout",  // PayPal direct booking checkout
-  "/api/bookings/capture",   // PayPal payment capture
-];
-
-// Admin-only routes — require owner/admin role
 const ADMIN_ONLY_PREFIXES = [
-  "/admin",
-  "/api/admin",
-  "/api/payroll",
-  "/api/accounting",
-  "/api/integrations/paypal",
-  "/api/expenses",
-  "/api/invoices",
-  "/api/taxes",
-  "/api/settings",
+  '/admin',
+  '/owner',
+  '/properties/new',
+  '/api/admin',
+  '/api/payroll',
+  '/api/accounting',
+  '/api/integrations/paypal',
+  '/api/expenses',
+  '/api/invoices',
+  '/api/taxes',
+  '/api/settings',
+  '/api/properties/new',
 ];
 
-const AUTH_COOKIE_NAME = "rah-auth-token";
+const PUBLIC_API_PREFIXES = [
+  '/api/webhooks/stripe',
+  '/api/webhooks/vrbo',
+  '/api/integrations/vrbo/webhook',
+  '/api/integrations/ical',
+  '/api/cron',
+  '/api/calls',
+  '/api/concierge',
+  '/api/bookings/checkout',
+  '/api/bookings/capture',
+];
 
-type TokenRole = "guest" | "worker" | "admin" | "owner";
+// Defense in depth: these listings are visible for portfolio/history purposes,
+// but their direct-booking forms must not be reachable while inactive.
+const INACTIVE_PROPERTY_SLUGS = new Set([
+  'haynes-2802',
+  'vanguard-6613',
+  'oriole-6100',
+  'gleneagles-4533',
+]);
 
-/**
- * Extract role from auth token.
- * Dev tokens: "dev_role_workerType" or "dev-mode-dev_role_..."
- * Firebase tokens: opaque JWT — we can't decode role in middleware without
- * calling Firebase Admin (Edge doesn't support it), so we set a role cookie.
- */
-function extractRoleFromToken(token: string): TokenRole | null {
-  // Dev mode tokens
-  if (token.startsWith("dev_") || token.startsWith("dev-mode-")) {
-    const clean = token.replace("dev-mode-", "");
-    const parts = clean.split("_");
-    const role = parts[1] as TokenRole;
-    if (["guest", "worker", "admin", "owner"].includes(role)) {
-      return role;
-    }
-    return "guest";
-  }
-  // Firebase JWT — can't decode in Edge Runtime without firebase-admin
-  // Role enforcement for Firebase users happens at API route level
-  return null;
+const AUTH_COOKIE_NAME = 'rah-auth-token';
+type TokenRole = 'guest' | 'worker' | 'admin' | 'owner';
+const VALID_ROLES = new Set<TokenRole>(['guest', 'worker', 'admin', 'owner']);
+
+function devLoginEnabled(): boolean {
+  return process.env.NODE_ENV === 'development' && process.env.ALLOW_DEV_LOGIN === 'true';
 }
 
-function isPublicRoute(pathname: string): boolean {
-  if (PUBLIC_ROUTES.includes(pathname)) return true;
-  if (pathname.startsWith("/properties/")) return true;
-  if (pathname.startsWith("/booking/success")) return true;
-  if (pathname.startsWith("/booking/complete")) return true;
+function isDevToken(token: string): boolean {
+  return token.startsWith('dev_') || token.startsWith('dev-mode-');
+}
+
+function extractRoleFromToken(token: string): TokenRole | null {
+  if (!devLoginEnabled() || !isDevToken(token)) return null;
+  const clean = token.replace(/^dev-mode-/, '');
+  const role = clean.split('_')[1] as TokenRole | undefined;
+  return role && VALID_ROLES.has(role) ? role : null;
+}
+
+function clearAuthCookie(response: NextResponse): NextResponse {
+  response.cookies.delete(AUTH_COOKIE_NAME);
+  return response;
+}
+
+function rejectDevApiToken(): NextResponse {
+  return clearAuthCookie(
+    NextResponse.json(
+      { error: 'Development credentials are not accepted', code: 'UNAUTHORIZED' },
+      { status: 401 },
+    ),
+  );
+}
+
+function rejectDevPageToken(request: NextRequest): NextResponse {
+  const loginUrl = new URL('/login', request.url);
+  loginUrl.searchParams.set('error', 'invalid_session');
+  return clearAuthCookie(NextResponse.redirect(loginUrl));
+}
+
+function inactiveBookingSlug(pathname: string): string | null {
+  const match = pathname.match(/^\/properties\/([^/]+)\/book\/?$/);
+  if (!match) return null;
+  const slug = decodeURIComponent(match[1]);
+  return INACTIVE_PROPERTY_SLUGS.has(slug.toLowerCase()) ? slug : null;
+}
+
+function isPublicPage(pathname: string): boolean {
+  if (PUBLIC_ROUTES.has(pathname)) return true;
+  if (pathname.startsWith('/properties/') && pathname !== '/properties/new') return true;
   return false;
 }
 
-function isPublicApiRoute(pathname: string): boolean {
-  return PUBLIC_API_ROUTES.some(
-    (route) => pathname === route || pathname.startsWith(route + "/")
+function isPublicPropertiesRead(request: NextRequest): boolean {
+  if (request.method !== 'GET') return false;
+  const pathname = request.nextUrl.pathname;
+  if (pathname === '/api/properties') return true;
+  return /^\/api\/properties\/[^/]+$/.test(pathname) && pathname !== '/api/properties/new';
+}
+
+function isPublicApi(request: NextRequest): boolean {
+  const pathname = request.nextUrl.pathname;
+  if (pathname === '/api/health') return true;
+  if (isPublicPropertiesRead(request)) return true;
+  return PUBLIC_API_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   );
 }
 
-function isProtectedRoute(pathname: string): boolean {
+function isProtectedPage(pathname: string): boolean {
   return PROTECTED_PREFIXES.some(
-    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   );
 }
 
-function isAdminOnlyRoute(pathname: string): boolean {
+function isAdminOnly(pathname: string): boolean {
   return ADMIN_ONLY_PREFIXES.some(
-    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   );
+}
+
+function roleRedirect(request: NextRequest, role: TokenRole | null): NextResponse | null {
+  if (!role) return null;
+  const pathname = request.nextUrl.pathname;
+  if ((pathname === '/owner' || pathname.startsWith('/owner/')) && !['owner', 'admin'].includes(role)) {
+    return NextResponse.redirect(new URL(role === 'worker' ? '/worker' : '/guest/dashboard', request.url));
+  }
+  if ((pathname === '/worker' || pathname.startsWith('/worker/')) && role === 'guest') {
+    return NextResponse.redirect(new URL('/guest/dashboard', request.url));
+  }
+  return null;
 }
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const response = NextResponse.next();
 
-  // ── Dev-login: allow through (password-protected on the page itself) ──
-  if (pathname === "/dev-login" || pathname.startsWith("/dev-login/")) {
-    return response;
+  // The legacy client-side role impersonation route is permanently disabled.
+  if (pathname === '/dev-login' || pathname.startsWith('/dev-login/')) {
+    return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  // ── Public page routes — always allow ──
-  if (isPublicRoute(pathname)) {
-    return response;
+  const blockedBookingSlug = inactiveBookingSlug(pathname);
+  if (blockedBookingSlug) {
+    const propertyUrl = new URL(`/properties/${encodeURIComponent(blockedBookingSlug)}`, request.url);
+    propertyUrl.searchParams.set('booking', 'unavailable');
+    return NextResponse.redirect(propertyUrl);
   }
 
-  // ── API routes ──
-  if (pathname.startsWith("/api/")) {
-    // Public API routes (health, webhooks, public property listing)
-    if (isPublicApiRoute(pathname)) {
-      return response;
-    }
+  if (isPublicPage(pathname)) return NextResponse.next();
 
-    // Allow API routes with valid API secret header (programmatic access)
-    const apiSecret = request.headers.get("x-api-secret");
-    if (apiSecret) {
-      return response; // Route handler validates the secret
-    }
+  if (pathname.startsWith('/api/')) {
+    if (isPublicApi(request)) return NextResponse.next();
 
-    // All other API routes require auth cookie
+    const apiSecret = request.headers.get('x-api-secret');
+    if (apiSecret) return NextResponse.next(); // The route handler must validate the value.
+
     const authToken = request.cookies.get(AUTH_COOKIE_NAME)?.value;
     if (!authToken) {
       return NextResponse.json(
-        { error: "Authentication required", code: "UNAUTHORIZED" },
-        { status: 401 }
+        { error: 'Authentication required', code: 'UNAUTHORIZED' },
+        { status: 401 },
       );
     }
+    if (isDevToken(authToken) && !devLoginEnabled()) return rejectDevApiToken();
 
-    // Admin-only API routes — check role from dev token
-    if (isAdminOnlyRoute(pathname)) {
+    if (isAdminOnly(pathname)) {
       const role = extractRoleFromToken(authToken);
-      // If we can determine the role (dev token) and it's not admin/owner, block
-      if (role && role !== "admin" && role !== "owner") {
+      if (role && !['admin', 'owner'].includes(role)) {
         return NextResponse.json(
-          { error: "Admin access required", code: "FORBIDDEN" },
-          { status: 403 }
+          { error: 'Owner access required', code: 'FORBIDDEN' },
+          { status: 403 },
         );
       }
     }
-
-    return response;
+    return NextResponse.next();
   }
 
-  // ── Protected page routes — check for auth cookie ──
-  if (isProtectedRoute(pathname)) {
+  if (isProtectedPage(pathname)) {
     const authToken = request.cookies.get(AUTH_COOKIE_NAME)?.value;
-
     if (!authToken) {
-      const loginUrl = new URL("/login", request.url);
-      loginUrl.searchParams.set("callbackUrl", pathname);
+      const loginUrl = new URL('/login', request.url);
+      loginUrl.searchParams.set('callbackUrl', pathname);
       return NextResponse.redirect(loginUrl);
     }
+    if (isDevToken(authToken) && !devLoginEnabled()) return rejectDevPageToken(request);
 
-    // Admin pages — check role
-    if (isAdminOnlyRoute(pathname)) {
-      const role = extractRoleFromToken(authToken);
-      if (role && role !== "admin" && role !== "owner") {
-        // Workers/guests trying to access admin — redirect to dashboard
-        return NextResponse.redirect(new URL("/dashboard", request.url));
-      }
+    const role = extractRoleFromToken(authToken);
+    const redirect = roleRedirect(request, role);
+    if (redirect) return redirect;
+
+    if (isAdminOnly(pathname) && role && !['admin', 'owner'].includes(role)) {
+      return NextResponse.redirect(new URL(role === 'worker' ? '/worker' : '/properties', request.url));
     }
-
-    return response;
+    return NextResponse.next();
   }
 
-  // ── All other routes — allow through ──
-  return response;
+  return NextResponse.next();
 }
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except:
-     * - _next/static (static files)
-     * - _next/image (image optimization)
-     * - favicon.ico, sitemap.xml, robots.txt
-     * - Public assets (images, fonts, etc.)
-     */
-    "/((?!_next/static|_next/image|favicon\\.ico|sitemap\\.xml|robots\\.txt|.*\\.png$|.*\\.jpg$|.*\\.jpeg$|.*\\.gif$|.*\\.svg$|.*\\.ico$|.*\\.webp$|.*\\.woff2?$|.*\\.ttf$|.*\\.eot$).*)",
+    '/((?!_next/static|_next/image|favicon\\.ico|sitemap\\.xml|robots\\.txt|.*\\.png$|.*\\.jpg$|.*\\.jpeg$|.*\\.gif$|.*\\.svg$|.*\\.ico$|.*\\.webp$|.*\\.woff2?$|.*\\.ttf$|.*\\.eot$).*)',
   ],
 };

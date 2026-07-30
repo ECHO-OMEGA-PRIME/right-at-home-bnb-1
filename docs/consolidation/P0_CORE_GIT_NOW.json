@@ -1,0 +1,21 @@
+﻿{
+    "checked_utc":  "2026-07-24T01:16:09.2789130Z",
+    "branch":  "p0/rah-core-candidate-20260723",
+    "head":  "873c6ab09d6add9c24fdf5c6fde6dd8fe031a01c",
+    "last_subject":  "fix(p0): harden RAH auth and deployment configuration",
+    "staged":  [
+
+               ],
+    "status":  [
+                   " M apps/web/vercel_env_output.txt",
+                   "?? .p0_commit_manifest.py",
+                   "?? .p0_core_validate.ps1",
+                   "?? .p0_finalize_provenance.py",
+                   "?? .p0_normalize_line_endings.py",
+                   "?? .p0_patch_static_hardening.py",
+                   "?? .p0_secret_scan.py",
+                   "?? apps/web/src/components/properties/",
+                   "?? docs/consolidation/"
+               ],
+    "remote_branch":  "873c6ab09d6add9c24fdf5c6fde6dd8fe031a01c\trefs/heads/p0/rah-core-candidate-20260723"
+}

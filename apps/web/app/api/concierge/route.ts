@@ -14,6 +14,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getAreaIntelligence } from '@/lib/area-intelligence';
 
 // API Keys
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
@@ -44,8 +45,6 @@ interface PropertyInfo {
   bathrooms: number;
   sleeps: number;
   amenities: string[];
-  wifi: { network: string; password: string };
-  door_code: string;
   rules: string[];
   features: string[];
 }
@@ -61,16 +60,13 @@ async function getPropertyFromDB(propertySlug: string): Promise<PropertyInfo | n
     const allProps = await prisma.property.findMany({
       where: { status: 'ACTIVE' },
       select: {
-        name: true, address: true, bedrooms: true, bathrooms: true,
-        maxGuests: true, amenities: true, wifiNetwork: true, wifiPassword: true,
-        houseRules: true, checkInInstr: true,
-        smartLock: { select: { currentCode: true } },
-        bookings: {
-          where: { status: 'CONFIRMED', checkOut: { gt: new Date() } },
-          select: { accessCode: true },
-          take: 1,
-          orderBy: { checkIn: 'desc' },
-        },
+        name: true,
+        address: true,
+        bedrooms: true,
+        bathrooms: true,
+        maxGuests: true,
+        amenities: true,
+        houseRules: true,
       },
     });
 
@@ -86,8 +82,6 @@ async function getPropertyFromDB(propertySlug: string): Promise<PropertyInfo | n
 
     const amenities = prop.amenities ? JSON.parse(prop.amenities) : ['WiFi', 'Full Kitchen', 'Parking'];
     const rules = prop.houseRules ? JSON.parse(prop.houseRules) : ['No smoking', 'No parties', 'Quiet hours 10pm-7am'];
-    const doorCode = prop.smartLock?.currentCode || prop.bookings[0]?.accessCode || '****';
-
     return {
       name: prop.name,
       address: prop.address,
@@ -95,11 +89,6 @@ async function getPropertyFromDB(propertySlug: string): Promise<PropertyInfo | n
       bathrooms: prop.bathrooms,
       sleeps: prop.maxGuests,
       amenities,
-      wifi: {
-        network: prop.wifiNetwork || `RightAtHome_${prop.name.split(' ')[0]}`,
-        password: prop.wifiPassword || '',
-      },
-      door_code: doorCode,
       rules,
       features: [],
     };
@@ -222,11 +211,10 @@ const CACHE_CONFIG = {
     general: 30 * 60 * 1000,    // 30 minutes for general queries
     property: 60 * 60 * 1000,   // 1 hour for property info (rarely changes)
     dining: 24 * 60 * 60 * 1000, // 24 hours for restaurant info
-    wifi: 24 * 60 * 60 * 1000,  // 24 hours for wifi/codes
     rules: 24 * 60 * 60 * 1000, // 24 hours for rules
   },
   // Intents that should NEVER be cached (time-sensitive)
-  noCacheIntents: ['events', 'emergency', 'checkout', 'checkin', 'contact'],
+  noCacheIntents: ['events', 'emergency', 'checkout', 'checkin', 'contact', 'wifi', 'access'],
   // Max cache entries before cleanup
   maxEntries: 500,
   // Clean up entries older than this (7 days)
@@ -615,6 +603,8 @@ YOUR PERSONALITY:
 - Knowledgeable about Midland/Odessa area
 - Always offer to help further
 - If you don't know something, offer to connect them with Steven
+- NEVER reveal, guess, generate, retrieve, cache, or repeat door codes, Wi-Fi passwords, payment credentials, private lock identifiers, or another guest's data
+- High-risk actions such as payments, purchases, refunds, booking cancellation, rate changes, and remote unlocks require Steven's explicit approval
 
 STEVEN'S CONTACT:
 - Phone: ${EMERGENCY_INFO.host.phone}
@@ -637,9 +627,8 @@ CURRENT PROPERTY: ${prop.name}
 Address: ${prop.address}
 Bedrooms: ${prop.bedrooms} | Bathrooms: ${prop.bathrooms} | Sleeps: ${prop.sleeps}
 Amenities: ${prop.amenities.join(', ')}
-WiFi Network: ${prop.wifi.network} | Password: ${prop.wifi.password}
-Door Code: ${prop.door_code}
 House Rules: ${prop.rules.join('; ')}
+SECURITY: Never reveal, guess, generate, request, or repeat a door code, Wi-Fi password, payment credential, lock identifier, or private guest data. Authenticated stay details are available only in the guest dashboard.
 
 `;
     }
@@ -648,15 +637,24 @@ House Rules: ${prop.rules.join('; ')}
   // Add guest type context
   prompt += getGuestTypeContext(guestType);
 
-  // Add restaurant knowledge
+  const area = await getAreaIntelligence().catch(() => null);
+  const liveFood = area?.places?.food?.slice(0, 5).map((place) => place.name).join(', ') || 'Live dining source unavailable';
+  const liveMusic = area?.places?.music?.slice(0, 4).map((place) => place.name).join(', ') || 'Live music source unavailable';
+  const liveNightlife = area?.places?.nightlife?.slice(0, 4).map((place) => place.name).join(', ') || 'Live nightlife source unavailable';
+  const liveEvents = area?.events?.slice(0, 5).map((event) => `${event.name}${event.startDate ? ` (${event.startDate})` : ''}`).join('; ') || 'Live event source unavailable';
+  const localHeadlines = area?.news?.local?.slice(0, 4).map((article) => `${article.title} — ${article.source}`).join('; ') || 'Local news source unavailable';
+  const nationalHeadlines = area?.news?.national?.slice(0, 3).map((article) => `${article.title} — ${article.source}`).join('; ') || 'National news source unavailable';
+  const weather = area?.weather?.summary || 'Weather source unavailable';
+
   prompt += `
-TOP RESTAURANT RECOMMENDATIONS:
-- Fine Dining: ${RESTAURANTS.fine_dining.map(r => `${r.name} (${r.cuisine})`).join(', ')}
-- Casual: ${RESTAURANTS.casual.map(r => r.name).join(', ')}
-- Tex-Mex: ${RESTAURANTS.tex_mex.map(r => r.name).join(', ')}
-- BBQ: ${RESTAURANTS.bbq.map(r => `${r.name} - ${r.notes}`).join(', ')}
-- Late Night (24hr): ${RESTAURANTS.late_night.map(r => r.name).join(', ')}
-- Brunch: ${RESTAURANTS.brunch.map(r => r.name).join(', ')}
+LIVE MIDLAND AREA CONTEXT (provider-backed; do not invent missing results):
+- Weather: ${weather}
+- Food: ${liveFood}
+- Live music: ${liveMusic}
+- Nightlife: ${liveNightlife}
+- Events: ${liveEvents}
+- Local headlines: ${localHeadlines}
+- National headlines: ${nationalHeadlines}
 
 PROPERTIES AVAILABLE:
 ${await getAllPropertiesSummary()}
@@ -838,8 +836,8 @@ async function callLLM(messages: ConversationMessage[]): Promise<string> {
 function getFallbackResponse(query: string): string {
   const q = query.toLowerCase();
 
-  if (q.includes('wifi') || q.includes('password') || q.includes('internet')) {
-    return `Your WiFi information should be in your check-in instructions. Each property has its own network - typically named "RightAtHome_[PropertyName]" with password "Welcome2Midland". If you're having trouble connecting, please text Steven at ${EMERGENCY_INFO.host.phone}.`;
+  if (q.includes('wifi') || q.includes('password') || q.includes('internet') || q.includes('door code') || q.includes('access code')) {
+    return `For security, door access and Wi-Fi credentials are never available in public concierge responses. Sign in to your guest dashboard to view eligible stay information or contact Steven at ${EMERGENCY_INFO.host.phone}.`;
   }
 
   if (q.includes('checkout') || q.includes('check out')) {
@@ -848,7 +846,7 @@ function getFallbackResponse(query: string): string {
 - Load and start the dishwasher
 - Strip beds and leave linens in a pile
 - Lock all doors and windows
-- Leave the key/door code unchanged
+- Confirm the door is closed and locked
 
 Need a late checkout? Text Steven at ${EMERGENCY_INFO.host.phone} - we're often flexible if no one is checking in same day!`;
   }
@@ -908,43 +906,8 @@ Hours: 8am-8pm daily
 **Your Host Steven:** ${EMERGENCY_INFO.host.phone}`;
   }
 
-  // Local events, concerts, live music
   if (q.includes('concert') || q.includes('music') || q.includes('live') || q.includes('event') || q.includes('show') || q.includes('band') || q.includes('entertainment') || q.includes('weekend') || q.includes('tonight')) {
-    return `Here's what's happening in Midland/Odessa this weekend:
-
-**LIVE MUSIC & ENTERTAINMENT:**
-
-🎵 **The Blue Door** - 123 E Wall St, Midland
-Live bands Friday & Saturday nights starting 8pm
-Craft cocktails with live music - great vibe!
-
-🍺 **Tall City Brewing** - 203 E Texas Ave, Midland
-Live music most weekends on the patio
-Local craft beer + food trucks
-
-🎸 **La Hacienda Event Center** - 4 E Industrial Loop, Midland
-Check Facebook for upcoming concerts & events
-Large venue for bigger acts
-
-🎤 **Wagner Noël Performing Arts Center** - 1310 N FM 1788, Midland
-Broadway shows, concerts, comedy acts
-Visit wagnernoel.com for current schedule
-
-**ODESSA VENUES:**
-
-🎭 **Ector Theatre** - 500 N Texas Ave, Odessa
-Historic venue with concerts & events
-Check ectortheatre.com for schedule
-
-🎵 **The Barn Door** - 2140 N Grant Ave, Odessa
-Country & western live music
-
-**CHECK THESE FOR CURRENT EVENTS:**
-- Facebook: "Midland TX Events"
-- Midland Reporter-Telegram events section
-- VisitMidlandTexas.com/events
-
-Would you like restaurant recommendations near any of these venues?`;
+    return `Live Midland-area events, music and nightlife results are available in the authenticated area-intelligence panel. I will not invent schedules when a provider is unavailable.`;
   }
 
   return `Here's what I can help you with:
@@ -1011,7 +974,6 @@ export async function GET(request: NextRequest) {
           general: '30 minutes',
           property: '1 hour',
           dining: '24 hours',
-          wifi: '24 hours',
           rules: '24 hours',
         },
         noCacheIntents: CACHE_CONFIG.noCacheIntents,
@@ -1034,7 +996,7 @@ export async function GET(request: NextRequest) {
     },
     capabilities: [
       'Property information and amenities',
-      'WiFi and door codes',
+      'Secure stay-access status without exposing credentials',
       'Local restaurant recommendations',
       'Bar and nightlife suggestions',
       'Local events and attractions',

@@ -1,0 +1,28 @@
+﻿
+path                                                   bytes modified_utc                 sha256                                                          
+----                                                   ----- ------------                 ------                                                          
+docs/consolidation/P0_STATIC_ASSERTIONS_OUTPUT.txt      2050 2026-07-23T23:32:04.0803669Z 9021f6e1848f5a41445a0e7be60899701e16d3607fd8f88cc342074fad897359
+docs/consolidation/P0_WEB_TYPECHECK_OUTPUT.txt           957 2026-07-23T22:22:19.7123808Z 02914faea7b3a12b0818c46cec2c4c5780da54d6b4f715df88ecb6a41a62a7f7
+docs/consolidation/P0_MOBILE_TYPECHECK_OUTPUT.txt       9185 2026-07-23T22:37:30.4494237Z 75a3f02a6f45ff4e1b4c596e1421156c40e0727178b56cfa03f5e5677b963b30
+docs/consolidation/P0_DESKTOP_TYPECHECK_OUTPUT.txt     17840 2026-07-23T23:22:25.1108735Z 5babc79a1250013f76a026e20e1f5b5be99d11fb72a69819a3362114e80387c0
+docs/consolidation/P0_BACKEND_COMPILE_OUTPUT.txt                                                                                                          
+docs/consolidation/P0_PRISMA_VALIDATE_OUTPUT.txt        1386 2026-07-23T22:39:56.7164193Z 570f12267746ea8b02ce6ac138f6ea50c2852fad0001d83279325611db43e68f
+docs/consolidation/P0_SHARED_BUILD_OUTPUT.txt           2664 2026-07-23T22:35:17.7709047Z 73beefea6f232e7a6a37aaaded57512d42ca2f76ca64aed049fb20db9a077c2f
+docs/consolidation/P0_VRBO_MAILBRIDGE_TEST_OUTPUT.txt    104 2026-07-23T22:43:08.5382565Z 86a26a5e35b53503003246ba366fe48e2a5a34f03aca4ec809db6b67bdc16ff5
+docs/consolidation/P0_WEB_BUILD_COMPLETED.txt            255 2026-07-23T22:48:47.3545012Z 26bf0c543d1c3574c51d46363cf4506d1029595257541e5ff7f9b19324da7d11
+docs/consolidation/P0_WEB_BUILD_OUTPUT.txt             13718 2026-07-23T22:48:47.1692790Z 4e1bf9c8d5b9c90d0559ee6f58dc627bd28b3b2c6e8b5ac034d5c13ce7b78740
+docs/consolidation/P0_WEB_BUILD_ERROR.txt                362 2026-07-23T22:47:48.5864416Z c1e355bf3089d55ec4c9009c7426f0c76a8bb6f00d11d94b0a2a46ffcc2a7d5b
+docs/consolidation/P0_TESTING_PACKAGE_OUTPUT.txt       51309 2026-07-23T23:03:20.8470157Z f500af62b78661f694a642b9d3495a98d2f0541188448c0aa57ab8b9b843d690
+docs/consolidation/P0_DESKTOP_TEST_OUTPUT.txt           7636 2026-07-23T23:30:07.0945224Z fb7c88e2a7e9974b91c3340d77bebff00cecd22ca0a024fddd1f80ee22f24ce2
+docs/consolidation/P0_WORKSPACE_TESTS_OUTPUT.txt       74345 2026-07-23T23:30:44.7142716Z 4dd121be9a8f0e1b123d832073109f81b076bcbd947d86140b97c5047a2cb5ab
+docs/consolidation/P0_COMPARE_SOURCES_COMPLETED.txt      267 2026-07-23T23:01:22.8180740Z 5d73b00d8abf4c518496828bb4ffe2da4f330a93250d546ac1bb418b07c28ef2
+docs/consolidation/P0_COMPARE_SOURCES_OUTPUT.txt         325 2026-07-23T23:01:22.3685681Z 84ba8d83dd999040a7ed59d964cea6f076f84fdffa1c929f350d84e43da743c3
+docs/consolidation/P0_C_VS_FABLE_HASH_DIFF.json       173450 2026-07-23T23:01:22.2983057Z 43445b057264feecebd5af4507e16f9512aaaa3f3a5cc40f54b43858d49753b4
+docs/consolidation/P0_C_VS_FABLE_HASH_DIFF.md          39008 2026-07-23T23:01:22.3295700Z 245fd907f00eee744230b16f60f5de7957d0cec251d5b7c8ca10578d4561b4a5
+docs/consolidation/P0_GIT_STATE.txt                    14886 2026-07-23T23:32:25.1036661Z cc0bc632dd70a539f900562b8c6b47b925ca3b7363aa1b9eb547104800bc06d0
+tools/p0_static_assertions.mjs                          9979 2026-07-23T22:48:53.6975743Z 43f97cb087c0b49111a9db9b4af8d38a2fb7cf5c1c89137f0cc1acdff9ad8284
+tools/p0_compare_sources.ps1                            8426 2026-07-23T22:53:36.9232324Z 46260a769108ecbac517f6ac1f586b0b2022e62b1cab9b638408a777f701aff9
+tools/p0_verify_environment.ps1                        15842 2026-07-23T22:17:25.4624287Z 7ca4a8984b46ef5e6181f417048d9191a7e8903b224d570a2c1bbeef1218299c
+
+
+

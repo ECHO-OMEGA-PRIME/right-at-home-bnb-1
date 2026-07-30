@@ -1,0 +1,37 @@
+# RAH dynamic egress watchdog — detects public-IP drift vs the Tuya allowlist.
+# Deploy: /etc/systemd/system/echo-rah-egress-watchdog.service
+# Paired with echo-rah-egress-watchdog.timer (10-minute cadence).
+#
+# NOTE: oneshot + timer — deliberately NO Restart= here. A oneshot with
+# Restart= creates an invisible hot loop; the timer is the re-trigger.
+
+[Unit]
+Description=RAH egress IP watchdog (Tuya allowlist drift detector)
+Documentation=file:/home/forge/rah-monitor/egress_watchdog.py
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=forge
+ExecStart=/usr/bin/python3 /home/forge/rah-monitor/egress_watchdog.py
+StandardInput=null
+StandardOutput=journal
+StandardError=journal
+
+# --- Watchdog configuration -------------------------------------------
+# After an ISP IP change: update the Tuya Cloud allowlist FIRST, then this
+# value, then: systemctl daemon-reload
+Environment=RAH_EXPECTED_EGRESS_IP=107.219.15.225
+Environment=RAH_EGRESS_STATE=/home/forge/rah-monitor/egress_state.json
+# Optional fallback if /home/forge/cc_tg.py is unavailable:
+# Environment=TG_BOT_TOKEN=<bot token for @Echoomegaprimebot>
+# Environment=TG_CHAT_ID=8890692789
+
+# --- Resource + hardening ---------------------------------------------
+MemoryMax=128M
+TimeoutStartSec=90
+Nice=10
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full

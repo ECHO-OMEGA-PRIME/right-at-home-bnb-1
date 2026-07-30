@@ -84,4 +84,4 @@ export const DARK_COLORS = {
   overlayLight: 'rgba(255, 255, 255, 0.05)',
 } as const;
 
-export type ColorTheme = typeof COLORS;
+export type ColorTheme = { [Key in keyof typeof COLORS]: string };

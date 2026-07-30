@@ -1,0 +1,7 @@
+﻿step=PRISMA_VALIDATE
+started_utc=2026-07-24T00:49:51.4839046Z
+Prisma schema loaded from prisma\schema.prisma
+The schema at prisma\schema.prisma is valid ≡ƒÜÇ
+completed_utc=2026-07-24T00:49:53.9479215Z
+exit_code=0
+PRISMA_VALIDATE_GREEN

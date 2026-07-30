@@ -125,7 +125,12 @@ export async function registerTokenWithServer(
   userId: string
 ): Promise<boolean> {
   try {
-    const response = await fetch('https://api.rightathome.bnb/notifications/register', {
+    const apiBase = process.env.EXPO_PUBLIC_API_URL?.replace(/\/+$/, '');
+    if (!apiBase) {
+      throw new Error('EXPO_PUBLIC_API_URL is not configured');
+    }
+
+    const response = await fetch(`${apiBase}/notifications/register`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

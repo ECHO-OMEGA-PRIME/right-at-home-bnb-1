@@ -59,7 +59,7 @@ const ECHO_COLORS = {
 interface SettingSection {
   id: string;
   title: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
 }
 
 const sections: SettingSection[] = [

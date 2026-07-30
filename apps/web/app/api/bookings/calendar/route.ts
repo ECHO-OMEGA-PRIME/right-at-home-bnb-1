@@ -7,6 +7,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PROPERTIES } from '@/lib/property-data';
 
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 // VRBO listing IDs for all active properties
 const VRBO_PROPERTIES: Record<string, { vrboId: string; name: string }> = {};
 for (const p of PROPERTIES) {

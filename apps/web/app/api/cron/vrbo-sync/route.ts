@@ -8,6 +8,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { syncAllProperties, initializeVrboMappings } from '@/lib/integrations/vrbo-sync-service';
 
+export const dynamic = 'force-dynamic';
+
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 

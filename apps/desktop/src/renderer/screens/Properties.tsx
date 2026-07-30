@@ -138,7 +138,7 @@ export default function Properties() {
               vrboId: null,
               createdAt: new Date(),
               updatedAt: new Date(),
-            })) as PropertyWithPhotos[]
+            })) as unknown as PropertyWithPhotos[]
           );
         }
       } catch (error) {
@@ -148,7 +148,7 @@ export default function Properties() {
           contextProperties.map((p) => ({
             ...p,
             photos: [],
-          })) as PropertyWithPhotos[]
+          })) as unknown as PropertyWithPhotos[]
         );
       } finally {
         setLoading(false);

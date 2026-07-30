@@ -19,7 +19,7 @@ pnpm add @rightathome/cloud-sync
 
 ## Firebase Setup
 
-The module uses the `echo-prime-ai` Firebase project. Ensure you have the following environment variables:
+The module uses the `rightathome-prod` Firebase project. Ensure you have the following environment variables:
 
 ```env
 NEXT_PUBLIC_FIREBASE_API_KEY=your-api-key

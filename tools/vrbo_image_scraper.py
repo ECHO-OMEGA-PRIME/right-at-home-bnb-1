@@ -252,7 +252,7 @@ class VRBOImageScraper:
 class FirebaseUploader:
     """Uploads images to Firebase Storage and updates Firestore"""
 
-    def __init__(self, project_id: str = "echo-prime-ai"):
+    def __init__(self, project_id: str = "rightathome-prod"):
         self.project_id = project_id
         self.bucket_name = f"{project_id}.appspot.com"
         self._initialized = False

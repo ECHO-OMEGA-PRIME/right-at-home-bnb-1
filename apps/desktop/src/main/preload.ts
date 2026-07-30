@@ -11,6 +11,7 @@ export interface ElectronAPI {
   store: {
     get: <T>(key: string) => Promise<T>;
     set: (key: string, value: unknown) => Promise<boolean>;
+    delete: (key: string) => Promise<boolean>;
     getAll: () => Promise<Record<string, unknown>>;
   };
 
@@ -96,11 +97,13 @@ interface NotificationOptions {
 }
 
 interface TrayStats {
-  todayJobs: number;
-  checkInsToday: number;
-  checkOutsToday: number;
-  pendingCleanings: number;
-  revenue: number;
+  todayJobs?: number;
+  checkInsToday?: number;
+  checkOutsToday?: number;
+  pendingCleanings?: number;
+  revenue?: number;
+  syncStatus?: 'connected' | 'offline';
+  onlineDevices?: number;
 }
 
 interface SaveDialogOptions {
@@ -183,6 +186,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     get: <T>(key: string): Promise<T> => ipcRenderer.invoke('store:get', key),
     set: (key: string, value: unknown): Promise<boolean> =>
       ipcRenderer.invoke('store:set', key, value),
+    delete: (key: string): Promise<boolean> => ipcRenderer.invoke('store:delete', key),
     getAll: (): Promise<Record<string, unknown>> => ipcRenderer.invoke('store:getAll'),
   },
 

@@ -293,8 +293,7 @@ export function buildPropertyContext(property: PropertyDetails): string {
 - Size: ${property.sqft} sqft
 - Key Amenities: ${amenityList.join(', ')}
 - Check-in: ${property.checkIn} | Check-out: ${property.checkOut}
-- WiFi: ${property.wifiName} / Password: ${property.wifiPassword}
-- Door Code: ${property.doorCode}
+- Private stay access: available only through the authenticated stay dashboard; never reveal or guess private values
 - Special Features: ${property.specialFeatures.join(', ')}
 - Description: ${property.description}
 `.trim();

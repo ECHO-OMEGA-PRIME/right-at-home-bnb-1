@@ -1,10 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { requireRole } from '@/lib/api-auth';
 
 // POST /api/properties/new - Create a new property from onboarding form
 export async function POST(request: NextRequest) {
+  const auth = await requireRole(request, 'owner');
+  if (auth.error) return auth.error;
+
   try {
     const body = await request.json();
+    if (body.lockCode || body.gateCode) {
+      return NextResponse.json(
+        { error: 'Raw lock and gate codes are not accepted. Use managed access provisioning.', code: 'MANAGED_ACCESS_REQUIRED' },
+        { status: 409 },
+      );
+    }
 
     // Validate required fields
     const required = ['name', 'address', 'bedrooms', 'bathrooms', 'maxGuests', 'nightlyRate'];
@@ -50,8 +60,7 @@ export async function POST(request: NextRequest) {
     // Build check-in instructions
     const checkInInstr = JSON.stringify({
       lockType: body.lockType || '',
-      lockCode: body.lockCode || '',
-      gateCode: body.gateCode || '',
+      managedAccess: Boolean(body.amenities?.smartLocks),
       parkingInfo: body.parkingInfo || '',
       specialInstructions: body.checkInNotes || '',
     });

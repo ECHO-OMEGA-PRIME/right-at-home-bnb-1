@@ -78,7 +78,7 @@ async def ask_concierge(query: ConciergeQuery):
     # WiFi
     if "wifi" in q or "internet" in q or "password" in q:
         return {
-            "response": "Your WiFi details:\n\nNetwork: RightAtHome_Guest\nPassword: Welcome2024\n\nThe router is located near the living room TV.",
+            "response": "Wi-Fi details are private. Use the authenticated active-stay dashboard or contact Steven for help.",
             "category": "property_info"
         }
     

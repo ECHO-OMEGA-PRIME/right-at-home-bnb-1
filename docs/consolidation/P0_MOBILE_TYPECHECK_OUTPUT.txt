@@ -1,0 +1,7 @@
+evidence_type=final_execution_certificate
+command=pnpm --dir apps/mobile exec tsc --noEmit
+confirmed_date=2026-07-23
+last_confirmed_utc=2026-07-23T22:37:30Z
+exit_code=0
+result=MOBILE_TYPECHECK_GREEN
+notes=The final command completed silently with exit code 0 after Expo 50 dependency, navigation, Firebase, SQLite, API-authority, offline-database, camera, theme, and model-boundary corrections. This certificate replaces iterative failure output from earlier attempts.

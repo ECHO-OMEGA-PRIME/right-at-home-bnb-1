@@ -1,409 +1,160 @@
-# RAH-MIDLAND.COM — COMPLETE PROJECT STATUS & BUILD PLAN
-## Steven Palma | Right at Home BnB | Midland, TX
-## Target: Fully Autonomous Operations by May 2026
+# RAH-MIDLAND.COM — VERIFIED BUILD STATUS
 
----
+**Owner:** Right at Home BnB / Steven Palma  
+**Production site:** `https://rah-midland.com`  
+**Canonical repository:** `C:\ECHO_OMEGA_PRIME\WEBSITES\right-at-home-bnb`  
+**Local branch:** `cf-to-echo-cloud`  
+**Starting commit:** `f4ee582e74c3ce6c14dae0e5d00e1d44a5355916`  
+**Last verified:** 2026-07-17
 
-## OVERVIEW
+> This document intentionally contains no passwords, API secrets, device identifiers, database credentials, private network addresses, or vault material. Operational secrets must remain in Echo Vault or the approved deployment secret store.
 
-**Website:** https://rah-midland.com (Live, Vercel auto-deploy from GitHub)
-**GitHub:** github.com/bobmcwilliams4/right-at-home-bnb (Private)
-**Properties:** 22 vacation rentals in Midland, TX
-**Owner:** Steven Palma (steven.palma@rah-midland.com | (432) 559-1904)
-**Goal:** Website + apps run the entire business while Steven is in Spain (May 2026)
+## Current verdict
 
----
+| Area | Status | Verified state |
+|---|---|---|
+| Public landing page | PARTIAL | Live; featured properties render, but homepage counters still render as zero |
+| Property directory | PARTIAL | 22 properties render; 18 active and 4 inactive |
+| Property administration | NOT READY | Production still exposes the Add Property control and `/properties/new` to a guest session |
+| Direct booking | NOT READY | Inactive properties still expose direct-booking and Vrbo booking links |
+| Authentication | PARTIAL | Local middleware hardening exists but has not been built, deployed, and independently verified |
+| Credential hygiene | BLOCKED | Credentials were found in tracked public documentation; local documentation is now sanitized, but exposed credentials require rotation and Git history remediation |
+| Vrbo mailbox ingestion | NOT STARTED | Read-only MailBridge and parser pipeline are not certified |
+| Calendar reconciliation | NOT STARTED | Email + Vrbo iCal + RAH iCal reconciliation is not certified |
+| Finance synchronization | NOT STARTED | Unified reservation and payout ledger is not certified |
+| Tuya automation | DISABLED FOR AUTONOMOUS USE | Do not generate or revoke guest PINs until reservation accuracy, credential rotation, and readback verification pass |
+| Mobile app | NOT CERTIFIED | UI exists; production builds and end-to-end tests are not verified |
+| Desktop app | NOT CERTIFIED | UI exists; packaging and end-to-end tests are not verified |
 
-## TECH STACK
+## Immediate security actions
 
-| Layer | Technology | Status |
-|-------|-----------|--------|
-| Frontend | Next.js 15 + React 19 + TailwindCSS | LIVE |
-| Hosting | Vercel (auto-deploy from GitHub) | LIVE |
-| Database | Prisma ORM + Supabase PostgreSQL | ✅ PRODUCTION |
-| Auth | Firebase Authentication | CONFIGURED |
-| Real-time | Firebase Firestore | CONFIGURED |
-| Backend API | Next.js API Routes + FastAPI on FORGE (`api.rah-midland.com` via cloudflared tunnel) | ✅ CODE READY — deploy via `backend/deploy/install-forge.sh` |
-| Mobile App | React Native + Expo | UI BUILT, NOT DEPLOYED |
-| Desktop App | Electron + React | UI BUILT, NOT DEPLOYED |
-| Smart Locks | Tuya Cloud API (ARPHA D280W WiFi) | API LIVE, 3 LOCKS CONNECTED |
-| Channel Manager | OwnerRez (free trial) — decision pending | PENDING |
-| Voice/Calls | Twilio (calls + SMS) | ✅ CREDENTIALS SET |
-| AI / LLM | Echo SDK gate → `echo.claude.oauth` ($0 Max-OAuth, primary) + GROQ fallback. Replaced Cloudflare Workers AI 2026-05-20. | ✅ CODE READY |
-| Object Storage | MinIO on ANVIL `192.168.1.96:9000` (S3-compatible). Replaced Cloudflare R2 2026-05-20. | ✅ CODE READY |
-| AI Concierge | Groq + fallback to SENTINEL-OMNI | CODE READY |
-| TTS | ElevenLabs v3 | CODE READY |
-| Payments | Stripe + Square | CODE EXISTS, NOT CONFIGURED |
-| Email | Zoho SMTP (rah-midland.com domain) | CONFIGURED |
+1. Rotate every credential that appeared in repository history, including the smart-lock cloud secret and the property-management account password.
+2. Revoke or replace any affected tokens, sessions, application secrets, and derived credentials.
+3. Review provider audit logs for use after the first public commit containing the exposed material.
+4. Remove secrets from Git history with an approved history-rewrite procedure, then invalidate stale clones and deployments.
+5. Add repository-wide secret scanning for source, documentation, fixtures, generated files, and staged commits.
+6. Keep device identifiers, private infrastructure addresses, database endpoints, and account-recovery details out of public documentation.
 
----
+## Verified production defects — 2026-07-17
 
-## SMART LOCK SYSTEM — TUYA / ARPHA D280W
+### P0 — Authorization
 
-### Status: API VERIFIED LIVE
+- Guest-facing `/properties` renders an `Add Property` control.
+- A guest session can load `/properties/new` and see the complete ten-step property creation form.
+- Local `apps/web/middleware.ts` has an uncommitted guard for `/properties/new`, but it has not been compiled, deployed, or regression-tested.
+- The properties page still needs role-aware rendering so guests never see administrative controls.
 
-**Locks Installed:**
+### P0 — Booking safety
 
-| Property | Device ID | Status | Battery |
-|----------|-----------|--------|---------|
-| Garfield | `eb066e65fa99294ea78miv` | ONLINE, LOCKED | 100% |
-| Castleford | `eb51f7fbcf98b9d955wqb9` | MAPPED | TBD |
-| Lincoln Green | `eb6d7ec17a24e8948dnhee` | MAPPED | TBD |
+The production API reports four inactive properties:
 
-**Tuya Cloud Credentials (in Echo Vault):**
-- Client ID: `3f5a7je79x58r8yscvxw`
-- Client Secret: `781115f4900d43dc9b66eaa27f56ca7c`
-- Data Center: Western America (`openapi.tuyaus.com`)
-- Smart Life Account: rightathomemidland@gmail.com
-- UID: `bay1773877962749xHcZ`
+- `haynes-2802`
+- `Vanguard-6613`
+- `Oriole-6100`
+- `gleneagles-4533`
 
-**API Verified:**
-- Token generation: WORKING
-- Device status query: WORKING (Garfield tested 2026-04-02)
-- Temporary password creation endpoint: AVAILABLE
-- Temporary password deletion endpoint: AVAILABLE
-- Entry logs endpoint: AVAILABLE
+At least one verified inactive property still renders:
 
-**Automation Flow (code-complete, needs end-to-end test):**
+- `Book Now — Best Price`
+- `Or book on VRBO`
+- direct-booking savings messaging
+
+Inactive or maintenance properties must render an unavailable/request-to-book state and must not expose a bookable URL.
+
+### P1 — Public data and presentation
+
+- Homepage counters render as zero despite the site describing 22 properties.
+- The public properties route can briefly or statically render zero-state content before hydration.
+- `/profile`, image optimization failures, Firebase permission errors, and hydration errors require a fresh browser-console and network pass after the authorization fixes deploy.
+- Login password autocomplete behavior requires revalidation.
+
+## Current local hardening retained
+
+The July 16 local working tree includes security work that must be preserved and validated:
+
+- default property PINs and fallback passwords removed from active web, mobile, and Python source
+- public concierge fallbacks replaced with authenticated-dashboard guidance
+- legacy webhook code-generation and test-email behavior disabled
+- `/properties/new` added to protected and admin-only middleware prefixes
+- API property reads narrowed to GET-only public access
+- owner/worker/guest route redirection tightened
+- operational authorization and secure-notification modules added
+
+This work is **not certified** until the exact dirty tree is inventoried and the full validation matrix passes.
+
+## Required validation matrix
+
+Run from the canonical repository without resetting, cleaning, stashing, or overwriting unrelated work:
+
+```text
+pnpm typecheck
+pnpm exec prisma validate
+pnpm db:generate
+pnpm build
+pnpm test
 ```
-Booking confirmed (any source)
-  → tuya-lock-client.ts creates time-limited 6-digit code
-  → Code pushed to ARPHA D280W lock via Tuya Cloud API
-  → Guest receives code via email + SMS
-  → Check-out time → code auto-deleted via Tuya API
-  → Lock auto-locks (10 second timer configured on hardware)
-  → Thermostat resets to eco mode (65°F)
+
+Also run:
+
+- targeted backend tests for modified Python services
+- repository-wide credential scan excluding dependency caches but including documentation and fixtures
+- staged-tree secret scan before commit
+- unauthenticated `/properties/new` denial test
+- guest UI test proving Add Property is absent
+- inactive-property test proving no direct or Vrbo booking action exists
+- homepage counter regression test
+- browser console, page-error, failed-request, hydration, and image checks
+- production deployment smoke test from the exact committed source
+
+## Vrbo synchronization sequence
+
+Do not enable instant direct booking until these gates pass:
+
+1. Register approved opaque browser credential capabilities.
+2. Rotate exposed mailbox/property-management credentials.
+3. Generate a provider-approved application password or secure mail key and store it only in Echo Vault.
+4. Verify read-only TLS IMAP connectivity.
+5. Import 90–180 days of historical messages without deleting, moving, or marking them read.
+6. Build versioned parsers for reservations, changes, cancellations, payments, refunds, payouts, claims, and guest messages.
+7. Route unknown templates to `PARSER_REVIEW_REQUIRED` with no booking, calendar, payment, or lock mutation.
+8. Create unified reservation records with source message hashes and parser provenance.
+9. Reconcile reservation email, Vrbo iCal, and RAH iCal state.
+10. On disagreement, set `SYNC_AT_RISK`, preserve existing bookings, block instant confirmation, and require operator reconciliation.
+
+## Direct-booking release gate
+
+The only permitted sequence is:
+
+```text
+availability check
+→ temporary date hold
+→ payment authorization
+→ final conflict check
+→ reservation persistence
+→ RAH calendar update
+→ owner notification
+→ payment capture
 ```
 
-**Code:** `apps/web/src/lib/tuya-lock-client.ts`
-**API Route:** `apps/web/app/api/smart-home/route.ts`
+When mailbox or calendar state is stale, the site must show `Request to Book` rather than instant confirmation.
 
-**REMAINING WORK:**
-- [ ] End-to-end test: create temp code → verify on physical lock → delete code
-- [ ] Test code expiration (time-limited validity)
-- [ ] Wire booking trigger → auto code generation
-- [ ] Install locks on remaining 19 properties
-- [ ] Set up Tuya webhook for real-time lock/unlock notifications
-- [ ] Battery monitoring alerts (notify Steven when < 20%)
+## Smart-lock release gate
 
----
+Autonomous temporary PIN creation remains disabled until:
 
-## CHANNEL MANAGER / PMS — DECISION NEEDED
+- the reservation is confirmed by reconciled sources
+- property-to-lock mapping is verified
+- PIN creation succeeds
+- lock readback confirms the PIN
+- activation and expiration windows are correct
+- cancellation revokes the exact reservation PIN
+- revocation readback succeeds
+- no credential or PIN enters logs, browser state, source control, or evidence
 
-### Current: OwnerRez Free Trial (14 days)
-**Login:** sp3158@sbcglobal.net / Maxwell2824! (2FA via email)
-**API Status:** Need 2FA code from Steven to generate `pt_*` API token
+Remote unlock remains operator-approved.
 
-### Options Researched:
+## Current execution blocker
 
-| Platform | Cost (22 props) | API Quality | VRBO+Airbnb | Recommendation |
-|----------|-----------------|-------------|-------------|----------------|
-| Lodgify | $96-120/mo | Good | Yes | CHEAPEST |
-| Beds24 | $154-220/mo | Strong | Yes | BEST VALUE |
-| OwnerRez | $300-400/mo | Best | Yes | BEST API |
+The local command capabilities `claude.windows.run` and `claude.windows.process_create` are returning persistent Cloudflare `502 origin_bad_gateway` responses from `forge.echo-op.com`. This prevents truthful execution of Git status, TypeScript, Prisma, tests, builds, and commit/push gates.
 
-### What the PMS Does:
-1. Syncs calendar across VRBO, Airbnb, Booking.com (prevents double bookings)
-2. Manages rates/pricing across all channels
-3. Receives booking notifications from all channels
-4. Sends automated guest messages (pre-arrival, check-in, mid-stay, checkout)
-5. Processes payments (via Stripe)
-6. Feeds bookings into RAH-midland.com → triggers smart lock code generation
-
-### Integration Built (ready to wire up):
-- `apps/web/src/lib/ownerrez-client.ts` — Full OwnerRez v2 REST API client
-- `apps/web/src/lib/ownerrez-migration.ts` — Data export/migration tool
-- `apps/web/app/api/ownerrez/route.ts` — API routes (health, properties, bookings, export)
-- `apps/web/app/api/ownerrez/webhook/route.ts` — Real-time booking event receiver
-
-**REMAINING WORK:**
-- [ ] Steven provides 2FA code → generate OwnerRez API token
-- [ ] OR decide on alternative PMS (Lodgify/Beds24)
-- [ ] Wire PMS booking webhook → smart lock code generation
-- [ ] Wire PMS booking webhook → automated guest messaging
-- [ ] Test full flow: VRBO booking → PMS → RAH site → lock code → guest notification
-
----
-
-## WEBSITE (rah-midland.com) — DETAILED STATUS
-
-### Pages — What's REAL vs MOCK
-
-| Page | URL | Status | Issue |
-|------|-----|--------|-------|
-| Landing page | `/` | REAL | Live, public-facing |
-| Properties list | `/properties` | MOCK DATA | Property data hardcoded in `property-knowledge.ts`, images are Unsplash placeholders |
-| Login | `/login` | REAL | Firebase auth |
-| Dev Login | `/dev-login` | ✅ SECURED | Server-side redirect to /login in production, dev-only access |
-| Register | `/register` | REAL | Firebase auth |
-| Dashboard | `/dashboard` | PARTIAL | UI real, some data sources mock |
-| Bookings | `/bookings` | REAL | Prisma database |
-| Calendar | `/calendar` | REAL | Calendar integration |
-| Guests | `/guests` | REAL | Firebase-backed |
-| Finance | `/finance` | REAL | Firebase expense tracking |
-| Cleaning | `/cleaning` | MOCK STORAGE | UI real, but uses in-memory Map() — data lost on restart |
-| Cleaners | `/cleaners` | NEEDS VERIFICATION | |
-| Messages | `/messages` | REAL | Firebase-backed |
-| Notifications | `/notifications` | REAL | |
-| Settings | `/settings` | REAL | |
-| Smart Locks | `/locks` | REAL | Tuya integration |
-| Smart Home | `/smart-home` | NEEDS VERIFICATION | |
-| Concierge | `/concierge` | REAL | AI-powered |
-| Steven AI | `/steven` | REAL | AI personality + voice |
-| Analytics | `/analytics` | NEEDS VERIFICATION | |
-| Maintenance | `/maintenance` | NEEDS VERIFICATION | |
-| Lawn Service | `/lawn-service` | NEEDS VERIFICATION | |
-| Privacy Policy | `/privacy-policy` | STATIC | |
-| Terms of Service | `/terms-of-service` | STATIC | |
-
-### API Routes — What's REAL vs MOCK
-
-| Endpoint | Status | Issue |
-|----------|--------|-------|
-| `/api/bookings` | REAL | Prisma DB — needs PostgreSQL for production |
-| `/api/properties` | MOCK DATA | Returns hardcoded property array |
-| `/api/cleaning` | ✅ FIXED | Prisma persistent storage (was in-memory Map) |
-| `/api/sync` | ✅ FIXED | Real iCal feed sync for Airbnb/VRBO (was fake delays) |
-| `/api/debug` | ✅ SECURED | Returns 404 in production unless secret key provided |
-| `/api/ownerrez` | REAL | OwnerRez API client (needs credentials) |
-| `/api/ownerrez/webhook` | REAL | Webhook receiver |
-| `/api/smart-home` | ✅ FIXED | Real Tuya lock control + Prisma storage (was in-memory) |
-| `/api/calls/*` | REAL | Twilio integration (needs credentials) |
-| `/api/steven-ai` | REAL | Groq API + SENTINEL-OMNI fallback |
-| `/api/concierge` | ✅ FIXED | Property data from DB, no hardcoded WiFi/codes in source |
-| `/api/checkout` | ✅ REAL | Full Stripe checkout integration |
-| `/api/checkout/square` | ✅ REAL | Full Square payment integration |
-| `/api/email/send` | ✅ REAL | Resend + SendGrid multi-provider |
-| `/api/messages/automated` | ✅ FIXED | Prisma storage + real Twilio SMS + email sending |
-| `/api/weather` | REAL | Weather API proxy |
-| `/api/vrbo/sync` | NEEDS VERIFICATION | |
-| `/api/webhooks/vrbo` | NEEDS VERIFICATION | |
-| `/api/guests` | ✅ REAL | Full Prisma CRUD with pagination |
-| `/api/admin/*` | ✅ REAL | VRBO scraper + Firebase image upload |
-| `/api/cron/*` | ✅ REAL | Cleaner monitor + system health cron |
-| `/api/monitor/*` | ✅ REAL | Late cleaners + system alerts |
-| `/api/settings` | ✅ FIXED | Prisma Setting model (was in-memory + cookies) |
-
-### Libraries — What's REAL vs MOCK
-
-| Library | Status | Issue |
-|---------|--------|-------|
-| `firebase-memory.ts` | REAL | Firebase Firestore integration |
-| `steven-memory.ts` | REAL | Firebase-backed guest memory |
-| `airbnb-integration.ts` | REAL | iCal feed parsing |
-| `ownerrez-client.ts` | REAL | OwnerRez v2 API client |
-| `ownerrez-migration.ts` | REAL | Data export/migration |
-| `tuya-lock-client.ts` | REAL | Tuya smart lock API (verified live) |
-| `twilio.ts` | REAL | Twilio calls/SMS |
-| `prisma.ts` | REAL | Database ORM |
-| `weather.ts` | REAL | Weather API |
-| `email-templates.ts` | REAL | Email templates |
-| `steven-personality.ts` | REAL | AI personality system |
-| `financials.ts` | REAL | Firebase expense tracking |
-| `local-events.ts` | REAL | Midland TX events |
-| `occupancy-calculator.ts` | REAL | Occupancy math |
-| `property-knowledge.ts` | MOCK | Hardcoded 22 properties — needs DB migration |
-| `property-images.ts` | ✅ DB-BACKED | Pulls from PropertyPhoto DB, falls back to static VRBO data |
-| `demo-mode.ts` | MOCK | Demo configuration — disable for production |
-| `cleaning-system.ts` | PARTIAL | Checklist real, storage needs fix |
-| `cleaning-checklist.ts` | PARTIAL | Hardcoded checklists |
-| `crm.ts` | STUB | CRM placeholder |
-| `crash-alert.ts` | STUB | Minimal implementation |
-| `calendar-sync.ts` | NEEDS VERIFICATION | |
-| `ai-concierge-brain.ts` | PARTIAL | Calendar integration TODO |
-
----
-
-## DATABASE
-
-### Production: Supabase PostgreSQL ✅ LIVE
-- **Project:** right-at-home-bnb (`ufdgnphupeknvkcocrmp`)
-- **Region:** us-east-1
-- **URL:** https://ufdgnphupeknvkcocrmp.supabase.co
-- **User:** `rah_app` (dedicated app user, not superuser)
-- **Pooler:** `postgresql://rah_app.ufdgnphupeknvkcocrmp:***@aws-0-us-east-1.pooler.supabase.com:6543/postgres`
-- **Direct:** `postgresql://rah_app:***@db.ufdgnphupeknvkcocrmp.supabase.co:5432/postgres`
-- **Tables:** All 12 Prisma models created (User, Property, PropertyPhoto, Guest, Booking, CleaningJob, SmartLock, Message, Expense, ConciergeQuery, AuditLog, Setting)
-- **Schema pushed:** 2026-04-02 via `prisma db push`
-
-### Remaining DB Tasks:
-- [x] Provision PostgreSQL
-- [x] Push schema
-- [ ] Set DATABASE_URL + DIRECT_URL on Vercel (needs Vercel CLI auth)
-- [ ] Seed 22 properties from property-knowledge.ts
-- [ ] Migrate existing Firebase data to PostgreSQL
-
-### Firebase Firestore Collections (REAL, in use):
-- `rah_memory` — AI memory
-- `steven_guests` — Guest profiles
-- `rah_properties` — Property data
-- `rah_context` — Context storage
-- `bookings` — Booking records
-- `vrbo_listings` — VRBO sync
-- `airbnb_listings` — Airbnb sync
-- `expenses` — Financial tracking
-
----
-
-## MOBILE APP (Cleaner/Owner App)
-
-### Status: UI BUILT, NOT DEPLOYED
-
-**Location:** `apps/mobile/`
-**Framework:** React Native + Expo
-
-**Screens Built:**
-- Home screen
-- Jobs list + detail
-- Booking detail
-- Calendar
-- Cleaning management
-- Messages
-- Leaderboard
-- Settings
-
-**What Works:**
-- React Query hooks configured for API fetching
-- UI components complete
-- Navigation structure complete
-
-**What's Missing:**
-- [ ] Not built/compiled for iOS or Android
-- [ ] API integration not verified end-to-end
-- [ ] Push notifications not configured
-- [ ] GPS check-in for cleaners not tested
-- [ ] Photo upload for cleaning verification not tested
-- [ ] App Store / Play Store listing not created
-
----
-
-## DESKTOP APP (Admin Control Center)
-
-### Status: UI BUILT, NOT DEPLOYED
-
-**Location:** `apps/desktop/`
-**Framework:** Electron + React
-
-**Screens Built:**
-- Dashboard
-- Properties + Property Detail
-- Bookings
-- Cleaners
-- Finance
-- Smart Locks
-- Settings
-
-**Services Built:**
-- Calendar service
-- Cleaning service
-- Invoicing service
-- Encryption service
-- Audit service
-- Pricing service
-- Logging service
-
-**What's Missing:**
-- [ ] Electron packaging not configured
-- [ ] Offline-first sync not verified
-- [ ] Cross-platform sync (Firebase) not tested
-- [ ] Installer creation (Windows + Mac)
-
----
-
-## CREDENTIALS IN VAULT
-
-### Echo Vault API (https://echo-vault-api.bmcii1976.workers.dev)
-
-| Service | Status | In Vault |
-|---------|--------|----------|
-| Tuya Cloud API | VERIFIED LIVE | Yes — Client ID + Secret |
-| Tuya Lock Garfield | VERIFIED LIVE | Yes — Device ID |
-| Tuya Lock Castleford | MAPPED | Yes — Device ID |
-| Tuya Lock Lincoln Green | MAPPED | Yes — Device ID |
-| Smart Life App | CONFIGURED | Yes — rightathomemidland@gmail.com |
-| OwnerRez Login | STORED | Yes — sp3158@sbcglobal.net (needs 2FA for API token) |
-| Firebase | NEEDS CHECK | Check if in vault |
-| Twilio | NEEDS CHECK | Check if in vault |
-| Stripe | NOT CONFIGURED | No |
-| Square | NOT CONFIGURED | No |
-| ElevenLabs | NEEDS CHECK | Check if in vault |
-| Groq | NEEDS CHECK | Check if in vault |
-| Google Maps | NEEDS CHECK | Check if in vault |
-
----
-
-## CRITICAL PATH TO MAY 2026
-
-### PHASE 1: Foundation (Week 1-2) — BLOCKING
-
-| # | Task | Status | Blocker |
-|---|------|--------|---------|
-| 1 | Steven provides OwnerRez 2FA code | WAITING | Steven sleeping |
-| 2 | Decide PMS: OwnerRez vs Lodgify vs Beds24 | WAITING | Steven decision |
-| 3 | Set up PostgreSQL production database | NOT STARTED | |
-| 4 | Fix in-memory cleaning storage → Firestore/Prisma | NOT STARTED | |
-| 5 | Remove `/dev-login` from production | NOT STARTED | |
-| 6 | Replace hardcoded property data with DB queries | NOT STARTED | |
-| 7 | Replace Unsplash images with real VRBO property photos | NOT STARTED | |
-| 8 | Configure ALL environment variables on Vercel | NOT STARTED | |
-
-### PHASE 2: Integrations (Week 2-3)
-
-| # | Task | Status | Blocker |
-|---|------|--------|---------|
-| 9 | Wire PMS → smart lock code generation | NOT STARTED | Phase 1 #1-2 |
-| 10 | Wire PMS → automated guest messaging | NOT STARTED | Phase 1 #1-2 |
-| 11 | End-to-end test Tuya lock code creation/deletion | NOT STARTED | |
-| 12 | Configure + test Twilio calls/SMS | NOT STARTED | |
-| 13 | Configure + test Stripe/Square payments | NOT STARTED | |
-| 14 | Configure + test email sending (Zoho SMTP) | NOT STARTED | |
-| 15 | Verify all 11 "NEEDS CHECK" API endpoints | NOT STARTED | |
-
-### PHASE 3: Apps (Week 3-4)
-
-| # | Task | Status | Blocker |
-|---|------|--------|---------|
-| 16 | Build + test mobile app (Expo) | NOT STARTED | |
-| 17 | Deploy mobile app to TestFlight / Play Store beta | NOT STARTED | |
-| 18 | Build + test desktop app (Electron) | NOT STARTED | |
-| 19 | Test cross-platform sync (web ↔ mobile ↔ desktop) | NOT STARTED | |
-| 20 | Install locks on remaining 19 properties | NOT STARTED | Steven action |
-
-### PHASE 4: Production Hardening (Week 4+)
-
-| # | Task | Status | Blocker |
-|---|------|--------|---------|
-| 21 | Full end-to-end test: VRBO booking → code → guest → checkout | NOT STARTED | |
-| 22 | Full end-to-end test: Direct booking → payment → code → guest | NOT STARTED | |
-| 23 | Set up monitoring + alerting | NOT STARTED | |
-| 24 | Load testing | NOT STARTED | |
-| 25 | Steven UAT (user acceptance testing) | NOT STARTED | |
-| 26 | Go live — Steven leaves for Spain | TARGET: MAY 2026 | |
-
----
-
-## FILES CREATED THIS SESSION (2026-04-02)
-
-| File | Purpose |
-|------|---------|
-| `apps/web/src/lib/ownerrez-client.ts` | OwnerRez v2 API client (properties, bookings, guests, quotes, availability) |
-| `apps/web/src/lib/ownerrez-migration.ts` | OwnerRez data export + feature parity checklist |
-| `apps/web/src/lib/tuya-lock-client.ts` | Tuya smart lock API (temp codes, status, entry logs) |
-| `apps/web/app/api/ownerrez/route.ts` | OwnerRez API routes (health, properties, bookings, export) |
-| `apps/web/app/api/ownerrez/webhook/route.ts` | OwnerRez webhook receiver |
-| `.env.example` | Updated with OwnerRez + Tuya config |
-| `RAH_MIDLAND_PROJECT_STATUS.md` | This document |
-
----
-
-## CONTACT
-
-- **Steven Palma:** steven.palma@rah-midland.com | (432) 559-1904
-- **Smart Life Account:** rightathomemidland@gmail.com
-- **OwnerRez Account:** sp3158@sbcglobal.net
-- **GitHub Repo:** github.com/bobmcwilliams4/right-at-home-bnb
-
----
-
-*Last Updated: 2026-04-02 by ECHO OMEGA PRIME*
-*Authority: Bobby Don McWilliams II — Level 11.0 SUPREME SOVEREIGN*
+No source validation, deployment, commit, or push may be claimed until that origin is restored and the required commands pass.

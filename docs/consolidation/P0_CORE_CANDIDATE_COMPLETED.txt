@@ -1,0 +1,3 @@
+﻿completed_utc=2026-07-24T00:52:45.3236245Z
+overall_exit_code=0
+P0_CORE_CANDIDATE_GREEN

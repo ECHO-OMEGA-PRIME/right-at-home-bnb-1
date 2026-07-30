@@ -25,9 +25,9 @@ interface ValidationResult {
 // Firebase configuration
 const firebaseConfig = {
   apiKey: process.env.FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY || '',
-  authDomain: 'echo-prime-ai.firebaseapp.com',
-  projectId: 'echo-prime-ai',
-  storageBucket: 'echo-prime-ai.appspot.com',
+  authDomain: 'rightathome-prod.firebaseapp.com',
+  projectId: 'rightathome-prod',
+  storageBucket: 'rightathome-prod.appspot.com',
   messagingSenderId: '249995513427',
   appId: process.env.FIREBASE_APP_ID || process.env.NEXT_PUBLIC_FIREBASE_APP_ID || ''
 };

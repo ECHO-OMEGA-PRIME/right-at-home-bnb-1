@@ -4,14 +4,17 @@
  * POST — Update property info fields (wifi, parking, check-in/out, rules, etc.)
  */
 
+import crypto from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
-const API_SECRET = process.env.ADMIN_API_SECRET || 'rah-vrbo-sync-2026';
-
 function verifySecret(request: NextRequest): boolean {
-  const secret = request.headers.get('x-api-secret');
-  return secret === API_SECRET;
+  const expected = process.env.ADMIN_API_SECRET || '';
+  const supplied = request.headers.get('x-api-secret') || '';
+  if (!expected || !supplied) return false;
+  const left = Buffer.from(supplied);
+  const right = Buffer.from(expected);
+  return left.length === right.length && crypto.timingSafeEqual(left, right);
 }
 
 const INFO_FIELDS = {

@@ -59,7 +59,7 @@ const ECHO_COLORS = {
 };
 
 // Amenity icon mapping
-const amenityIcons: Record<string, React.ComponentType<{ className?: string }>> = {
+const amenityIcons: Record<string, React.ComponentType<{ className?: string; style?: React.CSSProperties }>> = {
   WiFi: Wifi,
   Parking: Car,
   Pool: Droplet,
@@ -231,8 +231,10 @@ const PhotoGalleryModal: React.FC<{
               idx === currentIndex ? 'ring-2 ring-offset-2' : 'opacity-60 hover:opacity-100'
             }`}
             style={{
-              ringColor: ECHO_COLORS.echoOrange,
-              ringOffsetColor: ECHO_COLORS.echoBlack,
+              boxShadow:
+                idx === currentIndex
+                  ? `0 0 0 2px ${ECHO_COLORS.echoOrange}, 0 0 0 4px ${ECHO_COLORS.echoBlack}`
+                  : undefined,
             }}
           >
             {photo.url ? (
@@ -291,7 +293,7 @@ export default function PropertyDetail({ propertyId, onBack }: PropertyDetailPro
               vrboId: null,
               createdAt: new Date(),
               updatedAt: new Date(),
-            } as PropertyWithPhotos);
+            } as unknown as PropertyWithPhotos);
           }
         }
       } catch (error) {
@@ -302,7 +304,7 @@ export default function PropertyDetail({ propertyId, onBack }: PropertyDetailPro
           setProperty({
             ...contextProperty,
             photos: [],
-          } as PropertyWithPhotos);
+          } as unknown as PropertyWithPhotos);
         }
       } finally {
         setLoading(false);

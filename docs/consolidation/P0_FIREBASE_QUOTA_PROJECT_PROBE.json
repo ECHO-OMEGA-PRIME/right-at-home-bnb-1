@@ -1,0 +1,39 @@
+{
+  "checked_utc": "2026-07-24T05:39:04.702195+00:00",
+  "account": "bmcii1976@gmail.com",
+  "target_project": "rightathome-prod",
+  "token_exit_code": 0,
+  "token_obtained": true,
+  "successful_quota_project_count": 0,
+  "recovered_web_config_count": 0,
+  "attempts": [
+    {
+      "quota_project": "echo-prime-ai",
+      "project_status": 403,
+      "webapps_status": 403,
+      "webapp_count": 0,
+      "access_granted": false,
+      "project_error": "The caller does not have permission",
+      "webapps_error": "The caller does not have permission"
+    },
+    {
+      "quota_project": "echo-prime-ai-7f259",
+      "project_status": 403,
+      "webapps_status": 403,
+      "webapp_count": 0,
+      "access_granted": false,
+      "project_error": "Caller does not have required permission to use project echo-prime-ai-7f259. Grant the caller the roles/serviceusage.serviceUsageConsumer role, or a custom role with the serviceusage.services.use permission, by visiting https://console.developers.google.com/iam-admin/iam?project=echo-prime-ai-7f259 and then retry. Propagation of the new permission may take a few minutes.",
+      "webapps_error": "Caller does not have required permission to use project echo-prime-ai-7f259. Grant the caller the roles/serviceusage.serviceUsageConsumer role, or a custom role with the serviceusage.services.use permission, by visiting https://console.developers.google.com/iam-admin/iam?project=echo-prime-ai-7f259 and then retry. Propagation of the new permission may take a few minutes."
+    },
+    {
+      "quota_project": "rightathome-prod",
+      "project_status": 403,
+      "webapps_status": 403,
+      "webapp_count": 0,
+      "access_granted": false,
+      "project_error": "Caller does not have required permission to use project rightathome-prod. Grant the caller the roles/serviceusage.serviceUsageConsumer role, or a custom role with the serviceusage.services.use permission, by visiting https://console.developers.google.com/iam-admin/iam?project=rightathome-prod and then retry. Propagation of the new permission may take a few minutes.",
+      "webapps_error": "Caller does not have required permission to use project rightathome-prod. Grant the caller the roles/serviceusage.serviceUsageConsumer role, or a custom role with the serviceusage.services.use permission, by visiting https://console.developers.google.com/iam-admin/iam?project=rightathome-prod and then retry. Propagation of the new permission may take a few minutes."
+    }
+  ],
+  "private_output": "C:\\ECHO_OMEGA_PRIME\\WEBSITES\\right-at-home-bnb\\docs\\consolidation\\P0_FIREBASE_RECOVERED_WEB_CONFIG_PRIVATE.json"
+}

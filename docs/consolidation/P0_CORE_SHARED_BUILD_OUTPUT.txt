@@ -1,0 +1,48 @@
+﻿step=SHARED_BUILD
+started_utc=2026-07-24T00:49:11.5968593Z
+
+> @rightathome/shared@1.0.0 build C:\ECHO_OMEGA_PRIME\WORKTREES\rah-p0-core-20260723\packages\shared
+> tsup src/index.ts src/types/index.ts src/sync/index.ts src/sync/hooks.ts src/firebase/index.ts src/api/index.ts --format cjs,esm --dts
+
+[34mCLI[39m Building entry: src/index.ts, src/api/index.ts, src/firebase/index.ts, src/sync/hooks.ts, src/sync/index.ts, src/types/index.ts
+[34mCLI[39m Using tsconfig: tsconfig.json
+[34mCLI[39m tsup v8.5.1
+[34mCLI[39m Target: es2020
+[34mCJS[39m Build start
+[34mESM[39m Build start
+[32mESM[39m [1mdist\chunk-LOLJLZCX.mjs [22m[32m0 B[39m
+[32mESM[39m [1mdist\index.mjs          [22m[32m3.73 KB[39m
+[32mESM[39m [1mdist\chunk-J4Z6AEFQ.mjs [22m[32m7.30 KB[39m
+[32mESM[39m [1mdist\api\index.mjs      [22m[32m142.00 B[39m
+[32mESM[39m [1mdist\chunk-UIBXSDYJ.mjs [22m[32m6.05 KB[39m
+[32mESM[39m [1mdist\chunk-6YHHJK63.mjs [22m[32m4.48 KB[39m
+[32mESM[39m [1mdist\chunk-VW65ZAVM.mjs [22m[32m4.99 KB[39m
+[32mESM[39m [1mdist\sync\hooks.mjs     [22m[32m428.00 B[39m
+[32mESM[39m [1mdist\firebase\index.mjs [22m[32m478.00 B[39m
+[32mESM[39m [1mdist\types\index.mjs    [22m[32m32.00 B[39m
+[32mESM[39m [1mdist\sync\index.mjs     [22m[32m166.00 B[39m
+[32mESM[39m ΓÜí∩╕Å Build success in 191ms
+[32mCJS[39m [1mdist\index.js          [22m[32m28.24 KB[39m
+[32mCJS[39m [1mdist\api\index.js      [22m[32m8.32 KB[39m
+[32mCJS[39m [1mdist\firebase\index.js [22m[32m5.98 KB[39m
+[32mCJS[39m [1mdist\types\index.js    [22m[32m764.00 B[39m
+[32mCJS[39m [1mdist\sync\hooks.js     [22m[32m11.72 KB[39m
+[32mCJS[39m [1mdist\sync\index.js     [22m[32m6.47 KB[39m
+[32mCJS[39m ΓÜí∩╕Å Build success in 196ms
+[34mDTS[39m Build start
+[32mDTS[39m ΓÜí∩╕Å Build success in 12418ms
+[32mDTS[39m [1mdist\index.d.ts           [22m[32m2.64 KB[39m
+[32mDTS[39m [1mdist\api\index.d.ts       [22m[32m3.89 KB[39m
+[32mDTS[39m [1mdist\firebase\index.d.ts  [22m[32m3.88 KB[39m
+[32mDTS[39m [1mdist\sync\hooks.d.ts      [22m[32m2.45 KB[39m
+[32mDTS[39m [1mdist\sync\index.d.ts      [22m[32m3.08 KB[39m
+[32mDTS[39m [1mdist\types\index.d.ts     [22m[32m8.63 KB[39m
+[32mDTS[39m [1mdist\index.d.mts          [22m[32m2.64 KB[39m
+[32mDTS[39m [1mdist\api\index.d.mts      [22m[32m3.89 KB[39m
+[32mDTS[39m [1mdist\firebase\index.d.mts [22m[32m3.88 KB[39m
+[32mDTS[39m [1mdist\sync\hooks.d.mts     [22m[32m2.45 KB[39m
+[32mDTS[39m [1mdist\sync\index.d.mts     [22m[32m3.08 KB[39m
+[32mDTS[39m [1mdist\types\index.d.mts    [22m[32m8.63 KB[39m
+completed_utc=2026-07-24T00:49:27.6020470Z
+exit_code=0
+SHARED_BUILD_GREEN

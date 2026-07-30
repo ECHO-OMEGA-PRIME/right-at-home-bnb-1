@@ -1,0 +1,4 @@
+﻿completed_utc=2026-07-23T22:48:47.3439644Z
+exit_code=0
+stdout=C:\ECHO_OMEGA_PRIME\WEBSITES\right-at-home-bnb\docs\consolidation\P0_WEB_BUILD_OUTPUT.txt
+stderr=C:\ECHO_OMEGA_PRIME\WEBSITES\right-at-home-bnb\docs\consolidation\P0_WEB_BUILD_ERROR.txt

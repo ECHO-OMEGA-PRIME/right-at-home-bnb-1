@@ -1,173 +1,175 @@
 #!/usr/bin/env python3
-"""
-Right at Home BnB - Vercel Environment Sync Tool
-Pulls credentials from ECHO OMEGA PRIME vault and syncs to Vercel
+"""Safely validate or sync RAH Midland Firebase variables to Vercel.
 
-Usage:
-    python tools/sync-vercel-env.py --list     # List vars to sync
-    python tools/sync-vercel-env.py --sync     # Sync to Vercel
-    python tools/sync-vercel-env.py --preview  # Preview only (don't sync)
+This tool never reads from a hardcoded drive or legacy vault path. Values must
+already be present in the current process environment. Nothing is changed
+unless --sync and the exact confirmation token are both supplied.
 """
 
+from __future__ import annotations
+
+import argparse
+import os
+import shutil
 import subprocess
 import sys
-import json
-import argparse
 from pathlib import Path
+from typing import Dict, Iterable
 
-# Add ECHO vault to path
-sys.path.insert(0, "O:/ECHO_OMEGA_PRIME/core")
+EXPECTED_PROJECT_ID = "rightathome-prod"
+CONFIRMATION_TOKEN = "SYNC_RAH_VERCEL_ENV"
 
-# Environment variables to sync from vault to Vercel
-VERCEL_ENV_CONFIG = {
-    # Format: "VERCEL_VAR_NAME": ("vault_service", "vault_username") or "static_value"
-
-    # Firebase (public keys)
-    "NEXT_PUBLIC_FIREBASE_API_KEY": ("firebase_echo_prime", "echo-prime-ai"),
-    "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN": "echo-prime-ai.firebaseapp.com",
-    "NEXT_PUBLIC_FIREBASE_PROJECT_ID": "echo-prime-ai",
-    "NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET": "echo-prime-ai.appspot.com",
-    "NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "249995513427",
-    "NEXT_PUBLIC_FIREBASE_APP_ID": "1:249995513427:web:310bf6cf8b171cddb140a6",
-
-    # AI / Chat
-    "GROQ_API_KEY": ("API_KEYS", "GROQ_API_KEY"),
-
-    # Voice TTS
-    "ELEVENLABS_API_KEY": ("API_KEYS", "ELEVENLABS_API_KEY"),
-    "ELEVENLABS_STEVEN_VOICE_ID": "keDMh3sQlEXKM4EQxvvi",  # ECHO Prime voice
-}
+FIREBASE_VARIABLES = (
+    "NEXT_PUBLIC_FIREBASE_API_KEY",
+    "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN",
+    "NEXT_PUBLIC_FIREBASE_PROJECT_ID",
+    "NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET",
+    "NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID",
+    "NEXT_PUBLIC_FIREBASE_APP_ID",
+    "FIREBASE_PROJECT_ID",
+    "FIREBASE_STORAGE_BUCKET",
+    "FIREBASE_SERVICE_ACCOUNT",
+)
 
 
-def get_vault():
-    """Get ECHO credential vault instance."""
-    try:
-        from credential_vault import CloudCredentialVault
-        return CloudCredentialVault()
-    except ImportError:
-        print("ERROR: Could not import ECHO vault. Make sure O:/ECHO_OMEGA_PRIME/core is accessible.")
-        sys.exit(1)
+def read_values(names: Iterable[str]) -> Dict[str, str]:
+    return {name: os.environ.get(name, "").strip() for name in names}
 
 
-def get_env_values():
-    """Resolve all environment values from vault or static."""
-    vault = get_vault()
-    result = {}
+def validate(values: Dict[str, str]) -> list[str]:
+    errors: list[str] = []
+    missing = [name for name, value in values.items() if not value]
+    if missing:
+        errors.append("Missing variables: " + ", ".join(missing))
 
-    for var_name, source in VERCEL_ENV_CONFIG.items():
-        if isinstance(source, str):
-            # Static value
-            result[var_name] = source
-        else:
-            # Vault lookup: (service, username)
-            service, username = source
-            cred = vault.get_credential(service, username)
-            if cred:
-                result[var_name] = cred.get("password", "")
-            else:
-                # Try searching by just username
-                for c in vault.credentials.values():
-                    if c.get("username") == username:
-                        result[var_name] = c.get("password", "")
-                        break
-                else:
-                    print(f"WARNING: Could not find {var_name} in vault ({service}/{username})")
-                    result[var_name] = ""
+    client_project = values.get("NEXT_PUBLIC_FIREBASE_PROJECT_ID", "")
+    admin_project = values.get("FIREBASE_PROJECT_ID", "")
 
-    return result
+    if client_project and client_project != EXPECTED_PROJECT_ID:
+        errors.append(
+            f"NEXT_PUBLIC_FIREBASE_PROJECT_ID must be {EXPECTED_PROJECT_ID}, "
+            f"not {client_project}."
+        )
+    if admin_project and admin_project != EXPECTED_PROJECT_ID:
+        errors.append(
+            f"FIREBASE_PROJECT_ID must be {EXPECTED_PROJECT_ID}, not {admin_project}."
+        )
+    if client_project and admin_project and client_project != admin_project:
+        errors.append("Client and Admin Firebase project IDs do not match.")
+
+    return errors
 
 
-def list_vars():
-    """List all environment variables and their values (masked)."""
-    values = get_env_values()
-    print("\n=== Environment Variables to Sync ===\n")
-    for name, value in sorted(values.items()):
-        if value:
-            masked = value[:8] + "..." if len(value) > 12 else value
-            print(f"  {name}: {masked}")
-        else:
-            print(f"  {name}: [NOT SET]")
-    print()
+def print_status(values: Dict[str, str]) -> None:
+    print("RAH Vercel environment status")
+    print(f"Expected Firebase project: {EXPECTED_PROJECT_ID}")
+    for name in FIREBASE_VARIABLES:
+        print(f"  {name}: {'SET' if values.get(name) else 'MISSING'}")
 
 
-def preview_sync():
-    """Preview the Vercel commands that would be run."""
-    values = get_env_values()
-    print("\n=== Vercel Sync Preview ===\n")
-    print("Commands that would be run:\n")
-    for name, value in sorted(values.items()):
-        if value:
-            print(f'vercel env add {name} production < (echo "{value[:8]}...")')
-    print()
+def require_vercel_cli() -> str:
+    executable = shutil.which("vercel")
+    if not executable:
+        raise RuntimeError("Vercel CLI is not installed or not on PATH.")
+    return executable
 
 
-def sync_to_vercel():
-    """Actually sync environment variables to Vercel."""
-    values = get_env_values()
-
-    print("\n=== Syncing to Vercel ===\n")
-
-    for name, value in sorted(values.items()):
-        if not value:
-            print(f"  SKIP {name}: No value")
-            continue
-
-        try:
-            # Use vercel env add with stdin
-            # First remove if exists (ignore error)
-            subprocess.run(
-                ["vercel", "env", "rm", name, "production", "--yes"],
-                capture_output=True,
-                cwd=Path(__file__).parent.parent
-            )
-
-            # Add the new value
-            result = subprocess.run(
-                ["vercel", "env", "add", name, "production"],
-                input=value.encode(),
-                capture_output=True,
-                cwd=Path(__file__).parent.parent
-            )
-
-            if result.returncode == 0:
-                print(f"  OK {name}")
-            else:
-                error = result.stderr.decode() if result.stderr else "Unknown error"
-                print(f"  ERROR {name}: {error}")
-
-        except FileNotFoundError:
-            print("ERROR: Vercel CLI not found. Install with: npm i -g vercel")
-            sys.exit(1)
-        except Exception as e:
-            print(f"  ERROR {name}: {e}")
-
-    print("\n=== Sync Complete ===")
-    print("\nNOTE: You may need to redeploy for changes to take effect:")
-    print("  vercel --prod")
-    print()
+def run_vercel(
+    executable: str,
+    arguments: list[str],
+    cwd: Path,
+    input_text: str | None = None,
+) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [executable, *arguments],
+        cwd=cwd,
+        input=input_text,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Sync ECHO vault to Vercel")
-    parser.add_argument("--list", action="store_true", help="List vars to sync")
-    parser.add_argument("--preview", action="store_true", help="Preview commands")
-    parser.add_argument("--sync", action="store_true", help="Actually sync to Vercel")
+def sync(values: Dict[str, str], environment: str, confirm: str) -> int:
+    if confirm != CONFIRMATION_TOKEN:
+        print(
+            f"Refusing to sync. Pass --confirm {CONFIRMATION_TOKEN} exactly.",
+            file=sys.stderr,
+        )
+        return 2
 
+    errors = validate(values)
+    if errors:
+        for error in errors:
+            print(f"ERROR: {error}", file=sys.stderr)
+        return 2
+
+    executable = require_vercel_cli()
+    project_dir = Path(__file__).resolve().parent.parent
+
+    project_result = run_vercel(executable, ["project", "inspect"], project_dir)
+    if project_result.returncode != 0:
+        print("Unable to inspect the linked Vercel project.", file=sys.stderr)
+        print(project_result.stderr.strip(), file=sys.stderr)
+        return project_result.returncode or 1
+
+    for name in FIREBASE_VARIABLES:
+        value = values[name]
+
+        # Vercel CLI does not provide a portable atomic upsert. Validate every
+        # value first, then replace one variable at a time without printing it.
+        run_vercel(
+            executable,
+            ["env", "rm", name, environment, "--yes"],
+            project_dir,
+        )
+        result = run_vercel(
+            executable,
+            ["env", "add", name, environment],
+            project_dir,
+            input_text=value,
+        )
+        if result.returncode != 0:
+            print(f"ERROR updating {name}: {result.stderr.strip()}", file=sys.stderr)
+            return result.returncode or 1
+        print(f"Updated {name} for {environment}.")
+
+    print("Environment sync complete. A new immutable deployment is still required.")
+    return 0
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        description="Validate or sync RAH Firebase variables to the linked Vercel project."
+    )
+    parser.add_argument("--check", action="store_true", help="Validate environment only.")
+    parser.add_argument("--preview", action="store_true", help="Show variable presence only.")
+    parser.add_argument("--sync", action="store_true", help="Replace variables in Vercel.")
+    parser.add_argument(
+        "--environment",
+        choices=("production", "preview", "development"),
+        default="production",
+    )
+    parser.add_argument("--confirm", default="")
     args = parser.parse_args()
 
-    if args.list:
-        list_vars()
-    elif args.preview:
-        preview_sync()
-    elif args.sync:
-        sync_to_vercel()
-    else:
-        # Default: show help
+    values = read_values(FIREBASE_VARIABLES)
+    print_status(values)
+    errors = validate(values)
+
+    if errors:
+        for error in errors:
+            print(f"ERROR: {error}", file=sys.stderr)
+        return 2
+
+    if args.sync:
+        return sync(values, args.environment, args.confirm)
+
+    print("Validation passed. No Vercel changes were made.")
+    if not args.check and not args.preview:
         parser.print_help()
-        print("\n\nQuick start:")
-        print("  python tools/sync-vercel-env.py --list   # See what will be synced")
-        print("  python tools/sync-vercel-env.py --sync   # Sync to Vercel")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

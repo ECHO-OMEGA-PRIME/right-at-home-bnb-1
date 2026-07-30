@@ -17,27 +17,34 @@ datasource db {
 // ============================================
 
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  name          String
-  phone         String?
-  avatarUrl     String?
-  role          String    @default("GUEST")
-  isActive      Boolean   @default(true)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id        String   @id @default(cuid())
+  email     String   @unique
+  authUid   String?  @unique
+  name      String
+  phone     String?
+  avatarUrl String?
+  role      String   @default("GUEST")
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  cleaningJobs  CleaningJob[]
-  expenses      Expense[]
-  approvedMsgs  Message[]     @relation("ApprovedBy")
+  cleaningJobs     CleaningJob[]
+  expenses         Expense[]
+  approvedMsgs     Message[]          @relation("ApprovedBy")
+  workerProfile    WorkerProfile?
+  requestedWork    WorkOrder[]        @relation("WorkOrderRequestedBy")
+  requestedActions ConciergeAction[]  @relation("ConciergeActionRequestedBy")
+  approvedActions  ConciergeAction[]  @relation("ConciergeActionApprovedBy")
+  accessGrants     AccessGrant[]
+  assignedAlerts   OperationalAlert[] @relation("AlertAssignee")
 
   // Performance indexes
   @@index([email])
   @@index([role])
-  @@index([isActive])                     // Filter active users
-  @@index([role, isActive])               // Composite: active users by role
-  @@index([createdAt])                    // Sort by creation date
+  @@index([isActive]) // Filter active users
+  @@index([role, isActive]) // Composite: active users by role
+  @@index([createdAt]) // Sort by creation date
 }
 
 // ============================================
@@ -45,30 +52,30 @@ model User {
 // ============================================
 
 model Property {
-  id              String    @id @default(cuid())
-  name            String
-  address         String
-  city            String    @default("Midland")
-  state           String    @default("TX")
-  zipCode         String?
-  latitude        Float?
-  longitude       Float?
+  id        String  @id @default(cuid())
+  name      String
+  address   String
+  city      String  @default("Midland")
+  state     String  @default("TX")
+  zipCode   String?
+  latitude  Float?
+  longitude Float?
 
   // Property Details
-  bedrooms        Int
-  bathrooms       Float
-  maxGuests       Int
-  squareFeet      Int?
-  propertyType    String    @default("HOUSE")
+  bedrooms     Int
+  bathrooms    Float
+  maxGuests    Int
+  squareFeet   Int?
+  propertyType String @default("HOUSE")
 
   // Amenities & Info (stored as JSON string)
-  amenities       String?
-  wifiNetwork     String?
-  wifiPassword    String?
-  parkingInfo     String?
-  checkInInstr    String?
-  checkOutInstr   String?
-  houseRules      String?
+  amenities     String?
+  wifiNetwork   String?
+  wifiPassword  String?
+  parkingInfo   String?
+  checkInInstr  String?
+  checkOutInstr String?
+  houseRules    String?
 
   // Cleaning
   cleaningChecklist String?
@@ -79,44 +86,51 @@ model Property {
   securityDeposit Float?
 
   // External IDs
-  airbnbId        String?
-  vrboId          String?
+  airbnbId String?
+  vrboId   String?
 
   // Status
-  status          String    @default("ACTIVE")
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  status    String   @default("ACTIVE")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  bookings        Booking[]
-  cleaningJobs    CleaningJob[]
-  smartLock       SmartLock?
-  expenses        Expense[]
-  photos          PropertyPhoto[]
-  vrboSync        VrboSync?
+  bookings           Booking[]
+  cleaningJobs       CleaningJob[]
+  smartLock          SmartLock?
+  expenses           Expense[]
+  photos             PropertyPhoto[]
+  vrboSync           VrboSync?
+  workOrders         WorkOrder[]
+  serviceRates       PropertyServiceRate[]
+  checklistTemplates PropertyChecklistTemplate[]
+  serviceSchedules   ServiceSchedule[]
+  accessGrants       AccessGrant[]
+  guestRequests      GuestRequest[]
+  operationalAlerts  OperationalAlert[]
 
   // Performance indexes
   @@index([status])
   @@index([city])
-  @@index([status, city])             // Composite: filter by status and city
-  @@index([propertyType])             // Filter by property type
-  @@index([bedrooms])                 // Filter by bedroom count
-  @@index([nightlyRate])              // Sort/filter by price
-  @@index([airbnbId])                 // Lookup by external ID
-  @@index([vrboId])                   // Lookup by external ID
-  @@index([createdAt])                // Sort by creation date
+  @@index([status, city]) // Composite: filter by status and city
+  @@index([propertyType]) // Filter by property type
+  @@index([bedrooms]) // Filter by bedroom count
+  @@index([nightlyRate]) // Sort/filter by price
+  @@index([airbnbId]) // Lookup by external ID
+  @@index([vrboId]) // Lookup by external ID
+  @@index([createdAt]) // Sort by creation date
 }
 
 model PropertyPhoto {
-  id          String    @id @default(cuid())
-  propertyId  String
-  url         String
-  caption     String?
-  isPrimary   Boolean   @default(false)
-  sortOrder   Int       @default(0)
-  createdAt   DateTime  @default(now())
+  id         String   @id @default(cuid())
+  propertyId String
+  url        String
+  caption    String?
+  isPrimary  Boolean  @default(false)
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
 
-  property    Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
 
   @@index([propertyId])
 }
@@ -126,54 +140,55 @@ model PropertyPhoto {
 // ============================================
 
 model Guest {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  name          String
-  phone         String?
+  id    String  @id @default(cuid())
+  email String  @unique
+  name  String
+  phone String?
 
   // Source
-  platform      String    @default("DIRECT")
-  platformId    String?
+  platform   String  @default("DIRECT")
+  platformId String?
 
   // CRM Data
-  firstStay     DateTime?
-  lastStay      DateTime?
-  totalStays    Int       @default(0)
-  totalSpent    Float     @default(0)
-  avgRating     Float?
+  firstStay  DateTime?
+  lastStay   DateTime?
+  totalStays Int       @default(0)
+  totalSpent Float     @default(0)
+  avgRating  Float?
 
   // Tags & Preferences (stored as JSON string)
-  tags          String?
-  notes         String?
-  preferences   String?
+  tags        String?
+  notes       String?
+  preferences String?
 
   // VIP Status
-  isVip         Boolean   @default(false)
-  vipTier       String?
+  isVip   Boolean @default(false)
+  vipTier String?
 
   // Special Dates
-  birthday      DateTime?
-  anniversary   DateTime?
+  birthday    DateTime?
+  anniversary DateTime?
 
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  bookings      Booking[]
-  messages      Message[]
+  bookings         Booking[]
+  messages         Message[]
   conciergeQueries ConciergeQuery[]
+  guestRequests    GuestRequest[]
 
   // Performance indexes
   @@index([email])
   @@index([isVip])
-  @@index([platform])                     // Filter by booking platform
-  @@index([platform, platformId])         // Lookup by platform ID
-  @@index([totalStays])                   // Sort by stay count (loyalty)
-  @@index([totalSpent])                   // Sort by revenue (VIP identification)
-  @@index([lastStay])                     // Filter by recency
-  @@index([isVip, totalSpent])            // Composite: VIP ranking
-  @@index([createdAt])                    // Sort by registration date
-  @@index([birthday])                     // Birthday campaign targeting
+  @@index([platform]) // Filter by booking platform
+  @@index([platform, platformId]) // Lookup by platform ID
+  @@index([totalStays]) // Sort by stay count (loyalty)
+  @@index([totalSpent]) // Sort by revenue (VIP identification)
+  @@index([lastStay]) // Filter by recency
+  @@index([isVip, totalSpent]) // Composite: VIP ranking
+  @@index([createdAt]) // Sort by registration date
+  @@index([birthday]) // Birthday campaign targeting
 }
 
 // ============================================
@@ -181,45 +196,49 @@ model Guest {
 // ============================================
 
 model Booking {
-  id            String    @id @default(cuid())
-  propertyId    String
-  guestId       String
+  id         String @id @default(cuid())
+  propertyId String
+  guestId    String
 
   // Dates
-  checkIn       DateTime
-  checkOut      DateTime
+  checkIn  DateTime
+  checkOut DateTime
 
   // Details
-  guestCount    Int       @default(1)
-  platform      String    @default("DIRECT")
-  confirmCode   String?
+  guestCount  Int     @default(1)
+  platform    String  @default("DIRECT")
+  confirmCode String?
 
   // Pricing
-  nightlyRate   Float
-  totalNights   Int
-  subtotal      Float
-  cleaningFee   Float?
-  serviceFee    Float?
-  taxes         Float?
-  totalPrice    Float
+  nightlyRate Float
+  totalNights Int
+  subtotal    Float
+  cleaningFee Float?
+  serviceFee  Float?
+  taxes       Float?
+  totalPrice  Float
 
   // Access
   accessCode    String?
   codeExpiresAt DateTime?
 
   // Status
-  status        String    @default("CONFIRMED")
+  status        String  @default("CONFIRMED")
   specialReqs   String?
   internalNotes String?
 
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  property      Property  @relation(fields: [propertyId], references: [id])
-  guest         Guest     @relation(fields: [guestId], references: [id])
+  property      Property           @relation(fields: [propertyId], references: [id])
+  guest         Guest              @relation(fields: [guestId], references: [id])
   cleaningJob   CleaningJob?
   messages      Message[]
+  workOrders    WorkOrder[]
+  accessGrants  AccessGrant[]
+  guestRequests GuestRequest[]
+  alerts        OperationalAlert[]
 
   // Performance indexes
   @@index([propertyId])
@@ -227,13 +246,13 @@ model Booking {
   @@index([checkIn])
   @@index([checkOut])
   @@index([status])
-  @@index([propertyId, checkIn])          // Composite: property availability queries
-  @@index([propertyId, status])           // Composite: property bookings by status
+  @@index([propertyId, checkIn]) // Composite: property availability queries
+  @@index([propertyId, status]) // Composite: property bookings by status
   @@index([propertyId, checkIn, checkOut]) // Composite: date range availability
-  @@index([platform, status])             // Filter by platform and status
-  @@index([platform])                     // Filter by booking source
-  @@index([createdAt])                    // Sort by creation date
-  @@index([confirmCode])                  // Lookup by confirmation code
+  @@index([platform, status]) // Filter by platform and status
+  @@index([platform]) // Filter by booking source
+  @@index([createdAt]) // Sort by creation date
+  @@index([confirmCode]) // Lookup by confirmation code
 }
 
 // ============================================
@@ -241,63 +260,63 @@ model Booking {
 // ============================================
 
 model CleaningJob {
-  id            String    @id @default(cuid())
-  propertyId    String
-  cleanerId     String?
-  bookingId     String?   @unique
+  id         String  @id @default(cuid())
+  propertyId String
+  cleanerId  String?
+  bookingId  String? @unique
 
   // Scheduling
-  scheduledAt   DateTime
-  startedAt     DateTime?
-  completedAt   DateTime?
+  scheduledAt DateTime
+  startedAt   DateTime?
+  completedAt DateTime?
 
   // Type
-  jobType       String    @default("TURNOVER")
+  jobType String @default("TURNOVER")
 
   // Status
-  status        String    @default("SCHEDULED")
+  status String @default("SCHEDULED")
 
   // GPS Verification
-  checkInLat    Float?
-  checkInLng    Float?
-  checkOutLat   Float?
-  checkOutLng   Float?
+  checkInLat  Float?
+  checkInLng  Float?
+  checkOutLat Float?
+  checkOutLng Float?
 
   // Checklist & Photos (stored as JSON string)
   checklistProgress String?
-  photos        String?
+  photos            String?
 
   // Quality
   score         Int?
   scoreFeedback String?
 
   // Notes
-  notes         String?
-  issues        String?
+  notes  String?
+  issues String?
 
   // Duration
-  durationMins  Int?
+  durationMins Int?
 
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  property      Property  @relation(fields: [propertyId], references: [id])
-  cleaner       User?     @relation(fields: [cleanerId], references: [id])
-  booking       Booking?  @relation(fields: [bookingId], references: [id])
+  property Property @relation(fields: [propertyId], references: [id])
+  cleaner  User?    @relation(fields: [cleanerId], references: [id])
+  booking  Booking? @relation(fields: [bookingId], references: [id])
 
   // Performance indexes
   @@index([propertyId])
   @@index([cleanerId])
   @@index([status])
   @@index([scheduledAt])
-  @@index([propertyId, scheduledAt])      // Composite: property cleaning schedule
-  @@index([cleanerId, status])            // Composite: cleaner's active jobs
-  @@index([cleanerId, scheduledAt])       // Composite: cleaner's schedule
-  @@index([scheduledAt, status])          // Composite: upcoming jobs by status
-  @@index([jobType, status])              // Filter by job type and status
-  @@index([createdAt])                    // Sort by creation date
-  @@index([completedAt])                  // Query completed jobs
+  @@index([propertyId, scheduledAt]) // Composite: property cleaning schedule
+  @@index([cleanerId, status]) // Composite: cleaner's active jobs
+  @@index([cleanerId, scheduledAt]) // Composite: cleaner's schedule
+  @@index([scheduledAt, status]) // Composite: upcoming jobs by status
+  @@index([jobType, status]) // Filter by job type and status
+  @@index([createdAt]) // Sort by creation date
+  @@index([completedAt]) // Query completed jobs
 }
 
 // ============================================
@@ -305,14 +324,14 @@ model CleaningJob {
 // ============================================
 
 model SmartLock {
-  id            String    @id @default(cuid())
-  propertyId    String    @unique
+  id         String @id @default(cuid())
+  propertyId String @unique
 
   // Device Info
-  brand         String
-  model         String?
-  deviceId      String
-  serialNumber  String?
+  brand        String
+  model        String?
+  deviceId     String
+  serialNumber String?
 
   // Current State
   currentCode   String?
@@ -322,13 +341,13 @@ model SmartLock {
   isOnline      Boolean   @default(true)
 
   // Access Log (stored as JSON string)
-  accessLog     String?
+  accessLog String?
 
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  property      Property  @relation(fields: [propertyId], references: [id])
+  property Property @relation(fields: [propertyId], references: [id])
 
   @@index([brand])
 }
@@ -338,50 +357,50 @@ model SmartLock {
 // ============================================
 
 model Message {
-  id            String    @id @default(cuid())
-  guestId       String
-  bookingId     String?
+  id        String  @id @default(cuid())
+  guestId   String
+  bookingId String?
 
   // Message Details
-  type          String
-  channel       String    @default("EMAIL")
-  subject       String?
-  body          String
+  type    String
+  channel String  @default("EMAIL")
+  subject String?
+  body    String
 
   // Status
-  status        String    @default("DRAFT")
+  status String @default("DRAFT")
 
   // Scheduling
-  scheduledFor  DateTime?
-  sentAt        DateTime?
+  scheduledFor DateTime?
+  sentAt       DateTime?
 
   // Approval
-  approvedBy    String?
-  approvedAt    DateTime?
+  approvedBy String?
+  approvedAt DateTime?
 
   // AI Analysis
-  sentiment     String?
+  sentiment      String?
   sentimentScore Float?
 
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  guest         Guest     @relation(fields: [guestId], references: [id])
-  booking       Booking?  @relation(fields: [bookingId], references: [id])
-  approver      User?     @relation("ApprovedBy", fields: [approvedBy], references: [id])
+  guest    Guest    @relation(fields: [guestId], references: [id])
+  booking  Booking? @relation(fields: [bookingId], references: [id])
+  approver User?    @relation("ApprovedBy", fields: [approvedBy], references: [id])
 
   // Performance indexes
   @@index([guestId])
   @@index([bookingId])
   @@index([status])
   @@index([type])
-  @@index([channel])                      // Filter by message channel
-  @@index([guestId, type])                // Composite: guest messages by type
-  @@index([status, scheduledFor])         // Composite: scheduled messages queue
-  @@index([sentAt])                       // Query sent messages
-  @@index([createdAt])                    // Sort by creation date
-  @@index([sentiment])                    // Filter by sentiment analysis
+  @@index([channel]) // Filter by message channel
+  @@index([guestId, type]) // Composite: guest messages by type
+  @@index([status, scheduledFor]) // Composite: scheduled messages queue
+  @@index([sentAt]) // Query sent messages
+  @@index([createdAt]) // Sort by creation date
+  @@index([sentiment]) // Filter by sentiment analysis
 }
 
 // ============================================
@@ -389,52 +408,52 @@ model Message {
 // ============================================
 
 model Expense {
-  id            String    @id @default(cuid())
-  propertyId    String
-  createdById   String?
+  id          String  @id @default(cuid())
+  propertyId  String
+  createdById String?
 
   // Expense Details
-  category      String
-  subcategory   String?
-  amount        Float
-  description   String
-  vendor        String?
+  category    String
+  subcategory String?
+  amount      Float
+  description String
+  vendor      String?
 
   // Date
-  date          DateTime
+  date DateTime
 
   // Receipt
-  receiptUrl    String?
+  receiptUrl String?
 
   // Tax
   isTaxDeductible Boolean @default(true)
-  taxCategory   String?
+  taxCategory     String?
 
   // Status
-  status        String    @default("PENDING")
+  status String @default("PENDING")
 
   // Notes
-  notes         String?
+  notes String?
 
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  property      Property  @relation(fields: [propertyId], references: [id])
-  createdBy     User?     @relation(fields: [createdById], references: [id])
+  property  Property @relation(fields: [propertyId], references: [id])
+  createdBy User?    @relation(fields: [createdById], references: [id])
 
   // Performance indexes
   @@index([propertyId])
   @@index([category])
   @@index([date])
-  @@index([propertyId, date])             // Composite: property expenses by date
-  @@index([propertyId, category])         // Composite: property expenses by category
-  @@index([category, date])               // Composite: expenses report
-  @@index([status])                       // Filter by approval status
-  @@index([isTaxDeductible])              // Filter for tax reports
+  @@index([propertyId, date]) // Composite: property expenses by date
+  @@index([propertyId, category]) // Composite: property expenses by category
+  @@index([category, date]) // Composite: expenses report
+  @@index([status]) // Filter by approval status
+  @@index([isTaxDeductible]) // Filter for tax reports
   @@index([isTaxDeductible, taxCategory]) // Composite: tax category reports
-  @@index([vendor])                       // Group by vendor
-  @@index([createdAt])                    // Sort by creation date
+  @@index([vendor]) // Group by vendor
+  @@index([createdAt]) // Sort by creation date
 }
 
 // ============================================
@@ -442,30 +461,30 @@ model Expense {
 // ============================================
 
 model ConciergeQuery {
-  id            String    @id @default(cuid())
-  guestId       String?
-  propertyId    String?
+  id         String  @id @default(cuid())
+  guestId    String?
+  propertyId String?
 
   // Query & Response
-  query         String
-  response      String
+  query    String
+  response String
 
   // Classification
-  category      String?
-  intent        String?
+  category String?
+  intent   String?
 
   // Quality
-  wasHelpful    Boolean?
-  rating        Int?
+  wasHelpful Boolean?
+  rating     Int?
 
   // Voice
-  voiceUsed     Boolean   @default(false)
-  audioUrl      String?
+  voiceUsed Boolean @default(false)
+  audioUrl  String?
 
-  createdAt     DateTime  @default(now())
+  createdAt DateTime @default(now())
 
   // Relations
-  guest         Guest?    @relation(fields: [guestId], references: [id])
+  guest Guest? @relation(fields: [guestId], references: [id])
 
   @@index([guestId])
   @@index([category])
@@ -477,33 +496,33 @@ model ConciergeQuery {
 // ============================================
 
 model AuditLog {
-  id            String    @id @default(cuid())
-  userId        String?
-  action        String
-  entity        String
-  entityId      String?
-  oldValues     String?
-  newValues     String?
-  ipAddress     String?
-  userAgent     String?
-  createdAt     DateTime  @default(now())
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  entity    String
+  entityId  String?
+  oldValues String?
+  newValues String?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
 
   // Performance indexes
   @@index([userId])
   @@index([entity])
   @@index([createdAt])
-  @@index([entity, entityId])             // Composite: lookup entity history
-  @@index([action])                       // Filter by action type
-  @@index([userId, createdAt])            // Composite: user activity history
-  @@index([entity, action])               // Composite: entity action reports
+  @@index([entity, entityId]) // Composite: lookup entity history
+  @@index([action]) // Filter by action type
+  @@index([userId, createdAt]) // Composite: user activity history
+  @@index([entity, action]) // Composite: entity action reports
 }
 
 model Setting {
-  id            String    @id @default(cuid())
-  key           String    @unique
-  value         String
-  description   String?
-  updatedAt     DateTime  @updatedAt
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  description String?
+  updatedAt   DateTime @updatedAt
 }
 
 // ============================================
@@ -511,17 +530,17 @@ model Setting {
 // ============================================
 
 model VrboSync {
-  id              String    @id @default(cuid())
-  propertyId      String
-  vrboListingId   String
-  icalUrl         String?
-  lastIcalSync    DateTime?
-  lastScrapeSync  DateTime?
-  syncEnabled     Boolean   @default(true)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id             String    @id @default(cuid())
+  propertyId     String
+  vrboListingId  String
+  icalUrl        String?
+  lastIcalSync   DateTime?
+  lastScrapeSync DateTime?
+  syncEnabled    Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
-  property        Property  @relation(fields: [propertyId], references: [id])
+  property Property @relation(fields: [propertyId], references: [id])
 
   @@unique([propertyId])
   @@unique([vrboListingId])
@@ -529,20 +548,500 @@ model VrboSync {
 }
 
 model SyncLog {
-  id              String    @id @default(cuid())
-  propertyId      String?
-  syncType        String    // ical_import, ical_export, scrape_bookings, scrape_messages, rate_push
-  source          String    // vrbo, airbnb, booking
-  status          String    // success, partial, failed
-  itemsProcessed  Int       @default(0)
-  itemsCreated    Int       @default(0)
-  itemsUpdated    Int       @default(0)
-  errorMessage    String?
-  durationMs      Int?
-  metadata        String?
-  createdAt       DateTime  @default(now())
+  id             String   @id @default(cuid())
+  propertyId     String?
+  syncType       String // ical_import, ical_export, scrape_bookings, scrape_messages, rate_push
+  source         String // vrbo, airbnb, booking
+  status         String // success, partial, failed
+  itemsProcessed Int      @default(0)
+  itemsCreated   Int      @default(0)
+  itemsUpdated   Int      @default(0)
+  errorMessage   String?
+  durationMs     Int?
+  metadata       String?
+  createdAt      DateTime @default(now())
 
   @@index([propertyId, createdAt])
   @@index([syncType, createdAt])
   @@index([status])
+}
+
+// ============================================
+// OPERATIONS, DISPATCH, ACCESS & PAY
+// ============================================
+
+model WorkerProfile {
+  id                    String   @id @default(cuid())
+  userId                String   @unique
+  workerType            String
+  employmentClass       String   @default("EMPLOYEE")
+  dispatchPriority      Int      @default(100)
+  autoDispatchEligible  Boolean  @default(true)
+  defaultPayType        String   @default("PER_JOB")
+  hourlyRateCents       Int?
+  paymentMethod         String?
+  paymentDestinationRef String?
+  tuyaIdentityRef       String?
+  isAvailable           Boolean  @default(true)
+  maxConcurrentJobs     Int      @default(1)
+  scheduleJson          String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workOrders       WorkOrder[]
+  payEntries       WorkerPayEntry[]
+  serviceSchedules ServiceSchedule[]
+
+  @@index([workerType, isAvailable])
+  @@index([autoDispatchEligible, dispatchPriority])
+  @@index([employmentClass])
+}
+
+model PropertyServiceRate {
+  id            String    @id @default(cuid())
+  propertyId    String
+  serviceType   String
+  amountCents   Int
+  currency      String    @default("USD")
+  effectiveFrom DateTime  @default(now())
+  effectiveTo   DateTime?
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@unique([propertyId, serviceType, effectiveFrom])
+  @@index([propertyId, serviceType, isActive])
+}
+
+model PropertyChecklistTemplate {
+  id          String   @id @default(cuid())
+  propertyId  String
+  serviceType String
+  name        String
+  version     Int      @default(1)
+  itemsJson   String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@unique([propertyId, serviceType, version])
+  @@index([propertyId, serviceType, isActive])
+}
+
+model WorkOrder {
+  id                String    @id @default(cuid())
+  propertyId        String
+  bookingId         String?
+  requestedByUserId String?
+  assignedWorkerId  String?
+  serviceType       String
+  source            String    @default("SYSTEM")
+  status            String    @default("PENDING")
+  dispatchMode      String    @default("MANUAL")
+  priority          Int       @default(50)
+  title             String
+  description       String?
+  scheduledStart    DateTime?
+  dueAt             DateTime?
+  acceptedAt        DateTime?
+  checkedInAt       DateTime?
+  completedAt       DateTime?
+  checkedOutAt      DateTime?
+  checkInLat        Float?
+  checkInLng        Float?
+  checkOutLat       Float?
+  checkOutLng       Float?
+  timerSeconds      Int?
+  payAmountCents    Int?
+  paymentStatus     String    @default("UNAPPROVED")
+  reportSummary     String?
+  damageReported    Boolean   @default(false)
+  theftReported     Boolean   @default(false)
+  maintenanceNeeded Boolean   @default(false)
+  yardNeeded        Boolean   @default(false)
+  poolNeeded        Boolean   @default(false)
+  reportSubmittedAt DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  property       Property                 @relation(fields: [propertyId], references: [id])
+  booking        Booking?                 @relation(fields: [bookingId], references: [id])
+  requestedBy    User?                    @relation("WorkOrderRequestedBy", fields: [requestedByUserId], references: [id])
+  assignedWorker WorkerProfile?           @relation(fields: [assignedWorkerId], references: [id])
+  checklistItems WorkOrderChecklistItem[]
+  photos         WorkOrderPhoto[]
+  issues         WorkOrderIssue[]
+  payEntry       WorkerPayEntry?
+  accessGrant    AccessGrant?
+  guestRequests  GuestRequest[]
+  alerts         OperationalAlert[]
+
+  @@index([propertyId, status])
+  @@index([bookingId])
+  @@index([assignedWorkerId, status])
+  @@index([serviceType, status])
+  @@index([scheduledStart])
+  @@index([dueAt, status])
+  @@index([dispatchMode, status, priority])
+}
+
+model WorkOrderChecklistItem {
+  id               String    @id @default(cuid())
+  workOrderId      String
+  templateItemKey  String
+  label            String
+  sortOrder        Int       @default(0)
+  required         Boolean   @default(true)
+  requiresPhoto    Boolean   @default(false)
+  completed        Boolean   @default(false)
+  completedAt      DateTime?
+  evidencePhotoUrl String?
+  notes            String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  workOrder WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+
+  @@unique([workOrderId, templateItemKey])
+  @@index([workOrderId, completed])
+}
+
+model WorkOrderPhoto {
+  id               String   @id @default(cuid())
+  workOrderId      String
+  objectUrl        String
+  objectSha256     String?
+  category         String   @default("GENERAL")
+  caption          String?
+  uploadedByUserId String?
+  takenAt          DateTime @default(now())
+  createdAt        DateTime @default(now())
+
+  workOrder WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+
+  @@index([workOrderId, category])
+}
+
+model WorkOrderIssue {
+  id            String    @id @default(cuid())
+  workOrderId   String
+  issueType     String
+  severity      String    @default("NORMAL")
+  description   String
+  status        String    @default("REPORTED")
+  photoUrlsJson String?
+  resolvedAt    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  workOrder WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+
+  @@index([workOrderId, status])
+  @@index([issueType, severity, status])
+}
+
+model ServiceSchedule {
+  id             String    @id @default(cuid())
+  propertyId     String
+  workerId       String?
+  serviceType    String
+  recurrenceRule String
+  timezone       String    @default("America/Chicago")
+  nextRunAt      DateTime?
+  durationMins   Int?
+  isActive       Boolean   @default(true)
+  notes          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  property Property       @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  worker   WorkerProfile? @relation(fields: [workerId], references: [id])
+
+  @@index([serviceType, isActive, nextRunAt])
+  @@index([workerId, isActive])
+  @@index([propertyId, serviceType])
+}
+
+model AccessGrant {
+  id                 String    @id @default(cuid())
+  propertyId         String
+  bookingId          String?
+  workOrderId        String?   @unique
+  userId             String?
+  subjectType        String
+  provider           String    @default("TUYA")
+  externalGrantRef   String    @unique
+  secretRef          String?
+  status             String    @default("PENDING")
+  startsAt           DateTime
+  endsAt             DateTime
+  deliveredAt        DateTime?
+  revokedAt          DateTime?
+  deliveryChannel    String?
+  deliveryReceiptRef String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  property  Property   @relation(fields: [propertyId], references: [id])
+  booking   Booking?   @relation(fields: [bookingId], references: [id])
+  workOrder WorkOrder? @relation(fields: [workOrderId], references: [id])
+  user      User?      @relation(fields: [userId], references: [id])
+
+  @@index([propertyId, status])
+  @@index([bookingId])
+  @@index([userId, status])
+  @@index([startsAt, endsAt, status])
+}
+
+model GuestRequest {
+  id                  String    @id @default(cuid())
+  propertyId          String
+  bookingId           String?
+  guestId             String
+  assignedWorkOrderId String?
+  category            String
+  description         String
+  urgency             String    @default("NORMAL")
+  status              String    @default("OPEN")
+  sourceChannel       String    @default("WEB")
+  requestedAt         DateTime  @default(now())
+  acknowledgedAt      DateTime?
+  resolvedAt          DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  property          Property   @relation(fields: [propertyId], references: [id])
+  booking           Booking?   @relation(fields: [bookingId], references: [id])
+  guest             Guest      @relation(fields: [guestId], references: [id])
+  assignedWorkOrder WorkOrder? @relation(fields: [assignedWorkOrderId], references: [id])
+
+  @@index([guestId, status])
+  @@index([bookingId])
+  @@index([propertyId, status, urgency])
+  @@index([assignedWorkOrderId])
+}
+
+model PayrollBatch {
+  id            String    @id @default(cuid())
+  weekEnding    DateTime  @unique
+  status        String    @default("DRAFT")
+  totalCents    Int       @default(0)
+  paymentMethod String?
+  approvedAt    DateTime?
+  paidAt        DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  entries WorkerPayEntry[]
+
+  @@index([status, weekEnding])
+}
+
+model WorkerPayEntry {
+  id                 String    @id @default(cuid())
+  workerId           String
+  workOrderId        String    @unique
+  payrollBatchId     String?
+  amountCents        Int
+  currency           String    @default("USD")
+  status             String    @default("EARNED")
+  earnedAt           DateTime  @default(now())
+  approvedAt         DateTime?
+  paidAt             DateTime?
+  paymentMethod      String?
+  externalPaymentRef String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  worker       WorkerProfile @relation(fields: [workerId], references: [id])
+  workOrder    WorkOrder     @relation(fields: [workOrderId], references: [id])
+  payrollBatch PayrollBatch? @relation(fields: [payrollBatchId], references: [id])
+
+  @@index([workerId, status, earnedAt])
+  @@index([payrollBatchId])
+}
+
+model ConciergeAction {
+  id                String    @id @default(cuid())
+  requestedByUserId String?
+  approvedByUserId  String?
+  actorType         String
+  actionType        String
+  targetType        String?
+  targetId          String?
+  riskLevel         String    @default("LOW")
+  requiresApproval  Boolean   @default(false)
+  approvalStatus    String    @default("NOT_REQUIRED")
+  status            String    @default("QUEUED")
+  idempotencyKey    String    @unique
+  inputJson         String?
+  resultJson        String?
+  failureReason     String?
+  approvedAt        DateTime?
+  executedAt        DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  requestedBy User? @relation("ConciergeActionRequestedBy", fields: [requestedByUserId], references: [id])
+  approvedBy  User? @relation("ConciergeActionApprovedBy", fields: [approvedByUserId], references: [id])
+
+  @@index([status, riskLevel])
+  @@index([requestedByUserId, createdAt])
+  @@index([actionType, targetType, targetId])
+}
+
+model OperationalAlert {
+  id               String    @id @default(cuid())
+  propertyId       String?
+  bookingId        String?
+  workOrderId      String?
+  assignedToUserId String?
+  alertType        String
+  severity         String    @default("NORMAL")
+  title            String
+  message          String
+  status           String    @default("OPEN")
+  notifiedAt       DateTime?
+  acknowledgedAt   DateTime?
+  resolvedAt       DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  property   Property?  @relation(fields: [propertyId], references: [id])
+  booking    Booking?   @relation(fields: [bookingId], references: [id])
+  workOrder  WorkOrder? @relation(fields: [workOrderId], references: [id])
+  assignedTo User?      @relation("AlertAssignee", fields: [assignedToUserId], references: [id])
+
+  @@index([status, severity, createdAt])
+  @@index([propertyId, status])
+  @@index([bookingId])
+  @@index([workOrderId])
+  @@index([assignedToUserId, status])
+}
+
+// ============================================
+// VRBO MAILBRIDGE SHADOW EVIDENCE & RECONCILIATION
+// ============================================
+
+model VrboMailCursor {
+  mailbox     String   @id
+  uidValidity BigInt
+  lastUid     BigInt   @default(0)
+  updatedAt   DateTime @default(now())
+
+  @@index([updatedAt])
+}
+
+model VrboMailMessage {
+  id                String   @id
+  mailbox           String
+  uidValidity       BigInt
+  uid               BigInt
+  internetMessageId String?
+  fromAddress       String?
+  subject           String
+  receivedAt        DateTime
+  rawSha256         String
+  bodyText          String?
+  headersJson       Json?
+  parserVersion     String
+  eventType         String
+  parseStatus       String
+  parsedJson        Json?
+  parseError        String?
+  ingestedAt        DateTime @default(now())
+
+  @@unique([mailbox, uidValidity, uid])
+  @@index([receivedAt])
+  @@index([parseStatus, eventType])
+  @@index([rawSha256])
+}
+
+model VrboReservationEvidence {
+  id                String   @id
+  sourceType        String
+  sourceKey         String
+  reservationKey    String
+  propertyId        String?
+  vrboListingId     String?
+  reservationId     String?
+  confirmationCode  String?
+  eventType         String?
+  status            String?
+  checkIn           DateTime?
+  checkOut          DateTime?
+  guestName         String?
+  guestEmail        String?
+  guestPhone        String?
+  guestCount        Int?
+  totalAmountCents  Int?
+  currency          String   @default("USD")
+  observedAt        DateTime
+  parserVersion     String
+  payloadSha256     String
+  payloadJson       Json
+  validationStatus  String   @default("VALID")
+  validationErrors  Json?
+  createdAt         DateTime @default(now())
+
+  @@unique([sourceType, sourceKey, payloadSha256])
+  @@index([reservationKey, observedAt])
+  @@index([sourceType, createdAt])
+  @@index([validationStatus])
+}
+
+model VrboReservationLedger {
+  reservationKey    String   @id
+  propertyId        String?
+  vrboListingId     String?
+  reservationId     String?
+  confirmationCode  String?
+  status             String?
+  checkIn            DateTime?
+  checkOut           DateTime?
+  guestName          String?
+  guestEmail         String?
+  guestPhone         String?
+  guestCount         Int?
+  totalAmountCents   Int?
+  currency           String   @default("USD")
+  consensusStatus    String
+  sourceCount        Int
+  evidenceCount      Int
+  sourceFingerprint  String
+  canonicalJson      Json
+  disagreementJson   Json?
+  validationErrors   Json?
+  firstSeenAt        DateTime
+  lastSeenAt         DateTime
+  lastReconciledAt   DateTime
+  updatedAt          DateTime
+
+  @@index([consensusStatus, lastReconciledAt])
+  @@index([propertyId, checkIn])
+  @@index([vrboListingId])
+}
+
+model VrboReconciliationRun {
+  id               String    @id
+  startedAt        DateTime
+  completedAt      DateTime?
+  mode             String    @default("SHADOW")
+  status           String
+  evidenceCount    Int       @default(0)
+  reservationCount Int       @default(0)
+  consistentCount  Int       @default(0)
+  unverifiedCount  Int       @default(0)
+  syncAtRiskCount  Int       @default(0)
+  errorCount       Int       @default(0)
+  detailsJson      Json?
+  createdAt        DateTime  @default(now())
+
+  @@index([status, startedAt])
+  @@index([syncAtRiskCount, startedAt])
 }

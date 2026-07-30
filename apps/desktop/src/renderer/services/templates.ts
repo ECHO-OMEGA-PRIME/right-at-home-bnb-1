@@ -56,7 +56,7 @@ Thank you for booking with Right at Home BnB! We're excited to host you.
 - Check-in: {{booking.checkIn}} (3:00 PM)
 - Check-out: {{booking.checkOut}} (11:00 AM)
 - Guests: {{booking.guests}}
-- Total: ${{booking.totalPrice}}
+- Total: \${{booking.totalPrice}}
 
 We'll send you check-in instructions closer to your arrival date.
 

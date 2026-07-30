@@ -55,8 +55,8 @@ PROPERTY_KNOWLEDGE = {
         "name": "Castleford Estate",
         "address": "123 Oak Lane, Midland, TX 79705",
         "wifi_network": "CastlefordGuest",
-        "wifi_password": "Welcome2024!",
-        "door_code": "1234#",
+        "wifi_password": None,
+        "door_code": None,
         "lockbox_location": None,  # Smart lock, no lockbox
         "check_in_time": "3:00 PM",
         "check_out_time": "11:00 AM",
@@ -93,8 +93,8 @@ PROPERTY_KNOWLEDGE = {
         "name": "Permian Palace",
         "address": "456 Basin Blvd, Midland, TX 79701",
         "wifi_network": "PermianPalace",
-        "wifi_password": "BasinLife2024!",
-        "door_code": "2468#",
+        "wifi_password": None,
+        "door_code": None,
         "check_in_time": "3:00 PM",
         "check_out_time": "11:00 AM",
         "parking": "Garage parking for 2, driveway for 4 more",
@@ -122,7 +122,7 @@ PROPERTY_KNOWLEDGE = {
 # Default property template for properties not fully configured
 DEFAULT_PROPERTY = {
     "wifi_network": "RightAtHome",
-    "wifi_password": "Welcome2024!",
+    "wifi_password": None,
     "check_in_time": "3:00 PM",
     "check_out_time": "11:00 AM",
     "parking": "Street parking available",
@@ -300,7 +300,7 @@ Your check-in details:
 📍 Address: {prop.get('address', 'See booking confirmation')}
 🔑 Door Code: {prop.get('door_code', 'See lockbox')}
 📶 WiFi: {prop.get('wifi_network', 'RightAtHome')}
-🔐 Password: {prop.get('wifi_password', 'Welcome2024!')}
+Private access details are available only in the authenticated active-stay dashboard.
 
 ⏰ Check-in: {prop.get('check_in_time', '3:00 PM')}
 ⏰ Check-out: {prop.get('check_out_time', '11:00 AM')}

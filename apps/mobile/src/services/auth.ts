@@ -16,36 +16,38 @@ import {
   Auth,
 } from 'firebase/auth';
 import * as Google from 'expo-auth-session/providers/google';
+import type { AuthSessionResult } from 'expo-auth-session';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as LocalAuthentication from 'expo-local-authentication';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform, Alert } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import * as Crypto from 'expo-crypto';
+import { getMobileFirebaseConfig } from './firebase-config';
 
 // Complete OAuth redirects
 WebBrowser.maybeCompleteAuthSession();
 
-// Firebase configuration
-const firebaseConfig = {
-  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY || '',
-  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN || 'echo-prime-ai.firebaseapp.com',
-  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || 'echo-prime-ai',
-  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET || 'echo-prime-ai.appspot.com',
-  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '249995513427',
-  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID || '',
-};
-
-// Initialize Firebase
+// Initialize Firebase with strict RAH project validation.
 let app: FirebaseApp;
 let auth: Auth;
 
 function initFirebase() {
-  if (getApps().length === 0) {
-    app = initializeApp(firebaseConfig);
+  const firebaseConfig = getMobileFirebaseConfig();
+  const existing = getApps()[0];
+
+  if (existing) {
+    if (existing.options.projectId !== firebaseConfig.projectId) {
+      throw new Error(
+        `Existing mobile Firebase app uses ${existing.options.projectId ?? 'unknown'}, ` +
+          `but RAH requires ${firebaseConfig.projectId}.`,
+      );
+    }
+    app = existing;
   } else {
-    app = getApps()[0];
+    app = initializeApp(firebaseConfig);
   }
+
   auth = getAuth(app);
   return { app, auth };
 }
@@ -157,8 +159,8 @@ export async function isBiometricEnabled(): Promise<boolean> {
  */
 export async function signInWithGoogle(
   request: Google.GoogleAuthRequestConfig | null,
-  response: Google.AuthSessionResult | null,
-  promptAsync: () => Promise<Google.AuthSessionResult>
+  response: AuthSessionResult | null,
+  promptAsync: () => Promise<AuthSessionResult>
 ): Promise<AuthUser | null> {
   try {
     if (response?.type === 'success') {
@@ -338,7 +340,12 @@ export async function registerPushToken(token: string): Promise<void> {
 
   try {
     // Send token to backend
-    const response = await fetch('https://api.rightathome.bnb/users/push-token', {
+    const apiBase = process.env.EXPO_PUBLIC_API_URL?.replace(/\/+$/, '');
+    if (!apiBase) {
+      throw new Error('EXPO_PUBLIC_API_URL is not configured');
+    }
+
+    const response = await fetch(`${apiBase}/users/push-token`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

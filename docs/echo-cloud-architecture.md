@@ -84,7 +84,7 @@ entry — `cloudflared tunnel route dns <UUID> <hostname>` creates the CNAME.
 | Var | Value | Why |
 |-----|-------|-----|
 | `ECHO_SDK_GATE` | `https://sdk1.echo-op.com` | All SDK calls go here (`apps/web/src/lib/echo-sdk.ts` + `echo-llm.ts`) |
-| `ECHO_SOVEREIGN_KEY` | value of `forge:/home/forge/.echo_sovereign_key` `SOVEREIGN_KEY=…` | `X-Echo-API-Key` header on every invoke |
+| `ECHO_SOVEREIGN_KEY` | value of `forge:/home/forge/.echo_sovereign_key` line `ECHO_SDK_SOVEREIGN_KEY=…` (note: file's actual prefix is `ECHO_SDK_SOVEREIGN_KEY`, not bare `SOVEREIGN_KEY`) | `X-Echo-API-Key` header on every invoke |
 | `LLM_CAP` | `echo.claude.oauth` | Default LLM cap — Max-OAuth path |
 | `LLM_MODEL` | `claude-haiku-4-5-20251001` | Default model |
 | `ECHO_API_BASE` | `https://api.rah-midland.com` | Where the `/api/v1/*` rewrite points |

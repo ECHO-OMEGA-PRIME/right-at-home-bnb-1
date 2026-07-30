@@ -135,7 +135,7 @@ export default function AIConcierge() {
 
     if (q.includes('wifi') || q.includes('internet') || q.includes('password')) {
       return {
-        response: "Your WiFi details:\n\n📶 Network: RightAtHome_Guest\n🔐 Password: Welcome2024\n\nThe router is located near the living room TV. Enjoy streaming!",
+        response: "Wi-Fi details are private. Open your authenticated active-stay dashboard, or contact Steven if access is unavailable.",
         category: 'property'
       };
     }
@@ -294,7 +294,7 @@ export default function AIConcierge() {
       {/* Header */}
       <div className="mb-6">
         <h2 className="font-display text-2xl font-bold text-charcoal-800 flex items-center gap-3">
-          <div className="w-12 h-12 bg-gradient-to-br from-maroon-800 to-maroon-900 
+          <div className="w-12 h-12 bg-gradient-to-br from-maroon-800 to-maroon-900
                           rounded-xl flex items-center justify-center">
             <MessageCircle className="w-6 h-6 text-white" />
           </div>
@@ -347,8 +347,8 @@ export default function AIConcierge() {
               <button
                 onClick={() => setIsListening(!isListening)}
                 className={`p-3 rounded-xl transition-all ${
-                  isListening 
-                    ? 'bg-maroon-800 text-white animate-pulse' 
+                  isListening
+                    ? 'bg-maroon-800 text-white animate-pulse'
                     : 'bg-cream-100 text-charcoal-600 hover:bg-cream-200'
                 }`}
               >
@@ -385,29 +385,29 @@ export default function AIConcierge() {
               Quick Actions
             </h3>
             <div className="space-y-2">
-              <QuickAction 
-                icon={Utensils} 
-                label="Find Restaurants" 
+              <QuickAction
+                icon={Utensils}
+                label="Find Restaurants"
                 onClick={() => handleQuickAction("Where should I eat dinner tonight?")}
               />
-              <QuickAction 
-                icon={Wine} 
-                label="Wine & Bars" 
+              <QuickAction
+                icon={Wine}
+                label="Wine & Bars"
                 onClick={() => handleQuickAction("Recommend a nice wine bar")}
               />
-              <QuickAction 
-                icon={MapPin} 
-                label="Things to Do" 
+              <QuickAction
+                icon={MapPin}
+                label="Things to Do"
                 onClick={() => handleQuickAction("What attractions should I visit?")}
               />
-              <QuickAction 
-                icon={Wifi} 
-                label="WiFi Info" 
+              <QuickAction
+                icon={Wifi}
+                label="WiFi Info"
                 onClick={() => handleQuickAction("What's the WiFi password?")}
               />
-              <QuickAction 
-                icon={Clock} 
-                label="Late Checkout" 
+              <QuickAction
+                icon={Clock}
+                label="Late Checkout"
                 onClick={() => handleQuickAction("Can I get a late checkout?")}
               />
             </div>

@@ -1,0 +1,37 @@
+{
+  "checked_utc": "2026-07-24T05:37:39.001631+00:00",
+  "project_id": "rightathome-prod",
+  "gcloud_auth_exit_code": 0,
+  "account_count": 2,
+  "access_granted_account_count": 0,
+  "recovered_web_config_count": 0,
+  "accounts": [
+    {
+      "account": "bmcii1976@gmail.com",
+      "credential_status": "ACTIVE",
+      "token_exit_code": 0,
+      "token_obtained": true,
+      "project_status": 403,
+      "webapps_status": 403,
+      "webapp_count": 0,
+      "config_statuses": [],
+      "access_granted": false,
+      "project_error": "Your application is authenticating by using local Application Default Credentials. The firebase.googleapis.com API requires a quota project, which is not set by default. To learn how to set your quota project, see https://cloud.google.com/docs/authentication/adc-troubleshooting/user-creds .",
+      "webapps_error": "Your application is authenticating by using local Application Default Credentials. The firebase.googleapis.com API requires a quota project, which is not set by default. To learn how to set your quota project, see https://cloud.google.com/docs/authentication/adc-troubleshooting/user-creds ."
+    },
+    {
+      "account": "vertex-express@echo-prime-ai.iam.gserviceaccount.com",
+      "credential_status": "",
+      "token_exit_code": 0,
+      "token_obtained": true,
+      "project_status": 403,
+      "webapps_status": 403,
+      "webapp_count": 0,
+      "config_statuses": [],
+      "access_granted": false,
+      "project_error": "The caller does not have permission",
+      "webapps_error": "The caller does not have permission"
+    }
+  ],
+  "private_output": "C:\\ECHO_OMEGA_PRIME\\WEBSITES\\right-at-home-bnb\\docs\\consolidation\\P0_FIREBASE_RECOVERED_WEB_CONFIG_PRIVATE.json"
+}

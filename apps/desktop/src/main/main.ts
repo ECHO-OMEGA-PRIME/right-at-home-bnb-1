@@ -49,11 +49,13 @@ interface StoreSchema {
 }
 
 interface TrayStats {
-  todayJobs: number;
-  checkInsToday: number;
-  checkOutsToday: number;
-  pendingCleanings: number;
-  revenue: number;
+  todayJobs?: number;
+  checkInsToday?: number;
+  checkOutsToday?: number;
+  pendingCleanings?: number;
+  revenue?: number;
+  syncStatus?: 'connected' | 'offline';
+  onlineDevices?: number;
 }
 
 // Initialize persistent storage
@@ -273,26 +275,26 @@ function updateTrayMenu(stats?: TrayStats): void {
     },
     { type: 'separator' },
     {
-      label: currentStats ? `${currentStats.todayJobs} Jobs Today` : 'Loading...',
+      label: currentStats ? `${currentStats.todayJobs ?? 0} Jobs Today` : 'Loading...',
       enabled: false,
     },
     {
-      label: currentStats ? `${currentStats.checkInsToday} Check-ins` : '',
-      enabled: false,
-      visible: !!currentStats,
-    },
-    {
-      label: currentStats ? `${currentStats.checkOutsToday} Check-outs` : '',
+      label: currentStats ? `${currentStats.checkInsToday ?? 0} Check-ins` : '',
       enabled: false,
       visible: !!currentStats,
     },
     {
-      label: currentStats ? `${currentStats.pendingCleanings} Pending Cleanings` : '',
+      label: currentStats ? `${currentStats.checkOutsToday ?? 0} Check-outs` : '',
       enabled: false,
       visible: !!currentStats,
     },
     {
-      label: currentStats ? `$${currentStats.revenue.toLocaleString()} Revenue` : '',
+      label: currentStats ? `${currentStats.pendingCleanings ?? 0} Pending Cleanings` : '',
+      enabled: false,
+      visible: !!currentStats,
+    },
+    {
+      label: currentStats ? `$${(currentStats.revenue ?? 0).toLocaleString()} Revenue` : '',
       enabled: false,
       visible: !!currentStats,
     },
@@ -643,6 +645,11 @@ ipcMain.handle('store:get', (_event, key: keyof StoreSchema) => {
 
 ipcMain.handle('store:set', (_event, key: keyof StoreSchema, value: unknown) => {
   store.set(key, value as StoreSchema[typeof key]);
+  return true;
+});
+
+ipcMain.handle('store:delete', (_event, key: keyof StoreSchema) => {
+  store.delete(key);
   return true;
 });
 

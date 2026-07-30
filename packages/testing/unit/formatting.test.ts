@@ -56,7 +56,7 @@ function formatNightCount(nights: number): string {
  * Format date range for display
  */
 function formatDateRange(checkIn: Date, checkOut: Date): string {
-  const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', year: 'numeric' };
+  const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' };
   const formatter = new Intl.DateTimeFormat('en-US', options);
   return `${formatter.format(checkIn)} - ${formatter.format(checkOut)}`;
 }
@@ -90,8 +90,10 @@ function formatBookingStatus(status: string): string {
  */
 function formatRelativeTime(date: Date): string {
   const now = new Date();
-  const diffMs = date.getTime() - now.getTime();
-  const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+  const dayNumber = (value: Date): number =>
+    Date.UTC(value.getFullYear(), value.getMonth(), value.getDate()) /
+    (1000 * 60 * 60 * 24);
+  const diffDays = dayNumber(date) - dayNumber(now);
 
   if (diffDays === 0) return 'Today';
   if (diffDays === 1) return 'Tomorrow';

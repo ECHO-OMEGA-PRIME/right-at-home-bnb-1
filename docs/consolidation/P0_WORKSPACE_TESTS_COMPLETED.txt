@@ -1,0 +1,4 @@
+﻿completed_utc=2026-07-23T22:55:27.6947158Z
+exit_code=1
+stdout=C:\ECHO_OMEGA_PRIME\WEBSITES\right-at-home-bnb\docs\consolidation\P0_WORKSPACE_TESTS_OUTPUT.txt
+stderr=C:\ECHO_OMEGA_PRIME\WEBSITES\right-at-home-bnb\docs\consolidation\P0_WORKSPACE_TESTS_ERROR.txt

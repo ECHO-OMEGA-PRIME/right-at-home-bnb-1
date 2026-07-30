@@ -1,0 +1,8 @@
+﻿Collecting icalendar==5.0.11
+  Using cached icalendar-5.0.11-py3-none-any.whl.metadata (30 kB)
+Requirement already satisfied: python-dateutil in C:\Users\bobmc\AppData\Roaming\Python\Python313\site-packages (from icalendar==5.0.11) (2.9.0.post0)
+Requirement already satisfied: pytz in C:\Users\bobmc\AppData\Roaming\Python\Python313\site-packages (from icalendar==5.0.11) (2026.1.post1)
+Requirement already satisfied: six>=1.5 in C:\Users\bobmc\AppData\Roaming\Python\Python313\site-packages (from python-dateutil->icalendar==5.0.11) (1.17.0)
+Using cached icalendar-5.0.11-py3-none-any.whl (112 kB)
+Installing collected packages: icalendar
+Successfully installed icalendar-5.0.11

@@ -7,34 +7,34 @@
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
-      "require": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "require": "./dist/index.js"
     },
     "./types": {
+      "types": "./dist/types/index.d.ts",
       "import": "./dist/types/index.mjs",
-      "require": "./dist/types/index.js",
-      "types": "./dist/types/index.d.ts"
+      "require": "./dist/types/index.js"
     },
     "./sync": {
+      "types": "./dist/sync/index.d.ts",
       "import": "./dist/sync/index.mjs",
-      "require": "./dist/sync/index.js",
-      "types": "./dist/sync/index.d.ts"
+      "require": "./dist/sync/index.js"
     },
     "./hooks": {
+      "types": "./dist/sync/hooks.d.ts",
       "import": "./dist/sync/hooks.mjs",
-      "require": "./dist/sync/hooks.js",
-      "types": "./dist/sync/hooks.d.ts"
+      "require": "./dist/sync/hooks.js"
     },
     "./firebase": {
+      "types": "./dist/firebase/index.d.ts",
       "import": "./dist/firebase/index.mjs",
-      "require": "./dist/firebase/index.js",
-      "types": "./dist/firebase/index.d.ts"
+      "require": "./dist/firebase/index.js"
     },
     "./api": {
+      "types": "./dist/api/index.d.ts",
       "import": "./dist/api/index.mjs",
-      "require": "./dist/api/index.js",
-      "types": "./dist/api/index.d.ts"
+      "require": "./dist/api/index.js"
     }
   },
   "scripts": {

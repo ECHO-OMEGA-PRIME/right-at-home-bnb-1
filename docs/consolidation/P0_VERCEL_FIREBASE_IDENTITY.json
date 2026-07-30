@@ -1,0 +1,13 @@
+﻿{
+    "checked_utc":  "2026-07-24T00:09:15.9849298Z",
+    "project_id_match":  false,
+    "auth_domain_match":  false,
+    "storage_bucket_mentions_project":  false,
+    "required_count":  6,
+    "missing_required_names":  [
+
+                               ],
+    "api_key_present":  true,
+    "sender_id_present":  true,
+    "app_id_present":  true
+}
