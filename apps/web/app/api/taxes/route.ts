@@ -1,80 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireOneOfRoles } from '@/lib/api-auth';
+import { prisma } from '@/lib/prisma';
 
-const taxRecords: any[] = [
-  {
-    id: 'TAX-001',
-    type: 'hot',
-    description: 'Hotel Occupancy Tax — January 2026',
-    period_start: '2026-01-01',
-    period_end: '2026-01-31',
-    taxable_revenue_cents: 340000,
-    tax_rate: 0.06,
-    tax_due_cents: 20400,
-    status: 'paid',
-    due_date: '2026-02-20',
-    paid_date: '2026-02-18',
-    created_at: '2026-02-01T00:00:00Z',
-  },
-  {
-    id: 'TAX-002',
-    type: 'sales',
-    description: 'Texas Sales Tax — January 2026',
-    period_start: '2026-01-01',
-    period_end: '2026-01-31',
-    taxable_revenue_cents: 340000,
-    tax_rate: 0.0825,
-    tax_due_cents: 28050,
-    status: 'paid',
-    due_date: '2026-02-20',
-    paid_date: '2026-02-18',
-    created_at: '2026-02-01T00:00:00Z',
-  },
-  {
-    id: 'TAX-003',
-    type: 'hot',
-    description: 'Hotel Occupancy Tax — February 2026',
-    period_start: '2026-02-01',
-    period_end: '2026-02-28',
-    taxable_revenue_cents: 282000,
-    tax_rate: 0.06,
-    tax_due_cents: 16920,
-    status: 'due',
-    due_date: '2026-03-20',
-    paid_date: null,
-    created_at: '2026-03-01T00:00:00Z',
-  },
-  {
-    id: 'TAX-004',
-    type: 'sales',
-    description: 'Texas Sales Tax — February 2026',
-    period_start: '2026-02-01',
-    period_end: '2026-02-28',
-    taxable_revenue_cents: 282000,
-    tax_rate: 0.0825,
-    tax_due_cents: 23265,
-    status: 'due',
-    due_date: '2026-03-20',
-    paid_date: null,
-    created_at: '2026-03-01T00:00:00Z',
-  },
-  {
-    id: 'TAX-005',
-    type: 'property',
-    description: 'Property Tax — Sunset Retreat (2025)',
-    period_start: '2025-01-01',
-    period_end: '2025-12-31',
-    taxable_revenue_cents: 0,
-    tax_rate: 0,
-    tax_due_cents: 485000,
-    status: 'paid',
-    due_date: '2026-01-31',
-    paid_date: '2026-01-28',
-    created_at: '2025-11-01T00:00:00Z',
-  },
-];
+// Real TaxPeriod rows (queue #26855). This route served a hardcoded array, so
+// tax liabilities, due totals and payment status were all invented -- on a
+// surface where being wrong has a filing deadline attached.
+//
+// TaxPeriod was originally the period-locking model for P5. Rather than add a
+// second entity with its own overlapping period fields, it was extended into
+// the tax record it needed to be: one row is a period, its computed liability,
+// and whether it is locked and paid.
 
-// ── GET /api/taxes ────────────────────────────────────────────────────────
+const VALID_TYPES = ['hot', 'sales', 'property', 'income', 'payroll'];
+
+const iso = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : null);
+
+function toContract(t: any) {
+  return {
+    id: t.id,
+    type: t.type,
+    description: t.description,
+    period_start: iso(t.periodStart),
+    period_end: iso(t.periodEnd),
+    taxable_revenue_cents: t.taxableRevenueCents,
+    tax_rate: t.taxRate,
+    tax_due_cents: t.taxDueCents,
+    tax_paid_cents: t.taxPaidCents,
+    status: t.status,
+    due_date: iso(t.dueDate),
+    paid_date: iso(t.paidDate),
+    locked_at: t.lockedAt ? t.lockedAt.toISOString() : null,
+    created_at: t.createdAt.toISOString(),
+  };
+}
+
+// ── GET /api/taxes ─────────────────────────────────────────────────────────
 export async function GET(request: NextRequest) {
   const auth = await requireOneOfRoles(request, ['owner', 'admin']);
   if (auth.error) return auth.error;
@@ -84,38 +44,41 @@ export async function GET(request: NextRequest) {
     const status = params.get('status');
     const year = params.get('year');
 
-    let filtered = [...taxRecords];
+    const rows = await prisma.taxPeriod.findMany({
+      where: {
+        ...(type ? { type } : {}),
+        ...(status ? { status } : {}),
+        ...(year
+          ? {
+              periodStart: {
+                gte: new Date(`${year}-01-01T00:00:00.000Z`),
+                lte: new Date(`${year}-12-31T23:59:59.999Z`),
+              },
+            }
+          : {}),
+      },
+      orderBy: { periodStart: 'desc' },
+    });
 
-    if (type) {
-      filtered = filtered.filter((t) => t.type === type);
-    }
-    if (status) {
-      filtered = filtered.filter((t) => t.status === status);
-    }
-    if (year) {
-      filtered = filtered.filter((t) => t.period_start.startsWith(year));
-    }
+    const filtered = rows.map(toContract);
 
+    // 'due' is the contract's word for an unpaid liability; the model's default
+    // status is 'pending'. Both count as outstanding, or a newly created record
+    // would silently vanish from the due total.
     const totalDueCents = filtered
-      .filter((t) => t.status === 'due')
+      .filter((t) => ['due', 'pending', 'overdue', 'filed'].includes(t.status))
       .reduce((sum, t) => sum + t.tax_due_cents, 0);
 
     const totalPaidCents = filtered
       .filter((t) => t.status === 'paid')
       .reduce((sum, t) => sum + t.tax_due_cents, 0);
 
-    // Group by type
     const byType: Record<string, { due_cents: number; paid_cents: number; count: number }> = {};
     for (const t of filtered) {
-      if (!byType[t.type]) {
-        byType[t.type] = { due_cents: 0, paid_cents: 0, count: 0 };
-      }
+      byType[t.type] ??= { due_cents: 0, paid_cents: 0, count: 0 };
       byType[t.type].count += 1;
-      if (t.status === 'due') {
-        byType[t.type].due_cents += t.tax_due_cents;
-      } else if (t.status === 'paid') {
-        byType[t.type].paid_cents += t.tax_due_cents;
-      }
+      if (t.status === 'paid') byType[t.type].paid_cents += t.tax_due_cents;
+      else byType[t.type].due_cents += t.tax_due_cents;
     }
 
     return NextResponse.json({
@@ -133,7 +96,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// ── POST /api/taxes ───────────────────────────────────────────────────────
+// ── POST /api/taxes ────────────────────────────────────────────────────────
 export async function POST(request: NextRequest) {
   const auth = await requireOneOfRoles(request, ['owner', 'admin']);
   if (auth.error) return auth.error;
@@ -142,45 +105,53 @@ export async function POST(request: NextRequest) {
 
     if (!body.type || !body.period_start || !body.period_end) {
       return NextResponse.json(
-        { error: 'Missing required: type, period_start, period_end' },
+        { error: 'Required: type, period_start, period_end' },
         { status: 400 },
       );
     }
-
-    const validTypes = ['hot', 'sales', 'property', 'income', 'payroll'];
-    if (!validTypes.includes(body.type)) {
+    if (!VALID_TYPES.includes(body.type)) {
       return NextResponse.json(
-        { error: `type must be one of: ${validTypes.join(', ')}` },
+        { error: `type must be one of: ${VALID_TYPES.join(', ')}` },
         { status: 400 },
       );
     }
 
-    // Auto-calculate tax if taxable_revenue and rate provided
+    // Derive the liability when a rate and base were given, rather than
+    // trusting a client-supplied total to agree with its own inputs.
     let taxDueCents = body.tax_due_cents ?? 0;
     if (body.taxable_revenue_cents && body.tax_rate && !body.tax_due_cents) {
       taxDueCents = Math.round(body.taxable_revenue_cents * body.tax_rate);
     }
 
-    const now = new Date().toISOString();
-    const record = {
-      id: `TAX-${Date.now().toString(36).toUpperCase()}`,
-      type: body.type,
-      description: body.description ?? `${body.type} tax — ${body.period_start} to ${body.period_end}`,
-      period_start: body.period_start,
-      period_end: body.period_end,
-      taxable_revenue_cents: body.taxable_revenue_cents ?? 0,
-      tax_rate: body.tax_rate ?? 0,
-      tax_due_cents: taxDueCents,
-      status: 'due',
-      due_date: body.due_date ?? null,
-      paid_date: null,
-      created_at: now,
-    };
+    const description =
+      body.description ?? `${body.type} tax — ${body.period_start} to ${body.period_end}`;
 
-    taxRecords.push(record);
+    const created = await prisma.taxPeriod.create({
+      data: {
+        // `name` is unique and identifies the filing; type + period is what
+        // makes one filing distinct from another.
+        name: `${body.type}:${body.period_start}:${body.period_end}`,
+        type: body.type,
+        description,
+        periodStart: new Date(`${body.period_start}T00:00:00.000Z`),
+        periodEnd: new Date(`${body.period_end}T23:59:59.999Z`),
+        taxableRevenueCents: body.taxable_revenue_cents ?? 0,
+        taxRate: body.tax_rate ?? 0,
+        taxDueCents,
+        status: 'due',
+        dueDate: body.due_date ? new Date(`${body.due_date}T00:00:00.000Z`) : null,
+        notes: body.notes ?? null,
+      },
+    });
 
-    return NextResponse.json({ tax_record: record }, { status: 201 });
+    return NextResponse.json({ tax_record: toContract(created) }, { status: 201 });
   } catch (error: any) {
+    if (String(error.message).includes('Unique constraint')) {
+      return NextResponse.json(
+        { error: 'A tax record already exists for that type and period' },
+        { status: 409 },
+      );
+    }
     return NextResponse.json(
       { error: 'Failed to create tax record', detail: error.message },
       { status: 500 },

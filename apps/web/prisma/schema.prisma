@@ -1176,8 +1176,24 @@ model InvoiceLine {
 model TaxPeriod {
   id          String    @id @default(cuid())
   name        String    @unique
+  /// hot | sales | property | income | payroll
+  type        String    @default("hot")
+  description String?
   periodStart DateTime
   periodEnd   DateTime
+
+  /// The liability for this period. Rate is stored as a fraction (0.06 = 6%).
+  taxableRevenueCents Int   @default(0)
+  taxRate             Float @default(0)
+  taxDueCents         Int   @default(0)
+  taxPaidCents        Int   @default(0)
+
+  /// pending | filed | paid | overdue
+  status   String    @default("pending")
+  dueDate  DateTime?
+  paidDate DateTime?
+
+  /// lockedAt is what makes a closed period immutable (P5 "period locking").
   lockedAt    DateTime?
   lockedById  String?
   notes       String?

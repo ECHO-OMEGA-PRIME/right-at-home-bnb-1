@@ -1,0 +1,11 @@
+-- AlterTable
+ALTER TABLE "TaxPeriod" ADD COLUMN     "description" TEXT,
+ADD COLUMN     "dueDate" TIMESTAMP(3),
+ADD COLUMN     "paidDate" TIMESTAMP(3),
+ADD COLUMN     "status" TEXT NOT NULL DEFAULT 'pending',
+ADD COLUMN     "taxDueCents" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN     "taxPaidCents" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN     "taxRate" DOUBLE PRECISION NOT NULL DEFAULT 0,
+ADD COLUMN     "taxableRevenueCents" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN     "type" TEXT NOT NULL DEFAULT 'hot';
+
