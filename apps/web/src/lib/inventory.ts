@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { type PropertyScope, scopedWhere } from '@/lib/tenant-scope';
 
 /**
  * Inventory service (queue #26855).
@@ -81,9 +82,19 @@ export async function listInventory(opts: {
   lowStock?: string | null;
   search?: string | null;
   propertyId?: string | null;
+  /**
+   * Caller's property scope. REQUIRED, not optional.
+   *
+   * An optional scope defaulting to `null` (unrestricted) is fail-OPEN: any
+   * future caller that forgets it silently returns the whole portfolio, and
+   * nothing complains. Making it required means the compiler catches the
+   * omission instead of a customer doing it. Pass `null` deliberately for
+   * genuinely unrestricted internal use.
+   */
+  scope: PropertyScope;
 }) {
   const items = (await prisma.inventoryItem.findMany({
-    where: {
+    where: scopedWhere({
       isActive: true,
       ...(opts.category ? { category: opts.category } : {}),
       ...(opts.propertyId ? { propertyId: opts.propertyId } : {}),
@@ -96,7 +107,7 @@ export async function listInventory(opts: {
             ],
           }
         : {}),
-    },
+    }, opts.scope),
     orderBy: { name: 'asc' },
   })) as ItemRow[];
 

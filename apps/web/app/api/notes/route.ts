@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireOneOfRoles } from '@/lib/api-auth';
 import { prisma } from '@/lib/prisma';
+import { propertyScopeFor, scopedWhere } from '@/lib/tenant-scope';
 
 // Real Note rows (queue #26855). Notes lived in an in-memory array, so every
 // note was discarded on the next cold start -- including entries like "front
@@ -50,8 +51,13 @@ export async function GET(request: NextRequest) {
     const search = params.get('search');
     const tag = params.get('tag');
 
+    // Property-level isolation (#26919). Without this, a worker who simply
+    // omits property_id reads every note in the business -- including operator
+    // notes about guests at houses they have nothing to do with.
+    const scope = await propertyScopeFor(auth.user);
+
     const rows = await prisma.note.findMany({
-      where: {
+      where: scopedWhere({
         ...(type ? { type } : {}),
         ...(propertyId ? { propertyId } : {}),
         ...(bookingId ? { bookingId } : {}),
@@ -66,7 +72,7 @@ export async function GET(request: NextRequest) {
               ],
             }
           : {}),
-      },
+      }, scope),
       // Pinned first, then newest -- the same ordering the route promised.
       orderBy: [{ pinned: 'desc' }, { createdAt: 'desc' }],
     });

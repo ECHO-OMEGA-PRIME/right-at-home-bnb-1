@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireOneOfRoles } from '@/lib/api-auth';
+import { propertyScopeFor } from '@/lib/tenant-scope';
 import { createInventoryItem, listInventory } from '@/lib/inventory';
 
 // Real InventoryItem / InventoryMovement rows (queue #26855). This route served
@@ -25,6 +26,9 @@ export async function GET(request: NextRequest) {
       lowStock: params.get('low_stock'),
       search: params.get('search'),
       propertyId: params.get('property_id'),
+      // Property-level isolation (#26919): a worker sees stock for the houses
+      // they work at, not the whole portfolio.
+      scope: await propertyScopeFor(auth.user),
     });
 
     // Exactly the contract's four keys.
