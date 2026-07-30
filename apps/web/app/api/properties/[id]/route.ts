@@ -1,87 +1,106 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireOneOfRoles } from '@/lib/api-auth';
+import { prisma } from '@/lib/prisma';
 
-// ── Mock data ────────────────────────────────────────────────────────────
-const properties: any[] = [
-  {
-    id: 'PROP-001', name: 'Sunset Retreat', address: '1423 W Illinois Ave, Midland, TX 79701',
-    status: 'active', bedrooms: 3, bathrooms: 2, max_guests: 8, pet_allowed: true,
-    pet_fee_cents: 5000, nightly_rate_cents: 17500, cleaning_fee_cents: 12500,
-    description: 'Beautifully renovated 3-bed home with a large backyard.',
-    amenities: ['wifi', 'washer_dryer', 'kitchen', 'parking', 'yard', 'grill', 'smart_lock'],
-    images: ['/properties/sunset-retreat-1.jpg'],
-    check_in_time: '15:00', check_out_time: '11:00', min_nights: 1,
-    created_at: '2025-06-01T00:00:00Z', updated_at: '2026-02-15T00:00:00Z',
-  },
-  {
-    id: 'PROP-002', name: 'Oilfield Oasis', address: '802 N Marienfeld St, Midland, TX 79701',
-    status: 'active', bedrooms: 4, bathrooms: 2.5, max_guests: 10, pet_allowed: false,
-    pet_fee_cents: 0, nightly_rate_cents: 22500, cleaning_fee_cents: 15000,
-    description: 'Spacious 4-bed house near downtown. Perfect for extended crew stays.',
-    amenities: ['wifi', 'washer_dryer', 'kitchen', 'parking', 'smart_lock', 'workspace'],
-    images: ['/properties/oilfield-oasis-1.jpg'],
-    check_in_time: '15:00', check_out_time: '11:00', min_nights: 2,
-    created_at: '2025-08-15T00:00:00Z', updated_at: '2026-01-20T00:00:00Z',
-  },
-  {
-    id: 'PROP-003', name: 'Permian Basin Pad', address: '515 E Pine Ave, Midland, TX 79701',
-    status: 'maintenance', bedrooms: 2, bathrooms: 1, max_guests: 4, pet_allowed: true,
-    pet_fee_cents: 3500, nightly_rate_cents: 12500, cleaning_fee_cents: 10000,
-    description: 'Cozy 2-bed bungalow. Currently undergoing renovation.',
-    amenities: ['wifi', 'kitchen', 'parking'], images: [],
-    check_in_time: '15:00', check_out_time: '11:00', min_nights: 1,
-    created_at: '2025-11-01T00:00:00Z', updated_at: '2026-03-01T00:00:00Z',
-  },
-];
+// Backed by the real Property table (22 rows). Previously three invented
+// properties and invented bookings behind them (queue #26855).
+//
+// GET stays PUBLIC: /api/properties/[id] serves the marketing site's listings
+// and middleware exempts it deliberately. PUT and DELETE carry their own
+// owner/admin guard here rather than relying on a middleware path regex to
+// distinguish a read from a write -- defence in depth on the mutating verbs.
 
-const bookings = [
-  { property_id: 'PROP-001', status: 'completed', check_in: '2026-02-15', check_out: '2026-02-18', total_cents: 70363 },
-  { property_id: 'PROP-001', status: 'completed', check_in: '2026-02-22', check_out: '2026-02-25', total_cents: 70363 },
-  { property_id: 'PROP-001', status: 'confirmed', check_in: '2026-03-20', check_out: '2026-03-23', total_cents: 70363 },
-  { property_id: 'PROP-002', status: 'completed', check_in: '2026-02-10', check_out: '2026-02-14', total_cents: 110306 },
-  { property_id: 'PROP-002', status: 'confirmed', check_in: '2026-03-22', check_out: '2026-03-25', total_cents: 89306 },
-];
+const dollarsToCents = (d: number | null | undefined) => Math.round((d ?? 0) * 100);
+const iso = (d: Date) => d.toISOString().slice(0, 10);
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-// ── GET /api/properties/[id] ─────────────────────────────────────────────
-export async function GET(request: NextRequest, context: RouteContext) {
+function parseAmenities(raw: string | null): string[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.map(String) : [];
+  } catch {
+    return raw.split(',').map((a) => a.trim()).filter(Boolean);
+  }
+}
+
+function toContract(p: any) {
+  return {
+    id: p.id,
+    name: p.name,
+    address: [p.address, p.city, p.state, p.zipCode].filter(Boolean).join(', '),
+    status: (p.status || '').toLowerCase(),
+    bedrooms: p.bedrooms,
+    bathrooms: p.bathrooms,
+    max_guests: p.maxGuests,
+    nightly_rate_cents: dollarsToCents(p.nightlyRate),
+    cleaning_fee_cents: dollarsToCents(p.cleaningFee),
+    security_deposit_cents: dollarsToCents(p.securityDeposit),
+    amenities: parseAmenities(p.amenities),
+    images: (p.photos ?? []).map((ph: { url: string }) => ph.url),
+    property_type: p.propertyType,
+    square_feet: p.squareFeet,
+    check_in_instructions: p.checkInInstr,
+    check_out_instructions: p.checkOutInstr,
+    house_rules: p.houseRules,
+    // The model records no pet policy, no free-text description and no
+    // check-in/out times or minimum-nights rule. Reported as null rather than
+    // invented -- these are schema gaps, not values to guess.
+    pet_allowed: null,
+    pet_fee_cents: null,
+    description: null,
+    check_in_time: null,
+    check_out_time: null,
+    min_nights: null,
+    created_at: p.createdAt.toISOString(),
+    updated_at: p.updatedAt.toISOString(),
+  };
+}
+
+// ── GET /api/properties/[id] — public ──────────────────────────────────────
+export async function GET(_request: NextRequest, context: RouteContext) {
   try {
     const { id } = await context.params;
-    const property = properties.find((p) => p.id === id);
-
+    const property = await prisma.property.findUnique({
+      where: { id },
+      include: { photos: { orderBy: { sortOrder: 'asc' }, select: { url: true } } },
+    });
     if (!property) {
       return NextResponse.json({ error: 'Property not found' }, { status: 404 });
     }
 
-    // Calculate stats
-    const propBookings = bookings.filter((b) => b.property_id === id);
-    const completedBookings = propBookings.filter((b) => b.status === 'completed');
-    const upcomingBookings = propBookings.filter(
-      (b) => ['confirmed', 'pending'].includes(b.status) && b.check_in >= new Date().toISOString().split('T')[0],
+    const bookings = await prisma.booking.findMany({
+      where: { propertyId: id },
+      select: { checkIn: true, checkOut: true, totalNights: true, totalPrice: true, status: true },
+    });
+
+    const today = iso(new Date());
+    const norm = (s: string | null) => (s || '').toLowerCase();
+    // Status is stored upper-case; compare case-insensitively or every booking
+    // silently drops out of these stats.
+    const completed = bookings.filter((b) => ['completed', 'checked_out'].includes(norm(b.status)));
+    const upcoming = bookings.filter(
+      (b) => ['confirmed', 'pending'].includes(norm(b.status)) && iso(b.checkIn) >= today,
     );
 
-    // Occupancy: booked nights in last 90 days / 90
-    const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-    const recentBookings = completedBookings.filter((b) => b.check_out >= ninetyDaysAgo);
-    let bookedNights = 0;
-    for (const b of recentBookings) {
-      const ci = new Date(b.check_in);
-      const co = new Date(b.check_out);
-      bookedNights += Math.ceil((co.getTime() - ci.getTime()) / (1000 * 60 * 60 * 24));
-    }
-    const occupancy_rate = Math.round((bookedNights / 90) * 100) / 100;
+    const ninetyDaysAgo = iso(new Date(Date.now() - 90 * 24 * 60 * 60 * 1000));
+    const bookedNights = completed
+      .filter((b) => iso(b.checkOut) >= ninetyDaysAgo)
+      .reduce((s, b) => s + (b.totalNights ?? 0), 0);
 
-    const total_revenue_cents = completedBookings.reduce((s, b) => s + b.total_cents, 0);
+    const totalRevenueCents = completed.reduce((s, b) => s + dollarsToCents(b.totalPrice), 0);
 
     return NextResponse.json({
-      property,
+      property: toContract(property),
       stats: {
-        total_bookings: propBookings.length,
-        completed_bookings: completedBookings.length,
-        upcoming_bookings: upcomingBookings.length,
-        occupancy_rate_90d: occupancy_rate,
-        total_revenue_cents,
-        avg_nightly_revenue_cents: bookedNights > 0 ? Math.round(total_revenue_cents / bookedNights) : 0,
+        total_bookings: bookings.length,
+        completed_bookings: completed.length,
+        upcoming_bookings: upcoming.length,
+        occupancy_rate_90d: Math.round((bookedNights / 90) * 100) / 100,
+        total_revenue_cents: totalRevenueCents,
+        avg_nightly_revenue_cents:
+          bookedNights > 0 ? Math.round(totalRevenueCents / bookedNights) : 0,
       },
     });
   } catch (error: any) {
@@ -92,35 +111,35 @@ export async function GET(request: NextRequest, context: RouteContext) {
   }
 }
 
-// ── PUT /api/properties/[id] ─────────────────────────────────────────────
+// ── PUT /api/properties/[id] ───────────────────────────────────────────────
 export async function PUT(request: NextRequest, context: RouteContext) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const { id } = await context.params;
-    const idx = properties.findIndex((p) => p.id === id);
-
-    if (idx === -1) {
-      return NextResponse.json({ error: 'Property not found' }, { status: 404 });
-    }
+    const existing = await prisma.property.findUnique({ where: { id } });
+    if (!existing) return NextResponse.json({ error: 'Property not found' }, { status: 404 });
 
     const body = await request.json();
-    const property = properties[idx];
+    const data: Record<string, unknown> = {};
+    if (body.name !== undefined) data.name = body.name;
+    if (body.address !== undefined) data.address = body.address;
+    if (body.status !== undefined) data.status = String(body.status).toUpperCase();
+    if (body.bedrooms !== undefined) data.bedrooms = body.bedrooms;
+    if (body.bathrooms !== undefined) data.bathrooms = body.bathrooms;
+    if (body.max_guests !== undefined) data.maxGuests = body.max_guests;
+    if (body.amenities !== undefined) data.amenities = JSON.stringify(body.amenities);
+    if (body.house_rules !== undefined) data.houseRules = body.house_rules;
+    // Money arrives as cents and is stored as Float dollars.
+    if (body.nightly_rate_cents !== undefined) data.nightlyRate = body.nightly_rate_cents / 100;
+    if (body.cleaning_fee_cents !== undefined) data.cleaningFee = body.cleaning_fee_cents / 100;
 
-    const updatable = [
-      'name', 'address', 'status', 'bedrooms', 'bathrooms', 'max_guests',
-      'pet_allowed', 'pet_fee_cents', 'nightly_rate_cents', 'cleaning_fee_cents',
-      'description', 'amenities', 'images', 'check_in_time', 'check_out_time', 'min_nights',
-    ];
-
-    for (const field of updatable) {
-      if (body[field] !== undefined) {
-        property[field] = body[field];
-      }
-    }
-
-    property.updated_at = new Date().toISOString();
-    properties[idx] = property;
-
-    return NextResponse.json({ property });
+    const updated = await prisma.property.update({
+      where: { id },
+      data,
+      include: { photos: { orderBy: { sortOrder: 'asc' }, select: { url: true } } },
+    });
+    return NextResponse.json({ property: toContract(updated) });
   } catch (error: any) {
     return NextResponse.json(
       { error: 'Failed to update property', detail: error.message },
@@ -129,22 +148,26 @@ export async function PUT(request: NextRequest, context: RouteContext) {
   }
 }
 
-// ── DELETE /api/properties/[id] — Soft delete (set inactive) ─────────────
+// ── DELETE /api/properties/[id] — deactivate, never destroy ────────────────
 export async function DELETE(request: NextRequest, context: RouteContext) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const { id } = await context.params;
-    const idx = properties.findIndex((p) => p.id === id);
+    const existing = await prisma.property.findUnique({ where: { id } });
+    if (!existing) return NextResponse.json({ error: 'Property not found' }, { status: 404 });
 
-    if (idx === -1) {
-      return NextResponse.json({ error: 'Property not found' }, { status: 404 });
-    }
-
-    properties[idx].status = 'inactive';
-    properties[idx].updated_at = new Date().toISOString();
+    // Soft-deactivate. A property has bookings, expenses and ledger history
+    // hanging off it; hard-deleting would orphan or cascade real records.
+    const updated = await prisma.property.update({
+      where: { id },
+      data: { status: 'INACTIVE' },
+      include: { photos: { orderBy: { sortOrder: 'asc' }, select: { url: true } } },
+    });
 
     return NextResponse.json({
-      message: 'Property deactivated',
-      property: properties[idx],
+      property: toContract(updated),
+      message: 'Property deactivated (not deleted — booking and financial history is preserved)',
     });
   } catch (error: any) {
     return NextResponse.json(

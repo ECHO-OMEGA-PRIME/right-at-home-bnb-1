@@ -74,6 +74,14 @@ KNOWN_GAPS: dict[str, str] = {
     # its routes were deleted rather than guarded - dead code is not a gap.
 }
 
+# Routes whose GET is deliberately public while their write methods are guarded.
+# Declared explicitly so the partial-coverage check stays strict everywhere else
+# instead of being loosened globally to accommodate one legitimate shape.
+PUBLIC_READ_ROUTES = {
+    "properties/[id]/route.ts":
+        "GET serves the public marketing listing; PUT/DELETE are owner/admin only",
+}
+
 MIDDLEWARE = Path("apps/web/middleware.ts")
 
 
@@ -186,9 +194,10 @@ def classify(path: Path, public_prefixes: list[str] | None = None) -> dict:
             rf"function\s+{fn}\s*\([^)]*\)[^{{]*\{{(.*?)\n\}}", text, re.S)
         if body and any(re.search(rf"\b{g}\s*\(", body.group(1)) for g in SESSION_GUARDS):
             guard_hits += len(re.findall(rf"\b{fn}\s*\(", text)) - 1  # minus its definition
-    partial = (
-        bool(guards) and not delegated and len(methods) > 1 and guard_hits < len(methods)
-    )
+    # A declared public-read route is expected to have one unguarded method
+    # (GET); every OTHER method must still be covered.
+    expected = len(methods) - (1 if rel in PUBLIC_READ_ROUTES and "GET" in methods else 0)
+    partial = bool(guards) and not delegated and len(methods) > 1 and guard_hits < expected
 
     return {
         "route": rel,
