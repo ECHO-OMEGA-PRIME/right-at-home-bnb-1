@@ -26,10 +26,18 @@ export async function GET(request: NextRequest) {
     let filtered = journalLines.filter(
       (l) => l.date >= startDate && l.date <= endDate,
     );
+
+    // Unallocated lines (property_id null) used to be folded into WHICHEVER
+    // property was asked for. Asking about each property in turn therefore
+    // charged the whole company's overhead to every one of them, so no two
+    // properties could be compared and the per-property figures did not sum to
+    // the company total. They are now excluded and reported on their own line,
+    // so the cost is still visible but belongs to nobody in particular.
+    const unallocated = propertyFilter
+      ? filtered.filter((l) => l.property_id === null)
+      : [];
     if (propertyFilter) {
-      filtered = filtered.filter(
-        (l) => l.property_id === propertyFilter || l.property_id === null,
-      );
+      filtered = filtered.filter((l) => l.property_id === propertyFilter);
     }
 
     // Aggregate revenue lines (4xxx accounts — credit-normal)
@@ -63,10 +71,33 @@ export async function GET(request: NextRequest) {
     const totalExpensesCents = expenseLines.reduce((s, e) => s + e.amount_cents, 0);
     const netIncomeCents = totalRevenueCents - totalExpensesCents;
 
+    // The ledger is currently EMPTY (0 JournalEntry, 0 JournalEntryLine against
+    // 27 seeded accounts), so this report returns zeros for a business with 762
+    // confirmed bookings. Say so, rather than presenting a clean $0 P&L that
+    // looks like a finished report of a business that did nothing.
+    const ledgerEmpty = journalLines.length === 0;
+
     return NextResponse.json({
       report: 'profit_and_loss',
       period: { start: startDate, end: endDate },
       property_id: propertyFilter ?? 'all',
+      source: 'journal_ledger',
+      ledger_empty: ledgerEmpty,
+      warnings: ledgerEmpty
+        ? [
+            'No journal entries exist for this period, so every figure below is zero because nothing has been posted to the ledger — not because the business had no activity. For revenue actually recorded against properties, use /api/accounting/reports/property-pnl.',
+          ]
+        : [],
+      // Costs that belong to the business rather than to one property. Only
+      // populated when a single property was requested; otherwise they are
+      // already inside the totals.
+      unallocated: propertyFilter
+        ? {
+            note: 'Not included in the figures above — company-level lines that are not attributable to this property.',
+            debit_cents: unallocated.reduce((s, l) => s + l.debit_cents, 0),
+            credit_cents: unallocated.reduce((s, l) => s + l.credit_cents, 0),
+          }
+        : null,
       revenue: {
         lines: revenueLines,
         total_cents: totalRevenueCents,
