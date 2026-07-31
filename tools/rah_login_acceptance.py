@@ -77,7 +77,15 @@ def live_firebase_config() -> dict:
 
 # ------------------------------------------------------------------- 2. identity
 # vercel env pull .rah_prod.env --environment=production   (keep out of git)
-PROD_ENV = os.environ.get("RAH_PROD_ENV", ".rah_prod.env")
+#
+# Resolved against the repo root rather than the caller's cwd. As a bare
+# relative name this silently missed the file whenever a tool was run from
+# apps/web, fell through to the known-dead vault row below, and died with
+# `binascii.Error: Incorrect padding` -- an error that names neither the file
+# nor the credential, and reads like a corrupt secret rather than a wrong
+# working directory.
+_REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PROD_ENV = os.environ.get("RAH_PROD_ENV") or os.path.join(_REPO_ROOT, ".rah_prod.env")
 
 
 def _sa_from_prod_env() -> str | None:
@@ -123,7 +131,18 @@ def load_service_account() -> dict:
 
     raw = raw.strip()
     if not raw.startswith("{"):
-        raw = base64.b64decode(raw).decode("utf-8")
+        try:
+            raw = base64.b64decode(raw, validate=True).decode("utf-8")
+        except Exception as exc:
+            # Say which credential failed and how to fix it. The vault row is a
+            # 28-char placeholder, so this is what a missing .rah_prod.env
+            # actually looks like -- not a corrupted secret.
+            raise RuntimeError(
+                f"Firebase service account is unusable ({len(raw)} chars, not JSON and not "
+                f"valid base64: {exc}). Expected it in {PROD_ENV}; the vault row "
+                f"{SA_SERVICE!r} is a known placeholder and cannot sign. Refresh with: "
+                f"vercel env pull .rah_prod.env --environment=production"
+            ) from exc
     sa = json.loads(raw)
     # PEM newlines survive env-var round-trips as literal backslash-n.
     if "private_key" in sa:
