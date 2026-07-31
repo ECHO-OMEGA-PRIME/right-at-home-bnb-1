@@ -11,13 +11,59 @@ import toast from 'react-hot-toast';
 // API CONFIGURATION
 // ============================================
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+/**
+ * SAME-ORIGIN BY DEFAULT.
+ *
+ * This client used to be built as:
+ *
+ *     const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+ *
+ * In production NEXT_PUBLIC_API_URL was
+ * "https://rightathome-api.bmcii1976.workers.dev\n" — a Cloudflare Worker on
+ * the RETIRED account, which answers 404 for every path including "/", with a
+ * literal \n appended by `vercel env pull`. So every call through this client
+ * went to a host that does not exist. 57 distinct paths, across 9 pages.
+ *
+ * Nothing looked broken because the failures render as empty or perpetually
+ * loading states, not errors. "No data yet" and "the request went to a dead
+ * server" are indistinguishable on screen.
+ *
+ * An empty baseURL makes every request relative to the page's own origin, so
+ * these hit this Next app's own /api routes. The env var is still honoured if
+ * it is set to something usable, but a value has to survive `usableBase` to be
+ * used — silently inheriting a dead host is exactly what happened here.
+ */
+export function usableBase(raw: string | undefined): string {
+  // `vercel env pull` writes escaped values, so a literal backslash-n can end
+  // up inside the string. Strip it before judging the URL, or a perfectly good
+  // host looks malformed (and an unusable one looks fine).
+  const cleaned = (raw ?? '').replace(/\\[rn]/g, '').trim();
+  if (!cleaned) return '';
+  try {
+    const url = new URL(cleaned);
+    // The retired Cloudflare account. Never address it again, however it is
+    // configured — this is the specific host that was dead in production.
+    if (url.hostname.endsWith('.bmcii1976.workers.dev')) return '';
+    // A localhost default only helps a developer who happens to be running the
+    // old Python backend; in a browser it points at the USER's machine.
+    if (typeof window !== 'undefined' && /^(localhost|127\.0\.0\.1)$/.test(url.hostname)) return '';
+    return cleaned.replace(/\/$/, '');
+  } catch {
+    return '';
+  }
+}
+
+const API_BASE_URL = usableBase(process.env.NEXT_PUBLIC_API_URL);
 
 export const api: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
+  // These routes authenticate with the rah-auth-token COOKIE, not the Bearer
+  // header below. Same-origin requests send cookies anyway; this makes it
+  // explicit and keeps working if a real API host is configured later.
+  withCredentials: true,
   timeout: 30000,
 });
 
@@ -34,13 +80,20 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
-    if (error.response?.status === 401) {
-      // Redirect to login on unauthorized
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('auth_token');
-        window.location.href = '/login';
-      }
-    }
+    // DELIBERATELY NO LONGER FORCES A LOGOUT ON 401.
+    //
+    // This used to clear auth_token and hard-navigate to /login on any 401.
+    // That code was dormant: every request died against a dead host with a
+    // network error, so no 401 ever reached it. Pointing the base at this app's
+    // own origin wakes it up — and several of these endpoints are owner-only,
+    // so one background query firing a 401 would have signed the user out
+    // mid-task, with no explanation and no way to tell it from a session
+    // expiry.
+    //
+    // Session expiry is handled by the auth layer that owns the cookie. An API
+    // client's job is to report the failure, not to decide the user is logged
+    // out. The rejection propagates so react-query surfaces isError and a page
+    // can say what went wrong.
     return Promise.reject(error);
   }
 );
@@ -1196,7 +1249,7 @@ export function useCreateExpense() {
       property: string;
       recurring: boolean;
     }) => {
-      const { data } = await api.post('/expenses', expense);
+      const { data } = await api.post('/api/expenses', expense);
       return data;
     },
     onSuccess: () => {
@@ -1597,7 +1650,7 @@ export function useRespondToAdminReview() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, response }: { id: string; response: string }) => {
-      const { data } = await api.post(`/reviews/${id}/respond`, { response });
+      const { data } = await api.post(`/api/reviews/${id}/respond`, { response });
       return data;
     },
     onSuccess: () => {
@@ -1624,7 +1677,7 @@ export function useCreateReview() {
       sentiment?: string;
       nightly_rate?: number;
     }) => {
-      const { data } = await api.post('/reviews', review);
+      const { data } = await api.post('/api/reviews', review);
       return data;
     },
     onSuccess: () => {
