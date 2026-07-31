@@ -279,7 +279,7 @@ export default function CleanersPage() {
 
           {/* Tab Content */}
           {activeTab === 'leaderboard' && (
-            <LeaderboardView cleaners={cleanerProfiles} />
+            <LeaderboardView />
           )}
 
           {activeTab === 'manage' && (
@@ -712,138 +712,193 @@ function ManageCleanersView({
 }
 
 // Leaderboard View
-function LeaderboardView({ cleaners }: { cleaners: CleanerProfile[] }) {
-  const leaderboard = [...cleaners]
-    .sort((a, b) => (b.avgScore * b.rating) - (a.avgScore * a.rating))
-    .map((cleaner, index) => ({
-      ...cleaner,
-      rank: index + 1,
-      score: Math.round(cleaner.avgScore * cleaner.rating * 10),
-    }));
+/**
+ * Cleaner leaderboard.
+ *
+ * This tab is the page's DEFAULT view and it used to be fed by
+ * `mockCleanerProfiles`, an empty array that nothing ever populated. So it
+ * rendered an empty podium with no explanation — which reads as "nobody scored
+ * well this month". The truth is that no turnover has ever been completed by
+ * anyone: production holds 209 cleaning jobs, every one still SCHEDULED, with
+ * 0 worker records and 0 active schedules. Those are completely different
+ * statements and must not render the same.
+ *
+ * src/lib/api.ts already had fetchCleanerLeaderboard() pointing at
+ * /api/cleaners/leaderboard through the shared axios client, whose baseURL is
+ * a Cloudflare Worker on the retired account that answers 404 for every path
+ * including '/'. The function existed; the endpoint did not. This fetches the
+ * real Next route, same-origin.
+ */
+interface LeaderRow {
+  cleaner_id: string;
+  cleaner_name: string | null;
+  completed: number;
+  on_time_pct: number | null;
+  within_target_pct: number | null;
+  avg_minutes: number | null;
+  avg_quality: number | null;
+  evidence_pct: number | null;
+}
+interface LeaderboardPayload {
+  rankable: boolean;
+  reason: string | null;
+  target_mins: number;
+  rows: LeaderRow[];
+  context: {
+    worker_count: number;
+    active_schedule_count: number;
+    jobs_total: number;
+    jobs_completed: number;
+    jobs_in_progress: number;
+    jobs_unassigned: number;
+    jobs_overdue: number;
+  };
+  warnings: string[];
+}
+
+function LeaderboardView() {
+  const [data, setData] = useState<LeaderboardPayload | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/cleaners/leaderboard', { credentials: 'include' })
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`${r.status} ${r.statusText}`))))
+      .then((d) => !cancelled && setData(d))
+      .catch((e) => !cancelled && setError(e.message))
+      .finally(() => !cancelled && setLoading(false));
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (loading) {
+    return <div className="p-8 text-center text-sm text-gray-500">Loading leaderboard...</div>;
+  }
+  if (error || !data) {
+    // A failure must not look like an empty leaderboard.
+    return (
+      <div className="p-8 text-center">
+        <p className="text-sm font-medium text-red-700">Could not load the leaderboard</p>
+        <p className="mt-1 text-sm text-gray-500">{error}</p>
+      </div>
+    );
+  }
+
+  const c = data.context;
+
+  if (!data.rankable) {
+    return (
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-8">
+        <div className="max-w-2xl mx-auto text-center">
+          <Trophy className="w-10 h-10 mx-auto text-gray-300" />
+          <h3 className="mt-4 text-base font-semibold text-gray-900">Nothing to rank yet</h3>
+          <p className="mt-2 text-sm text-gray-600">{data.reason}</p>
+
+          {/* What IS known, so the empty state informs rather than just being blank. */}
+          <dl className="mt-6 grid grid-cols-2 sm:grid-cols-3 gap-3 text-left">
+            {[
+              { label: 'Cleaning jobs', value: c.jobs_total },
+              { label: 'Completed', value: c.jobs_completed },
+              { label: 'In progress', value: c.jobs_in_progress },
+              { label: 'Unassigned', value: c.jobs_unassigned },
+              { label: 'Overdue', value: c.jobs_overdue },
+              { label: 'Worker records', value: c.worker_count },
+            ].map((s) => (
+              <div key={s.label} className="rounded-lg border border-gray-200 px-4 py-3">
+                <dt className="text-xs uppercase tracking-wide text-gray-500">{s.label}</dt>
+                <dd className="mt-1 text-lg font-semibold text-gray-900">{s.value}</dd>
+              </div>
+            ))}
+          </dl>
+
+          {data.warnings.length > 0 && (
+            <ul className="mt-6 space-y-2 text-left">
+              {data.warnings.map((w) => (
+                <li
+                  key={w}
+                  className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2"
+                >
+                  {w}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </motion.div>
+    );
+  }
 
   const rankStyles = [
-    { bg: 'bg-gradient-to-r from-yellow-400 to-yellow-500', text: 'text-white', icon: Trophy },
-    { bg: 'bg-gradient-to-r from-gray-300 to-gray-400', text: 'text-white', icon: Medal },
-    { bg: 'bg-gradient-to-r from-amber-600 to-amber-700', text: 'text-white', icon: Award },
+    { bg: 'bg-gradient-to-r from-yellow-400 to-yellow-500', icon: Trophy },
+    { bg: 'bg-gradient-to-r from-gray-300 to-gray-400', icon: Medal },
+    { bg: 'bg-gradient-to-r from-amber-600 to-amber-700', icon: Award },
   ];
+  const dash = (v: number | null, suffix = '') => (v === null ? '-' : `${v}${suffix}`);
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="space-y-6"
-    >
-      {/* Top 3 Podium */}
-      {leaderboard.length >= 3 && (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+      {data.rows.length >= 3 && (
         <div className="grid md:grid-cols-3 gap-4">
-          {leaderboard.slice(0, 3).map((cleaner, index) => {
-            const style = rankStyles[index];
+          {data.rows.slice(0, 3).map((r, i) => {
+            const style = rankStyles[i];
             const RankIcon = style.icon;
-
             return (
-              <motion.div
-                key={cleaner.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                className={`relative overflow-hidden rounded-2xl p-6 ${style.bg} ${style.text}`}
-              >
-                <div className="absolute top-4 right-4 opacity-20">
-                  <RankIcon className="w-24 h-24" />
-                </div>
-
-                <div className="relative z-10">
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center font-bold">
-                      #{cleaner.rank}
-                    </div>
-                    <RankIcon className="w-6 h-6" />
-                  </div>
-
-                  <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center text-2xl font-['Playfair_Display'] font-bold mb-3">
-                    {cleaner.name.split(' ').map(n => n[0]).join('')}
-                  </div>
-
-                  <h3 className="text-xl font-['Playfair_Display'] font-bold mb-1">
-                    {cleaner.name}
-                  </h3>
-
-                  <div className="flex items-center gap-4 text-sm opacity-90">
-                    <div className="flex items-center gap-1">
-                      <Zap className="w-4 h-4" />
-                      {cleaner.score} pts
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Star className="w-4 h-4" />
-                      {cleaner.rating}
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
+              <div key={r.cleaner_id} className={`rounded-xl p-5 text-white ${style.bg}`}>
+                <RankIcon className="w-6 h-6" />
+                <p className="mt-3 text-lg font-bold">{r.cleaner_name ?? 'Unnamed'}</p>
+                <p className="text-sm opacity-90">{r.completed} turnovers completed</p>
+              </div>
             );
           })}
         </div>
       )}
 
-      {/* Full Leaderboard */}
-      <div className="bg-white rounded-2xl shadow-sm border border-[#2D2D2D]/5 overflow-hidden">
-        <div className="p-4 border-b border-[#2D2D2D]/10">
-          <h3 className="text-lg font-['Playfair_Display'] font-semibold text-[#2D2D2D]">
-            Full Rankings
-          </h3>
-        </div>
-
-        <div className="divide-y divide-[#2D2D2D]/5">
-          {leaderboard.map((cleaner, index) => (
-            <motion.div
-              key={cleaner.id}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.05 }}
-              className="flex items-center gap-4 p-4 hover:bg-[#F5F5F0] transition-colors"
-            >
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
-                cleaner.rank <= 3 ? 'bg-[#500000] text-white' : 'bg-[#F5F5F0] text-[#2D2D2D]'
-              }`}>
-                #{cleaner.rank}
-              </div>
-
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#500000]/20 to-[#722F37]/20 flex items-center justify-center text-lg font-['Playfair_Display'] font-bold text-[#500000]">
-                {cleaner.name.split(' ').map(n => n[0]).join('')}
-              </div>
-
-              <div className="flex-1">
-                <div className="font-semibold text-[#2D2D2D]">{cleaner.name}</div>
-                <div className="text-sm text-[#2D2D2D]/60">{cleaner.totalJobs} jobs completed</div>
-              </div>
-
-              <div className="hidden md:flex items-center gap-6">
-                <div className="text-center">
-                  <div className="flex items-center gap-1 text-[#C4A777]">
-                    <Star className="w-4 h-4 fill-current" />
-                    {cleaner.rating}
-                  </div>
-                  <div className="text-xs text-[#2D2D2D]/50">Rating</div>
-                </div>
-                <div className="text-center">
-                  <div className="flex items-center gap-1 text-emerald-600">
-                    <Target className="w-4 h-4" />
-                    {cleaner.onTimePercentage}%
-                  </div>
-                  <div className="text-xs text-[#2D2D2D]/50">On Time</div>
-                </div>
-              </div>
-
-              <div className="text-right">
-                <div className="text-xl font-['Playfair_Display'] font-bold text-[#500000]">
-                  {cleaner.score}
-                </div>
-                <div className="text-xs text-[#2D2D2D]/50">points</div>
-              </div>
-            </motion.div>
-          ))}
-        </div>
+      <div className="overflow-x-auto border border-gray-200 rounded-xl">
+        <table className="min-w-full text-sm">
+          <thead className="bg-gray-50 text-gray-600">
+            <tr>
+              {[
+                '#',
+                'Cleaner',
+                'Completed',
+                'On time',
+                `Within ${data.target_mins}m`,
+                'Avg mins',
+                'Quality',
+                'Evidence',
+              ].map((h) => (
+                <th key={h} className="px-4 py-3 text-left font-medium whitespace-nowrap">
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {data.rows.map((r, i) => (
+              <tr key={r.cleaner_id}>
+                <td className="px-4 py-3 text-gray-500">{i + 1}</td>
+                <td className="px-4 py-3 font-medium text-gray-900">
+                  {r.cleaner_name ?? 'Unnamed'}
+                </td>
+                <td className="px-4 py-3">{r.completed}</td>
+                <td className="px-4 py-3">{dash(r.on_time_pct, '%')}</td>
+                <td className="px-4 py-3">{dash(r.within_target_pct, '%')}</td>
+                <td className="px-4 py-3">{dash(r.avg_minutes)}</td>
+                <td className="px-4 py-3">{dash(r.avg_quality)}</td>
+                <td className="px-4 py-3">{dash(r.evidence_pct, '%')}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
+
+      {/* A dash means "not measured"; it must not be read as a zero. */}
+      <p className="text-xs text-gray-500">
+        A dash means the figure could not be measured - for example, a completion with no recorded
+        start time has no turnaround to judge.
+      </p>
     </motion.div>
   );
 }
