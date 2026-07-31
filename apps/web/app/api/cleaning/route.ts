@@ -302,6 +302,40 @@ export async function POST(request: NextRequest) {
 
         const checklist = parseJsonColumn(job.checklistProgress, job.id, 'checklistProgress') as any[];
 
+        // ── Completion gates (P2-1: "without allowing silent completion gaps")
+        //
+        // 1. A job that was never STARTED must not be completable. Previously a
+        //    checklist with no photo-required items passed the check below and
+        //    completed a job whose startedAt was null — a turnover marked done
+        //    that nobody ever began, with no duration and no evidence.
+        if (!job.startedAt) {
+          return NextResponse.json(
+            {
+              error: 'This turnover was never started, so it cannot be completed',
+              detail: 'POST action "start" first — completion records a duration measured from it.',
+            },
+            { status: 400 },
+          );
+        }
+
+        // 2. An EMPTY checklist must be refused explicitly. It used to reach the
+        //    score maths as 0/0, produce NaN, and fail at the database write as
+        //    an opaque 500 — failing closed by accident rather than by design.
+        //    An empty list is also exactly what parseJsonColumn returns for a
+        //    MALFORMED blob, so this is the difference between "no evidence" and
+        //    "evidence we could not read", both of which must block completion.
+        if (checklist.length === 0) {
+          return NextResponse.json(
+            {
+              error: 'No checklist progress recorded, so this turnover cannot be completed',
+              detail:
+                'Either no checklist was started, or the stored checklist could not be read. ' +
+                'Completion requires recorded evidence.',
+            },
+            { status: 400 },
+          );
+        }
+
         // Check required items
         const incompleteRequired = checklist.filter((item: any) => {
           const original = masterChecklist.find((m) => m.id === item.itemId);
@@ -328,7 +362,13 @@ export async function POST(request: NextRequest) {
         const totalItems = checklist.length;
         const issues = parseJsonColumn(job.issues, job.id, 'issues') as any[];
         const issueDeduction = issues.filter((i: any) => i.severity === 'high' || i.severity === 'urgent').length * 10;
-        const score = Math.max(0, Math.round(((completedItems / totalItems) * 100) - issueDeduction));
+        // totalItems cannot be 0 here — the gate above refuses an empty
+        // checklist — but the guard stays so a future edit to that gate cannot
+        // silently reintroduce a NaN score on an Int column.
+        const score =
+          totalItems > 0
+            ? Math.max(0, Math.round(((completedItems / totalItems) * 100) - issueDeduction))
+            : 0;
 
         const updated = await prisma.cleaningJob.update({
           where: { id: reportId },
