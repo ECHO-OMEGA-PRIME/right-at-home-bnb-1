@@ -21,18 +21,31 @@ import {
 
 // Run the late cleaner check
 export async function POST(request: NextRequest) {
-  const auth = await requireOneOfRoles(request, ['worker', 'owner', 'admin']);
+  // Owner/admin only. This handler PLACES PHONE CALLS to Steven's real number.
+  // It previously accepted 'worker', so anyone holding a cleaner's session could
+  // make the system ring a human, as often as they liked.
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
   if (auth.error) return auth.error;
   console.log('[Monitor API] Running late cleaner check...');
 
   try {
-    // Optional: Check for API key in production
+    // Fail CLOSED when MONITOR_API_KEY is not configured.
+    //
+    // This was `if (apiKey && authHeader !== ...)`, so an unset key skipped the
+    // check entirely — the protection disappeared exactly when someone forgot
+    // to configure it. /api/cron/monitor already gets this right (`!cronSecret
+    // || ...`); this handler is the one that drifted.
     const authHeader = request.headers.get('authorization');
     const apiKey = process.env.MONITOR_API_KEY;
 
-    if (apiKey && authHeader !== `Bearer ${apiKey}`) {
+    if (!apiKey || authHeader !== `Bearer ${apiKey}`) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        {
+          error: 'Unauthorized',
+          detail: apiKey
+            ? 'A valid MONITOR_API_KEY bearer token is required.'
+            : 'MONITOR_API_KEY is not configured, so this endpoint is disabled. It places live phone calls and will not run unauthenticated.',
+        },
         { status: 401 }
       );
     }

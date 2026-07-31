@@ -113,6 +113,20 @@ async function processLateCleaner(
 
   // Check if we've already alerted for this cleaner today
   const existingAlert = await getExistingAlert(cleaner.id);
+
+  // We could not read the alert store, so we cannot tell whether Steven has
+  // already been called about this. Record it and stop: a missed call is
+  // recoverable on the next run once the store is readable, whereas a repeated
+  // call cannot be un-made and lands on a real phone.
+  if (existingAlert === ALERT_LOOKUP_UNKNOWN) {
+    const msg =
+      `Alert store unreadable for ${cleaner.cleanerName} at ${cleaner.propertyName} ` +
+      `(${hoursLate}h late). Skipped calling Steven because a previous alert cannot be ruled out.`;
+    result.errors.push(msg);
+    console.error(`[CleanerMonitor] ${msg}`);
+    return;
+  }
+
   if (existingAlert && !existingAlert.resolved) {
     console.log(`[CleanerMonitor] Alert already exists for ${cleaner.cleanerName}`);
 
@@ -142,8 +156,28 @@ async function processLateCleaner(
 /**
  * Check for existing unresolved alert for this cleaner schedule
  */
-async function getExistingAlert(scheduleId: string): Promise<CleanerAlert | null> {
-  if (!db) return null;
+/**
+ * Look up an unresolved alert for this schedule.
+ *
+ * Returns the alert, `null` for "confirmed none", or the UNKNOWN sentinel when
+ * the store could not be read.
+ *
+ * That third case is the whole point. This used to return null both when there
+ * was genuinely no prior alert AND when Firestore was unreachable or
+ * quota-limited — and the caller treats null as "not alerted yet, go call
+ * Steven". The alert it then creates cannot be persisted either (createAlert
+ * no-ops without `db`), so the next run finds nothing again. That is a call to
+ * a real phone every 15 minutes, per late cleaner, for as long as the outage
+ * lasts, with no record that any of it happened.
+ *
+ * De-duplication that fails open is not de-duplication.
+ */
+export const ALERT_LOOKUP_UNKNOWN = Symbol('alert-lookup-unknown');
+type AlertLookup = CleanerAlert | null | typeof ALERT_LOOKUP_UNKNOWN;
+
+async function getExistingAlert(scheduleId: string): Promise<AlertLookup> {
+  // No Firestore configured at all: we cannot know, so we must not assume.
+  if (!db) return ALERT_LOOKUP_UNKNOWN;
 
   try {
     const snapshot = await db.collection('cleaner_alerts')
@@ -153,13 +187,14 @@ async function getExistingAlert(scheduleId: string): Promise<CleanerAlert | null
       .limit(1)
       .get();
 
+    // An empty result from a healthy query IS "confirmed none".
     if (snapshot.empty) return null;
 
     const doc = snapshot.docs[0];
     return { id: doc.id, ...doc.data() } as CleanerAlert;
   } catch (e) {
     console.error('[CleanerMonitor] Error checking existing alert:', e);
-    return null;
+    return ALERT_LOOKUP_UNKNOWN;
   }
 }
 
