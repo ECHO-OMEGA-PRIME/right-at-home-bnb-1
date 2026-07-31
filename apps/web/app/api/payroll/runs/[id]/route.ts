@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireOneOfRoles } from '@/lib/api-auth';
 import { prisma } from '@/lib/prisma';
+import { assertPeriodOpen, periodLockResponse } from '@/lib/period-lock';
 import { postJournalEntry, reverseJournalEntry, UnknownAccountError } from '@/lib/ledger';
 import { auditPiiAccess } from '@/lib/payroll';
 
@@ -110,6 +111,13 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: 'Payroll run not found' }, { status: 404 });
     }
 
+    // Closed books stay closed (P5-1). Approving or cancelling posts through
+    // the ledger, which carries its own lock check — but the other status
+    // changes update this batch without posting anything, and a payroll run
+    // dated inside a closed period is part of that period's cost whatever its
+    // status becomes.
+    await assertPeriodOpen(run.periodStart, run.weekEnding, run.payDate);
+
     const body = await request.json();
     const validStatuses = ['draft', 'approved', 'processed', 'cancelled'];
     if (!body.status || !validStatuses.includes(body.status)) {
@@ -214,6 +222,12 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       journal_entry: journalEntry,
     });
   } catch (error: any) {
+    // A locked accounting period is a REFUSAL, not a fault. Returning the
+    // generic 500 below would tell the caller the system broke when it did
+    // exactly what it was built to do, and the reason would be lost.
+    const locked = periodLockResponse(error);
+    if (locked) return NextResponse.json(locked.body, { status: locked.status });
+
     return NextResponse.json(
       { error: 'Failed to update payroll run', detail: error.message },
       { status: 500 },

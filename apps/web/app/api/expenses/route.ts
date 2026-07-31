@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireOneOfRoles } from '@/lib/api-auth';
 import { prisma } from '@/lib/prisma';
+import { assertPeriodOpen, periodLockResponse } from '@/lib/period-lock';
 import { postJournalEntry } from '@/lib/ledger';
 
 // Expenses are real Expense rows, and each one posts a real double-entry
@@ -162,6 +163,10 @@ export async function POST(request: NextRequest) {
       `${body.date ?? new Date().toISOString().slice(0, 10)}T00:00:00.000Z`,
     );
 
+    // Closed books stay closed (P5-1). Checked before the write, not after, so
+    // a rejected expense leaves nothing behind.
+    await assertPeriodOpen(expenseDate);
+
     const created = (await prisma.expense.create({
       data: {
         category: body.category,
@@ -216,6 +221,12 @@ export async function POST(request: NextRequest) {
       { status: 201 },
     );
   } catch (error: any) {
+    // A locked accounting period is a REFUSAL, not a fault. Returning the
+    // generic 500 below would tell the caller the system broke when it did
+    // exactly what it was built to do, and the reason would be lost.
+    const locked = periodLockResponse(error);
+    if (locked) return NextResponse.json(locked.body, { status: locked.status });
+
     return NextResponse.json(
       { error: 'Failed to create expense', detail: error.message },
       { status: 500 },

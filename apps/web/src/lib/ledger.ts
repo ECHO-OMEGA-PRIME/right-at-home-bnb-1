@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { assertPeriodOpen } from '@/lib/period-lock';
 
 /**
  * Double-entry ledger service (P1 objective 2 / queue #26855).
@@ -85,6 +86,11 @@ export function assertBalanced(lines: JournalLineInput[]): { debits: number; cre
 export async function postJournalEntry(input: JournalEntryInput) {
   assertBalanced(input.lines);
 
+  // Enforced here rather than in each route so that every caller — including
+  // routes not written yet — inherits it. A guard applied per-route is one
+  // forgotten import away from a hole in the books.
+  await assertPeriodOpen(input.entryDate);
+
   const codes = [...new Set(input.lines.map((l) => l.accountCode))];
   const accounts = await prisma.ledgerAccount.findMany({ where: { code: { in: codes } } });
   const byCode = new Map(accounts.map((a) => [a.code, a]));
@@ -119,6 +125,12 @@ export async function postJournalEntry(input: JournalEntryInput) {
  * is what makes the ledger an audit trail rather than a mutable table.
  */
 export async function reverseJournalEntry(entryId: string, memo: string, entryDate = new Date()) {
+  // Checked against the REVERSAL's date, not the original's. Correcting a
+  // closed period by posting a compensating entry in the current open period is
+  // exactly the right thing to do; blocking that because the original sits in a
+  // locked month would leave a known-wrong figure with no lawful way to fix it.
+  await assertPeriodOpen(entryDate);
+
   const original = await prisma.journalEntry.findUnique({
     where: { id: entryId },
     include: { lines: { include: { account: true } } },

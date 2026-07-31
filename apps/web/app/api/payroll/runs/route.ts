@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireOneOfRoles } from '@/lib/api-auth';
 import { prisma } from '@/lib/prisma';
+import { assertPeriodOpen, periodLockResponse } from '@/lib/period-lock';
 import { auditPiiAccess } from '@/lib/payroll';
 import { computePay } from '@/lib/payroll-tax';
 
@@ -191,11 +192,19 @@ export async function POST(request: NextRequest) {
       };
     });
 
+    const payDate = new Date(`${body.pay_date}T00:00:00.000Z`);
+
+    // Closed books stay closed (P5-1). Both ends of the pay period and the pay
+    // date itself: a run that starts inside a closed month still moves that
+    // month's wage cost, even if it is paid in an open one.
+    await assertPeriodOpen(periodStart, periodEnd, payDate);
+
     const created = await prisma.payrollBatch.create({
       data: {
         weekEnding: periodEnd,
-        periodStart: new Date(`${body.pay_period_start}T00:00:00.000Z`),
-        payDate: new Date(`${body.pay_date}T00:00:00.000Z`),
+        // The same values the lock was checked against, not rebuilt copies.
+        periodStart,
+        payDate,
         status: 'DRAFT',
         totalCents: totalNetCents,
         totalGrossCents,
@@ -210,6 +219,12 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ payroll_run: batchToContract(created) }, { status: 201 });
   } catch (error: any) {
+    // A locked accounting period is a REFUSAL, not a fault. Returning the
+    // generic 500 below would tell the caller the system broke when it did
+    // exactly what it was built to do, and the reason would be lost.
+    const locked = periodLockResponse(error);
+    if (locked) return NextResponse.json(locked.body, { status: locked.status });
+
     if (String(error.message).includes('Unique constraint')) {
       // weekEnding is unique: this is the guard against paying a period twice.
       return NextResponse.json(

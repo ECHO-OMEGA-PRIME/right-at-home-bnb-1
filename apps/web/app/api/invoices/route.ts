@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireOneOfRoles } from '@/lib/api-auth';
 import { prisma } from '@/lib/prisma';
+import { assertPeriodOpen, periodLockResponse } from '@/lib/period-lock';
 
 // Real Invoice / InvoiceLine rows (queue #26855).
 //
@@ -141,6 +142,13 @@ export async function POST(request: NextRequest) {
       ? new Date(`${body.due_date}T00:00:00.000Z`)
       : new Date(Date.now() + 10 * 24 * 60 * 60 * 1000);
 
+    const issueDate = new Date();
+
+    // Closed books stay closed (P5-1). An invoice is issued today, so this only
+    // bites when the CURRENT period has been locked — which is exactly when it
+    // should, because the filing for it has already been made.
+    await assertPeriodOpen(issueDate);
+
     const created = await prisma.invoice.create({
       data: {
         number: `INV-${Date.now().toString(36).toUpperCase()}`,
@@ -148,7 +156,7 @@ export async function POST(request: NextRequest) {
         propertyId: booking.propertyId,
         guestId: booking.guestId,
         status: 'draft',
-        issueDate: new Date(),
+        issueDate,
         dueDate,
         subtotalCents,
         taxCents,
@@ -164,6 +172,12 @@ export async function POST(request: NextRequest) {
       { status: 201 },
     );
   } catch (error: any) {
+    // A locked accounting period is a REFUSAL, not a fault. Returning the
+    // generic 500 below would tell the caller the system broke when it did
+    // exactly what it was built to do, and the reason would be lost.
+    const locked = periodLockResponse(error);
+    if (locked) return NextResponse.json(locked.body, { status: locked.status });
+
     return NextResponse.json(
       { error: 'Failed to create invoice', detail: error.message },
       { status: 500 },

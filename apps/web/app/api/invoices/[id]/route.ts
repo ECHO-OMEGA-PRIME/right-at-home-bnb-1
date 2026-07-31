@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireOneOfRoles } from '@/lib/api-auth';
 import { prisma } from '@/lib/prisma';
+import { assertPeriodOpen, periodLockResponse } from '@/lib/period-lock';
 
 // Real Invoice / InvoiceLine rows (queue #26855). Previously a hardcoded array,
 // so recorded payments disappeared on the next cold start -- an invoice ledger
@@ -117,9 +118,25 @@ export async function PUT(request: NextRequest, context: RouteContext) {
 
     if (body.notes !== undefined) data.notes = body.notes;
 
+    // Closed books stay closed (P5-1). Both the invoice's EXISTING dates and any
+    // new paid date are checked: marking a closed month's invoice paid changes
+    // that month's figures, and so does moving a paid date out of one. Checking
+    // only the new value would leave the obvious way around the lock.
+    await assertPeriodOpen(
+      existing.issueDate,
+      existing.paidDate,
+      data.paidDate as Date | undefined,
+    );
+
     const updated = await prisma.invoice.update({ where: { id }, data, include: INCLUDE });
     return NextResponse.json({ invoice: await toContract(updated) });
   } catch (error: any) {
+    // A locked accounting period is a REFUSAL, not a fault. Returning the
+    // generic 500 below would tell the caller the system broke when it did
+    // exactly what it was built to do, and the reason would be lost.
+    const locked = periodLockResponse(error);
+    if (locked) return NextResponse.json(locked.body, { status: locked.status });
+
     return NextResponse.json(
       { error: 'Failed to update invoice', detail: error.message },
       { status: 500 },
