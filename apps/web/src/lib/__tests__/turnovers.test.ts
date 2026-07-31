@@ -116,3 +116,55 @@ describe('warnings make a zero readable', () => {
     expect(warningsFor(3, 22, 0)).not.toEqual(warningsFor(0, 0, 0));
   });
 });
+
+/**
+ * The 90-minute standard.
+ *
+ * Nothing measured overrun before this. cleaner-monitor.ts tracks hoursLate,
+ * which is lateness to START — a cleaner who arrives on time and is still
+ * working three hours later was completely invisible. The two signals are
+ * different questions and a job can be either, both, or neither.
+ */
+describe('90-minute overrun', () => {
+  const TARGET = 90;
+  const overrun = (job: { startedAt: Date | null; completedAt: Date | null }) =>
+    Boolean(
+      job.startedAt &&
+        !job.completedAt &&
+        NOW.getTime() - job.startedAt.getTime() > TARGET * 60000,
+    );
+
+  const minsAgo = (m: number) => new Date(NOW.getTime() - m * 60000);
+
+  it('flags a job running longer than 90 minutes', () => {
+    expect(overrun({ startedAt: minsAgo(120), completedAt: null })).toBe(true);
+  });
+
+  it('does not flag a job still inside the window', () => {
+    expect(overrun({ startedAt: minsAgo(45), completedAt: null })).toBe(false);
+  });
+
+  it('does not flag exactly at 90 minutes — the standard is a target, not a trap', () => {
+    expect(overrun({ startedAt: minsAgo(90), completedAt: null })).toBe(false);
+  });
+
+  it('does not flag a job that already FINISHED, however long it took', () => {
+    // Overrun is about work happening NOW. A finished long job is a duration
+    // stat, not an alert someone needs to act on.
+    expect(overrun({ startedAt: minsAgo(300), completedAt: minsAgo(10) })).toBe(false);
+  });
+
+  it('does not flag a job that never started', () => {
+    // That is "late", a different signal — see the late tests above.
+    expect(overrun({ startedAt: null, completedAt: null })).toBe(false);
+  });
+
+  it('overrun and late are independent: on-time start, still running long', () => {
+    // The case the existing monitor could never see. Arrived punctually,
+    // therefore never "late", but 3 hours into a 90-minute job.
+    const job = { startedAt: minsAgo(180), completedAt: null };
+    expect(overrun(job)).toBe(true);
+    // and it is NOT late by arrival, because it was started on schedule
+    expect(derive({ ...base, scheduledAt: minsAgo(185), completedAt: null }).is_late).toBe(true);
+  });
+});

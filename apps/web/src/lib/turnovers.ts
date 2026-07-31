@@ -21,6 +21,16 @@
 import { prisma } from '@/lib/prisma';
 import { type PropertyScope, isUnrestricted, scopedWhere } from '@/lib/tenant-scope';
 
+/**
+ * The turnover standard: 90 minutes from start to completion.
+ *
+ * Nothing in this codebase measured overrun before. cleaner-monitor.ts tracks
+ * hoursLate, which is lateness to START (scheduled vs now) — a different signal
+ * entirely. A cleaner who arrives on time and is still working three hours later
+ * was invisible.
+ */
+export const TURNOVER_TARGET_MINS = 90;
+
 /** Statuses that mean the job is finished, one way or another. */
 const TERMINAL = ['COMPLETED', 'CANCELLED'];
 
@@ -58,6 +68,16 @@ function jobShape(j: {
     // Stated per row so a client does not have to re-derive the rule.
     is_late: !j.completedAt && !TERMINAL.includes(j.status) && j.scheduledAt < new Date(),
     is_unassigned: j.cleanerId === null,
+    // Minutes elapsed for a job still running, so an overrun is visible WHILE it
+    // is happening rather than only in the duration recorded at completion.
+    running_mins: j.startedAt && !j.completedAt
+      ? Math.round((Date.now() - j.startedAt.getTime()) / 60000)
+      : null,
+    is_over_target: Boolean(
+      j.startedAt &&
+        !j.completedAt &&
+        Date.now() - j.startedAt.getTime() > TURNOVER_TARGET_MINS * 60000,
+    ),
   };
 }
 
@@ -77,7 +97,7 @@ const INCLUDE = {
 export async function turnoverBoard(scope: PropertyScope, now = new Date()) {
   const where = (extra: Record<string, unknown>) => scopedWhere(extra, scope);
 
-  const [upcoming, active, late, blocked, completed, unassignedTotal, workers, schedules] =
+  const [upcoming, active, late, blocked, completed, overTarget, unassignedTotal, workers, schedules] =
     await Promise.all([
       prisma.cleaningJob.count({
         where: where({ scheduledAt: { gt: now }, status: { notIn: TERMINAL } }),
@@ -92,6 +112,15 @@ export async function turnoverBoard(scope: PropertyScope, now = new Date()) {
         where: where({ cleanerId: null, completedAt: null, status: { notIn: TERMINAL } }),
       }),
       prisma.cleaningJob.count({ where: where({ status: 'COMPLETED' }) }),
+
+      // Started, unfinished, and already past the 90-minute standard.
+      prisma.cleaningJob.count({
+        where: where({
+          startedAt: { lt: new Date(now.getTime() - TURNOVER_TARGET_MINS * 60000) },
+          completedAt: null,
+          status: { notIn: TERMINAL },
+        }),
+      }),
 
       prisma.cleaningJob.count({ where: where({ cleanerId: null }) }),
       // Not scoped: whether ANY worker or schedule exists is a property of the
@@ -131,6 +160,11 @@ export async function turnoverBoard(scope: PropertyScope, now = new Date()) {
       'No active service schedules exist, so no future turnovers are being generated.',
     );
   }
+  if (overTarget > 0) {
+    warnings.push(
+      `${overTarget} turnover(s) have been running longer than ${TURNOVER_TARGET_MINS} minutes.`,
+    );
+  }
   if (late > 0) {
     warnings.push(`${late} turnover(s) are past their scheduled time and not completed.`);
   }
@@ -139,6 +173,8 @@ export async function turnoverBoard(scope: PropertyScope, now = new Date()) {
     generated_at: now.toISOString(),
     scope: isUnrestricted(scope) ? 'all_properties' : 'assigned_properties',
     buckets,
+    over_target_count: overTarget,
+    turnover_target_mins: TURNOVER_TARGET_MINS,
     unassigned_total: unassignedTotal,
     worker_count: workers,
     active_schedule_count: schedules,
