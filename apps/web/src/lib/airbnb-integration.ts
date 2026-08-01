@@ -14,7 +14,7 @@
  * - Parse guest names and booking details
  */
 
-import { db } from './auth';
+import { db } from './firestore';
 import {
   collection,
   doc,

@@ -4,7 +4,7 @@
  * @author ECHO OMEGA PRIME
  */
 
-import { db } from './auth';
+import { db } from './firestore';
 import {
   doc, setDoc, getDoc, updateDoc, collection,
   query, where, getDocs, orderBy, serverTimestamp,

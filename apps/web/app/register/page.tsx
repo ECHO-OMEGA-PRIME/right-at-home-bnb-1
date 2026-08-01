@@ -12,9 +12,9 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Eye, EyeOff, Lock, Mail, ArrowRight, Home, User, Phone } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { getAuthInstance, signInWithGoogle, signInWithApple, db } from '@/lib/auth';
+import { getAuthInstance, signInWithGoogle, signInWithApple } from '@/lib/auth';
+import { setAuthCookie } from '@/lib/auth-cookie';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 type AccountType = 'guest' | 'cleaner' | 'yard_crew' | 'handyman';
 
@@ -71,43 +71,48 @@ export default function RegisterPage() {
       );
 
       const user = userCredential.user;
-      const role = accountType === 'guest' ? 'guest' : staffType;
 
       // Update display name
       await updateProfile(user, {
         displayName: `${formData.firstName} ${formData.lastName}`
       });
 
-      // Create user document in Firestore
-      await setDoc(doc(db(), 'users', user.uid), {
-        uid: user.uid,
-        email: formData.email,
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        displayName: `${formData.firstName} ${formData.lastName}`,
-        phone: formData.phone || null,
-        role: role,
-        staffType: accountType === 'staff' ? staffType : null,
-        status: accountType === 'staff' ? 'pending_approval' : 'active',
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
+      // Publish the session cookie BEFORE calling the API.
+      //
+      // `/api/register` is not a public API prefix, so middleware.ts rejects it
+      // outright when `rah-auth-token` is missing, and `requireAuth` reads the
+      // caller's identity from that same cookie. AuthProvider does set it, but
+      // from an `onAuthStateChanged` listener running on its own async chain --
+      // racing it here means a freshly created, perfectly valid account gets a
+      // 401 on its own registration.
+      setAuthCookie(await user.getIdToken());
+
+      const response = await fetch('/api/register', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        // No email field: the server takes the address from the verified token
+        // and ignores anything the form claims, so sending it would only
+        // suggest the client gets a say in who it is.
+        body: JSON.stringify({
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          phone: formData.phone || null,
+          accountType,
+          staffType: accountType === 'staff' ? staffType : null,
+        }),
       });
 
-      // If guest, also create entry in steven_guests for AI memory
-      if (accountType === 'guest') {
-        await setDoc(doc(db(), 'steven_guests', user.uid), {
-          guestId: user.uid,
-          guestName: `${formData.firstName} ${formData.lastName}`,
-          email: formData.email,
-          phone: formData.phone || null,
-          conversations: [],
-          preferences: {},
-          stays: [],
-          tags: ['registered_user'],
-          vipStatus: 'standard',
-          createdAt: serverTimestamp(),
-          lastInteraction: serverTimestamp(),
-        });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        const message =
+          payload && typeof payload.error === 'string'
+            ? payload.error
+            : 'Registration failed. Please try again.';
+        throw new Error(message);
       }
 
       toast.success('Account created successfully!');

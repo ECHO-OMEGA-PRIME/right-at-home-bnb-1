@@ -13,7 +13,7 @@
  * Contact: pmsalesinquiry@expediagroup.com
  */
 
-import { db } from './auth';
+import { db } from './firestore';
 import {
   collection,
   doc,

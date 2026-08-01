@@ -6,7 +6,7 @@
  * @author ECHO OMEGA PRIME
  */
 
-import { db } from './auth';
+import { db } from './firestore';
 import {
   collection,
   doc,

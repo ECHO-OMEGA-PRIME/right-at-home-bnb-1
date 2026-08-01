@@ -13,21 +13,12 @@ import {
   signOut as firebaseSignOut,
 } from 'firebase/auth';
 import {
-  Firestore,
-  doc,
-  getDoc,
-  getFirestore,
-  serverTimestamp,
-  setDoc,
-} from 'firebase/firestore';
-import {
   getFirebaseClientConfig,
   getFirebaseClientConfigurationStatus,
 } from '@/lib/firebase-client-config';
 
 let firebaseApp: FirebaseApp | null = null;
 let firebaseAuth: Auth | null = null;
-let firestoreDb: Firestore | null = null;
 
 function canInitializeFirebase(): boolean {
   return (
@@ -66,15 +57,6 @@ export function getAuthInstance(): Auth {
   return firebaseAuth;
 }
 
-function getDbInstance(): Firestore {
-  if (!canInitializeFirebase()) {
-    getFirebaseClientConfig();
-    throw new Error('Firestore is unavailable in this environment.');
-  }
-  if (!firestoreDb) firestoreDb = getFirestore(getFirebaseApp());
-  return firestoreDb;
-}
-
 export const auth = {
   get currentUser() {
     try {
@@ -84,8 +66,6 @@ export const auth = {
     }
   },
 };
-
-export { getDbInstance as db };
 
 export type UserRole = 'guest' | 'worker' | 'admin' | 'owner';
 

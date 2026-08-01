@@ -3,7 +3,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { User } from 'firebase/auth';
 import {
-  auth,
   signInWithGoogle,
   signInWithApple,
   signOut,
@@ -11,19 +10,7 @@ import {
   onAuthChange,
   AppUser,
 } from '@/lib/auth';
-
-function setAuthCookie(token: string) {
-  if (typeof document === 'undefined') return;
-  const maxAge = 60 * 60 * 24 * 30;
-  const secure = window.location.protocol === 'https:' ? '; Secure' : '';
-  document.cookie = `rah-auth-token=${encodeURIComponent(token)}; path=/; max-age=${maxAge}; SameSite=Strict${secure}`;
-}
-
-function clearAuthCookie() {
-  if (typeof document === 'undefined') return;
-  const secure = window.location.protocol === 'https:' ? '; Secure' : '';
-  document.cookie = `rah-auth-token=; path=/; max-age=0; SameSite=Strict${secure}`;
-}
+import { clearAuthCookie, isDevCookiePresent, setAuthCookie } from '@/lib/auth-cookie';
 
 function clearDevState() {
   if (typeof window === 'undefined') return;
@@ -35,16 +22,6 @@ function clearDevState() {
 
 function devLoginEnabled(): boolean {
   return process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_ALLOW_DEV_LOGIN === 'true';
-}
-
-function isDevCookiePresent(): boolean {
-  if (typeof document === 'undefined') return false;
-  const row = document.cookie
-    .split('; ')
-    .find((item) => item.startsWith('rah-auth-token='));
-  if (!row) return false;
-  const value = decodeURIComponent(row.slice('rah-auth-token='.length));
-  return value.startsWith('dev_') || value.startsWith('dev-mode-');
 }
 
 interface AuthContextType {

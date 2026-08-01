@@ -38,6 +38,7 @@ model User {
   approvedActions  ConciergeAction[]  @relation("ConciergeActionApprovedBy")
   accessGrants     AccessGrant[]
   assignedAlerts   OperationalAlert[] @relation("AlertAssignee")
+  staffApplications StaffApplication[]
 
   // Performance indexes
   @@index([email])
@@ -656,6 +657,40 @@ model WorkerProfile {
   @@index([workerType, isAvailable])
   @@index([autoDispatchEligible, dispatchPriority])
   @@index([employmentClass])
+}
+
+/// A REQUEST to become staff. Deliberately not a role, and deliberately not a
+/// WorkerProfile.
+///
+/// The signup form lets a visitor tick "Staff" and pick cleaner / yard crew /
+/// handyman. The old flow wrote that choice straight into the role store and
+/// showed a "pending approval" toast, but nothing anywhere enforced the
+/// pending part -- and `CLEANER` maps to the `worker` role, so anyone who
+/// self-registered as a cleaner held worker permissions on every route guarded
+/// by `requireRole(request, 'worker')` from the moment they submitted the form.
+///
+/// Splitting the request from the grant is what makes "pending" real: this row
+/// records what somebody asked for and confers nothing. An owner or admin
+/// provisions `User.role` and the `WorkerProfile` separately, which is the only
+/// path that grants anything.
+model StaffApplication {
+  id            String   @id @default(cuid())
+  userId        String
+  /// What the applicant asked to be: cleaner | yard_crew | handyman. Stored as
+  /// submitted rather than mapped to a role, precisely so that reading this
+  /// column can never be mistaken for reading an authorization.
+  requestedType String
+  status        String   @default("PENDING")
+  reviewedAt    DateTime?
+  reviewedBy    String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([userId])
+  @@index([createdAt])
 }
 
 model PropertyServiceRate {
