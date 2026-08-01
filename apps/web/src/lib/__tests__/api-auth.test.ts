@@ -16,6 +16,8 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 
 const verifyIdToken = vi.fn();
 const findFirst = vi.fn();
+const decodeJwt = vi.fn();
+const jwtVerify = vi.fn();
 
 vi.mock('firebase-admin/auth', () => ({
   getAuth: () => ({ verifyIdToken }),
@@ -34,6 +36,15 @@ vi.mock('@/lib/prisma', () => ({
   default: { user: { findFirst } },
 }));
 
+// jose is an ESM namespace, so its exports are frozen and vi.spyOn cannot
+// redefine them ("Cannot redefine property: decodeJwt"). It has to be mocked
+// at the module boundary instead.
+vi.mock('jose', () => ({
+  decodeJwt,
+  jwtVerify,
+  createRemoteJWKSet: () => 'jwks-stub',
+}));
+
 import { RoleStoreUnavailableError, requireAuth, verifyAuthToken } from '../api-auth';
 
 const TOKEN = 'valid.id.token';
@@ -49,6 +60,8 @@ beforeEach(() => {
   // NODE_ENV is typed readonly, so stub it rather than assigning.
   vi.stubEnv('NODE_ENV', 'production');
   vi.stubEnv('ALLOW_DEV_LOGIN', '');
+  // Default: a token is NOT echo-auth issued, so it routes to the legacy path.
+  decodeJwt.mockReturnValue({ iss: 'https://securetoken.google.com/echo-prime-ai' });
 });
 
 describe('verifyAuthToken', () => {
@@ -124,5 +137,66 @@ describe('requireAuth', () => {
     const { user, error } = await requireAuth(requestWithToken(TOKEN));
     expect(error).toBeNull();
     expect(user).toMatchObject({ uid: 'u1', role: 'owner' });
+  });
+});
+
+/**
+ * echo-auth integration (LAW 2026-07-31: one identity runtime, never Firebase
+ * direct). These pin the four states the law requires proof of, plus the
+ * fail-closed branch that the Firestore incident showed is the one that matters.
+ */
+describe('echo-auth identity path', () => {
+  const ISS = 'https://auth.echo-op.com';
+
+  it('routes a non-echo-auth issuer to the legacy Firebase path', async () => {
+    // A Firebase token must NOT be judged by the echo-auth verifier.
+    verifyIdToken.mockResolvedValue({ uid: 'u1', email: 'a@b.com', role: 'owner' });
+    const user = await verifyAuthToken(TOKEN);
+    expect(user).toMatchObject({ uid: 'u1', role: 'owner' });
+    expect(verifyIdToken).toHaveBeenCalled();
+  });
+
+  it('garbage token -> 401, never a login', async () => {
+    verifyIdToken.mockRejectedValue(new Error('Decoding Firebase ID token failed'));
+    const { user, error } = await requireAuth(requestWithToken('total-garbage'));
+    expect(user).toBeNull();
+    expect(error?.status).toBe(401);
+  });
+
+  it('no token -> 401', async () => {
+    const { user, error } = await requireAuth(requestWithToken(undefined));
+    expect(user).toBeNull();
+    expect(error?.status).toBe(401);
+  });
+
+  it('an unreachable JWKS is a 503, NOT a 401 - fail closed', async () => {
+    decodeJwt.mockReturnValue({ iss: ISS });
+    jwtVerify.mockRejectedValue(new Error('fetch failed')); // no ERR_JW* code => transport
+
+    const { user, error } = await requireAuth(requestWithToken('echo.auth.token'));
+
+    expect(error?.status).toBe(503);
+    expect(error?.headers.get('Retry-After')).toBe('30');
+    await expect(error?.json()).resolves.toMatchObject({
+      code: 'AUTH_BACKEND_UNAVAILABLE',
+    });
+    expect(user).toBeNull();
+    // and it must never have been handed to the legacy verifier
+    expect(verifyIdToken).not.toHaveBeenCalled();
+  });
+
+  it('a signature failure is a 401, not a 503 - a bad token is not an outage', async () => {
+    decodeJwt.mockReturnValue({ iss: ISS });
+    jwtVerify.mockRejectedValue(
+      Object.assign(new Error('signature verification failed'), {
+        code: 'ERR_JWS_SIGNATURE_VERIFICATION_FAILED',
+      })
+    );
+    verifyIdToken.mockRejectedValue(new Error('not a firebase token either'));
+
+    const { user, error } = await requireAuth(requestWithToken('echo.auth.token'));
+
+    expect(error?.status).toBe(401);
+    expect(user).toBeNull();
   });
 });
