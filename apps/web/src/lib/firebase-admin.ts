@@ -11,14 +11,10 @@
  */
 
 import { App, cert, getApps, initializeApp } from 'firebase-admin/app';
-import { Firestore, getFirestore } from 'firebase-admin/firestore';
-import { Storage, getStorage } from 'firebase-admin/storage';
 
 const EXPECTED_PROJECT_ID = 'echo-prime-ai';
 
 let app: App | undefined;
-let firestore: Firestore | undefined;
-let storageInstance: Storage | undefined;
 
 export type FirebaseAdminStatus = {
   initialized: boolean;
@@ -198,17 +194,18 @@ function initializeFirebaseAdmin(): App | undefined {
 
 app = initializeFirebaseAdmin();
 
-export const db: Firestore | undefined = (() => {
-  if (!app) return undefined;
-  if (!firestore) firestore = getFirestore(app);
-  return firestore;
-})();
-
-export const storage: Storage | undefined = (() => {
-  if (!app) return undefined;
-  if (!storageInstance) storageInstance = getStorage(app);
-  return storageInstance;
-})();
+// The Firestore (`db`) and Storage (`storage`) handles are gone.
+//
+// Nothing imported them any more: reservations, cleaning schedules, alerts,
+// guest memory, channel config and property photos all moved to Postgres, and
+// property images are served from our own origin. Leaving the handles exported
+// would keep a live Firestore client one import away from returning, against a
+// project whose billing accounts are closed and which answers 429.
+//
+// What remains here is deliberate and still load-bearing: the admin APP, used
+// by `api-auth.ts` through a dynamic import to verify LEGACY Firebase ID tokens
+// during the echo-auth cutover, and the status helpers the health check and
+// system monitor report on.
 
 export const isAdminAvailable = (): boolean => Boolean(app);
 export const getFirebaseAdminStatus = (): FirebaseAdminStatus => ({ ...initStatus });

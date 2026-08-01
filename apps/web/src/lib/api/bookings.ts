@@ -5,7 +5,20 @@
  * ECHO OMEGA PRIME | Made by Commander Bobby Don McWilliams II
  */
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const sanitizeBaseUrl = (raw?: string | null): string => {
+  if (!raw) return '';
+  const trimmed = raw.replace(/\\r|\\n/g, '').trim();
+  if (!trimmed) return '';
+  try {
+    const url = new URL(trimmed);
+    if (url.hostname.endsWith('.bmcii1976.workers.dev')) return '';
+    return `${url.protocol}//${url.host}${url.pathname === '/' ? '' : url.pathname}`.replace(/\/$/, '');
+  } catch {
+    return '';
+  }
+};
+
+const API_BASE = sanitizeBaseUrl(process.env.NEXT_PUBLIC_API_URL);
 
 // ============================================================================
 // TYPES

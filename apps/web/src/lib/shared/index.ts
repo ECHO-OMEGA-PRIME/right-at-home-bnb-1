@@ -6,23 +6,14 @@
 // Types
 export * from './types';
 
-// Firebase
-export * from './firebase';
-
-// Sync System
-export { default as CrossPlatformSync, SyncHelpers } from './sync';
-export type { SyncEvent, SyncEventType, SyncConfig } from './sync';
-
-// Sync Hooks
-export {
-  useCrossPlatformSync,
-  useSyncEvent,
-  useSyncedProperties,
-  useSyncedBookings,
-  useSyncedCleaningJobs,
-  useSyncedMessages,
-  useSyncedDevices
-} from './sync/hooks';
+// The Firebase and cross-platform-sync exports are gone.
+//
+// `./firebase` and `./sync` were a Firestore realtime layer driven by
+// SyncProvider, which wrapped every page, opened an onSnapshot listener and
+// wrote presence heartbeats -- for a context value nothing in the application
+// read. The provider was unmounted first, then the code removed once nothing
+// referenced it. If cross-device presence is ever genuinely needed, it belongs
+// on our own transport rather than Firestore; git history has the original.
 
 // API Client
 export { api, RightAtHomeAPI } from './api';
