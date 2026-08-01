@@ -404,17 +404,19 @@ export class SignInUnavailableError extends Error {
  * echo-auth is the fleet's ONE identity runtime (CLAUDE.md LAW 2026-07-31), so
  * it is asked first, through our own origin (see app/api/auth/login).
  *
- * Firebase remains a FALLBACK, and only for the one case where it is still
- * needed: echo-auth imported its users once, so an account created since that
- * import exists in Firebase and not yet in echo_auth -- registration still mints
- * Firebase accounts. Cutting the fallback before registration moves would lock
- * those people out. echo-auth handles legacy PASSWORDS itself (it verifies
- * against Firebase once, then re-hashes to argon2id), so this fallback is about
- * unknown ACCOUNTS, not unmigrated passwords.
+ * THE FIREBASE FALLBACK IS GONE. It existed for one case -- an account created
+ * after echo-auth's one-time import, which would exist in Firebase and not in
+ * echo_auth -- and registration now creates accounts through echo-auth
+ * (`/api/auth/signup`), so that case can no longer arise.
  *
- * The fallback runs only on a definite INVALID_CREDENTIALS answer. A 503 is
- * rethrown, because retrying an outage against Firebase would quietly restore
- * the dependency this is removing, and would mask that echo-auth is down.
+ * Removing it was checked, not assumed: the RAH `User` table holds exactly one
+ * row and ZERO rows carry an `authUid`, so no user was bound to a Firebase
+ * account and none could be locked out. echo-auth also handles legacy
+ * PASSWORDS itself for its imported users -- it verifies against Firebase once
+ * and re-hashes to argon2id -- so nothing here needed to.
+ *
+ * Every failure is now echo-auth's answer, which is what makes the fail-closed
+ * rule meaningful: there is no second opinion to paper over an outage.
  */
 export async function signInWithEmail(
   email: string,
@@ -446,14 +448,8 @@ export async function signInWithEmail(
 
   if (response.status === 503) throw new SignInUnavailableError();
 
-  if (response.status !== 401) {
-    // 400s are our own contract (missing fields); nothing for Firebase to add.
-    const payload = await response.json().catch(() => null);
-    throw new Error(payload?.error || 'Sign-in failed');
-  }
-
-  const result = await signInWithEmailAndPassword(getAuthInstance(), email, password);
-  return createOrUpdateUser(result.user);
+  const payload = await response.json().catch(() => null);
+  throw new Error(payload?.error || 'Sign-in failed');
 }
 
 export async function signOut(): Promise<void> {
