@@ -19,6 +19,14 @@ const nextConfig = {
   experimental: {
     serverComponentsExternalPackages: ['twilio'],
   },
+  async redirects() {
+    return [
+      // Legacy address-based slugs → SEO-friendly slugs (permanent)
+      { source: '/properties/Lanham-1426', destination: '/properties/posh-private-1426', permanent: true },
+      { source: '/properties/Humble-3106', destination: '/properties/outdoor-dream-3106', permanent: true },
+      { source: '/properties/Daventry-1311', destination: '/properties/santiago-dreams-1311', permanent: true },
+    ];
+  },
   async headers() {
     return [
       {

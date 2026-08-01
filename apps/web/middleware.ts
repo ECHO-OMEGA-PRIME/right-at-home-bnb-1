@@ -50,6 +50,14 @@ const ADMIN_ONLY_PREFIXES = [
 ];
 
 const PUBLIC_API_PREFIXES = [
+  // Public weather widget on the homepage. Brought over from main, where a flat
+  // PUBLIC_API_ROUTES list was introduced to fix a 401 on this endpoint; the
+  // rest of that list is deliberately NOT adopted, because it made
+  // `/api/properties` public by bare prefix and would therefore have exposed
+  // `/api/properties/new` -- an ADMIN_ONLY route -- since the public check runs
+  // before the admin check. `isPublicPropertiesRead` does that job safely: GET
+  // only, and never `/new`.
+  '/api/weather',
   '/api/webhooks/stripe',
   '/api/webhooks/vrbo',
   '/api/integrations/vrbo/webhook',
