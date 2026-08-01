@@ -145,6 +145,17 @@ function parseICalDate(value: string): Date {
   return clean.endsWith('Z') ? new Date(Date.UTC(y, mo, d, h, mi)) : new Date(y, mo, d, h, mi);
 }
 
+/**
+ * Summaries VRBO (and the other channels feeding the same iCal) use for an owner
+ * hold rather than a guest reservation. Deliberately broad: a real reservation
+ * misfiled as a hold still occupies its dates -- availability filters exclude
+ * only CANCELLED and DECLINED -- whereas a hold misfiled as a reservation
+ * fabricates a guest, fires the welcome/door-code automations at nobody, and
+ * becomes a row someone may later "clean up", which is how a hold turns into a
+ * double booking.
+ */
+const OWNER_HOLD_RE = /\b(block(ed)?|not\s*available|unavailable|owner|maintenance|hold|do\s*not\s*book|closed)\b/i;
+
 function extractGuestName(text: string): string {
   if (!text) return '';
   const patterns = [
@@ -234,65 +245,101 @@ export async function syncPropertyIcal(propertyId: string, vrboListingId: string
     // Upsert each booking
     for (const booking of parsedBookings) {
       try {
-        // Skip blocked/unavailable dates (no guest)
-        if (!booking.guestName && booking.summary?.toLowerCase().includes('block')) {
-          result.skipped++;
-          continue;
-        }
+        // An owner hold is not a guest reservation, and it must be recognised
+        // BEFORE we invent a guest for it. The previous guard required an empty
+        // guestName AND the word "block" in the summary -- but extractGuestName
+        // matches /Reserved\s*[-:]\s*(.+)/i and VRBO labels holds "Reserved - X",
+        // so guestName was never empty and the branch was dead: every hold was
+        // imported as a CONFIRMED reservation with a fabricated guest. (Proof:
+        // 0 of 494 Guest rows ever used the blocked- placeholder, while rows like
+        // 2026-06-01 -> 2026-12-31, 213 nights, sat in the calendar as CONFIRMED.)
+        // That is why deleting a "block" would CREATE a double booking.
+        //
+        // Erring toward BLOCKED is the safe direction: availability, pricing and
+        // the calendar all filter with `notIn: ['CANCELLED','DECLINED']`, so a
+        // BLOCKED row still occupies the dates -- it just stops impersonating a
+        // guest and stops triggering guest-facing automations.
+        const isOwnerBlock = !booking.guestName || OWNER_HOLD_RE.test(booking.summary ?? '');
 
         const totalNights = Math.max(1, Math.ceil((booking.checkOut.getTime() - booking.checkIn.getTime()) / 86400000));
 
-        // Find or create guest
-        let guest = await prisma.guest.findFirst({
-          where: booking.guestName ? { name: booking.guestName, platform: 'VRBO' } : undefined,
-        });
-        if (!guest && booking.guestName) {
-          guest = await prisma.guest.create({
-            data: {
-              email: `vrbo-${booking.uid.slice(0, 8)}@rah-midland.com`,
-              name: booking.guestName,
-              platform: 'VRBO',
-              platformId: booking.confirmCode || booking.uid,
-            },
-          });
-        }
-        if (!guest) {
-          // Create placeholder guest for blocked dates
-          guest = await prisma.guest.create({
-            data: {
-              email: `blocked-${booking.uid.slice(0, 8)}@rah-midland.com`,
-              name: booking.summary || 'VRBO Booking',
-              platform: 'VRBO',
-              platformId: booking.uid,
-            },
-          });
-        }
+        // Guest identity is keyed on the channel's own reservation id, never on
+        // the name. Matching by name collapsed every guest sharing a first name
+        // into ONE record -- "Jacqueline" carried 25 separate stays by different
+        // people, all sharing a single synthesized mailbox that door codes, guest
+        // messages and the lifecycle automations were then addressed to.
+        //
+        // The email is derived from the FULL key: the old `uid.slice(0, 8)` was a
+        // truncation collision on a UNIQUE column, and it threw in production
+        // ("Unique constraint failed on the fields: (email)"), aborting that
+        // booking's import entirely.
+        //
+        // Tradeoff, deliberate: VRBO gives us no guest email, so a returning guest
+        // books a new reservation id and gets a new Guest row. That loses CRM
+        // continuity we never actually had -- and it is strictly better than
+        // merging strangers who share a first name.
+        const guestKey = booking.confirmCode || booking.uid;
+        const guestEmail = isOwnerBlock
+          ? `owner-hold-${property.id}@rah-midland.com`
+          : `vrbo-${guestKey}@rah-midland.com`;
 
-        // Check if booking already exists (by UID or confirm code)
-        const existingBooking = await prisma.booking.findFirst({
-          where: {
-            propertyId: property.id,
-            OR: [
-              { confirmCode: booking.uid },
-              ...(booking.confirmCode ? [{ confirmCode: booking.confirmCode }] : []),
-            ],
+        const guest = await prisma.guest.upsert({
+          where: { email: guestEmail },
+          update: {},
+          create: {
+            email: guestEmail,
+            name: isOwnerBlock ? `${property.name} — owner hold` : booking.guestName,
+            platform: 'VRBO',
+            platformId: isOwnerBlock ? `owner-hold:${property.id}` : guestKey,
           },
         });
+
+        // externalRef is the channel's own id, and the ONLY column the
+        // @@unique([platform, externalRef]) index can act on. The importer never
+        // wrote it, so all 762 VRBO rows held NULL and the index was inert --
+        // Postgres does not conflict NULLs, so it deduplicated nothing. Match on
+        // it first; fall back to the legacy confirmCode probe and backfill the
+        // ref onto whatever that finds.
+        const existingBooking =
+          (await prisma.booking.findFirst({
+            where: { platform: 'VRBO', externalRef: booking.uid },
+          })) ??
+          (await prisma.booking.findFirst({
+            where: {
+              propertyId: property.id,
+              OR: [
+                { confirmCode: booking.uid },
+                ...(booking.confirmCode ? [{ confirmCode: booking.confirmCode }] : []),
+              ],
+            },
+          }));
 
         if (existingBooking) {
           // Update if dates changed
           const datesChanged = existingBooking.checkIn.getTime() !== booking.checkIn.getTime() ||
                                existingBooking.checkOut.getTime() !== booking.checkOut.getTime();
           const wasCancelled = booking.status === 'CANCELLED' && existingBooking.status !== 'CANCELLED';
+          // Repair passes for rows written by the old importer. Without these the
+          // fix would only ever apply to bookings imported from here on, and the
+          // 762 rows already carrying NULL refs (and the holds already mislabelled
+          // CONFIRMED) would stay broken forever.
+          const needsRefBackfill = existingBooking.externalRef === null;
+          const needsBlockReclass = isOwnerBlock && existingBooking.status !== 'BLOCKED'
+                                                 && existingBooking.status !== 'CANCELLED';
 
-          if (datesChanged || wasCancelled) {
+          if (datesChanged || wasCancelled || needsRefBackfill || needsBlockReclass) {
             await prisma.booking.update({
               where: { id: existingBooking.id },
               data: {
                 checkIn: booking.checkIn,
                 checkOut: booking.checkOut,
                 totalNights,
-                status: booking.status === 'CANCELLED' ? 'CANCELLED' : existingBooking.status,
+                externalRef: booking.uid,
+                status: booking.status === 'CANCELLED'
+                  ? 'CANCELLED'
+                  : isOwnerBlock
+                    ? 'BLOCKED'
+                    : existingBooking.status,
               },
             });
             result.updated++;
@@ -333,19 +380,25 @@ export async function syncPropertyIcal(propertyId: string, vrboListingId: string
               guestCount: 1,
               platform: 'VRBO',
               confirmCode: booking.confirmCode || booking.uid,
+              externalRef: booking.uid,
               nightlyRate: property.nightlyRate,
               totalNights,
               subtotal: property.nightlyRate * totalNights,
               cleaningFee: property.cleaningFee || 0,
               totalPrice: (property.nightlyRate * totalNights) + (property.cleaningFee || 0),
-              status: booking.status === 'CANCELLED' ? 'CANCELLED' : 'CONFIRMED',
+              status: booking.status === 'CANCELLED'
+                ? 'CANCELLED'
+                : isOwnerBlock
+                  ? 'BLOCKED'
+                  : 'CONFIRMED',
               specialReqs: booking.description || null,
             },
           });
           result.imported++;
 
-          // 🔥 FIRE AUTOMATIONS for new booking
-          if (booking.status !== 'CANCELLED') {
+          // 🔥 FIRE AUTOMATIONS for new booking -- never for an owner hold, which
+          // has no guest to welcome, no door code to issue and no one to email.
+          if (booking.status !== 'CANCELLED' && !isOwnerBlock) {
             try {
               const autoResult = await runNewBookingAutomations({
                 bookingId: newBooking.id,
