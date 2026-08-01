@@ -377,42 +377,20 @@ function getAppleProvider(): OAuthProvider {
 }
 
 async function createOrUpdateUser(user: User): Promise<AppUser> {
-  const dbInstance = getDbInstance();
-  const userRef = doc(dbInstance, 'users', user.uid);
-  const userSnapshot = await getDoc(userRef);
+  // Formerly: read Firestore `users/{uid}`, and on first sign-in assign a role
+  // from a CLIENT-SIDE email allowlist and write it. The server no longer trusts
+  // Firestore for roles, so that write granted nothing -- but code that appears
+  // to hand out `owner` is a loaded gun for whoever reads it next, so it is gone.
+  //
+  // The role is now whatever the server says it is. AuthContext sets the auth
+  // cookie from the fresh ID token before its own load, and signIn* callers are
+  // followed by onAuthChange doing the same, so /api/me is reachable here.
+  const profile = await getCurrentUser();
+  if (profile) return profile;
 
-  if (userSnapshot.exists()) {
-    const existing = userSnapshot.data() as Record<string, unknown>;
-    await setDoc(
-      userRef,
-      {
-        email: user.email,
-        displayName: user.displayName,
-        photoURL: user.photoURL,
-        lastLogin: serverTimestamp(),
-      },
-      { merge: true },
-    );
-    return appUserFromData(user, { ...existing, lastLogin: new Date() });
-  }
-
-  const role = determineUserRole(user.email);
-  const now = new Date();
-  const newUser = {
-    uid: user.uid,
-    email: user.email,
-    displayName: user.displayName,
-    photoURL: user.photoURL,
-    role,
-    properties: [],
-    createdAt: serverTimestamp(),
-    lastLogin: serverTimestamp(),
-    isOwner: role === 'owner',
-    isDeveloper: role === 'admin',
-  };
-
-  await setDoc(userRef, newUser);
-  return appUserFromData(user, { ...newUser, createdAt: now, lastLogin: now });
+  // Signed in, but the server has no elevated role for this uid yet. Report the
+  // least privilege rather than inventing one -- never the email allowlist.
+  return appUserFromData(user, { role: 'guest' });
 }
 
 export async function signInWithGoogle(): Promise<AppUser | null> {
@@ -437,17 +415,40 @@ export async function signOut(): Promise<void> {
   await firebaseSignOut(getAuthInstance());
 }
 
+/**
+ * Ask the server who the current user is.
+ *
+ * This used to read Firestore `users/{uid}` straight from the browser, which put
+ * a Google project on the critical path of every authenticated page: when the
+ * billing accounts closed and Firestore began returning 429, the client could no
+ * longer resolve its own role. It also had the role read by the same party it
+ * authorises.
+ *
+ * GET /api/me resolves it server-side instead (echo-auth verifies the token, the
+ * role comes from the claim or Postgres). The auth cookie is already set by
+ * AuthContext before this runs, so a same-origin fetch carries the credential.
+ *
+ * A 503 is deliberately NOT treated as "signed out". The server uses it to say
+ * "an auth backend is down", and silently returning null here would log the user
+ * out during an outage and hide the cause -- the exact confusion that made the
+ * Firestore incident look like a login bug for 16 hours.
+ */
 export async function getCurrentUser(): Promise<AppUser | null> {
-  try {
-    const currentUser = getAuthInstance().currentUser;
-    if (!currentUser) return null;
-    const userSnapshot = await getDoc(doc(getDbInstance(), 'users', currentUser.uid));
-    return userSnapshot.exists()
-      ? appUserFromData(currentUser, userSnapshot.data() as Record<string, unknown>)
-      : null;
-  } catch {
-    return null;
+  const currentUser = getAuthInstance().currentUser;
+  if (!currentUser) return null;
+
+  const response = await fetch('/api/me', {
+    credentials: 'same-origin',
+    headers: { Accept: 'application/json' },
+  });
+
+  if (response.status === 401) return null;
+  if (!response.ok) {
+    throw new Error(`identity unavailable (${response.status})`);
   }
+
+  const data = (await response.json()) as Record<string, unknown>;
+  return appUserFromData(currentUser, data);
 }
 
 export function onAuthChange(callback: (user: User | null) => void): () => void {
@@ -459,27 +460,10 @@ export function onAuthChange(callback: (user: User | null) => void): () => void 
   }
 }
 
-export async function isOwner(uid: string): Promise<boolean> {
-  try {
-    const userSnapshot = await getDoc(doc(getDbInstance(), 'users', uid));
-    if (!userSnapshot.exists()) return false;
-    const role = normalizeRole(userSnapshot.data().role);
-    return role === 'owner' || role === 'admin';
-  } catch {
-    return false;
-  }
-}
+// isOwner() removed: Firestore-only and had zero callers. Ask /api/me.
 
-export async function promoteToOwner(
-  uid: string,
-  propertyIds: string[] = [],
-): Promise<void> {
-  await setDoc(
-    doc(getDbInstance(), 'users', uid),
-    { role: 'owner', isOwner: true, properties: propertyIds },
-    { merge: true },
-  );
-}
+// promoteToOwner() removed: Firestore-only, zero callers, and role
+// changes belong on the server behind an admin gate, not in the browser.
 
 
 /** Legacy worker-role values retained for migration and reconciliation tooling. */
