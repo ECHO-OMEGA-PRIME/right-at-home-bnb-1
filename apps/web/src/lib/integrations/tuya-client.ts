@@ -211,9 +211,40 @@ export async function createGuestCode(
 
 /**
  * Delete a code from a lock.
+ *
+ * Throws unless the proxy can show the code actually left the device. That is
+ * deliberate, and it is the only thing standing between a departed guest and a
+ * working door code:
+ *
+ * `/locks/clear-code` answers HTTP 200 with `ok: true` and `revoked: true` even
+ * when its own body reports `still_on_lock: true` — "revoked" there describes a
+ * database row, not a door. rahFetch only throws on `!res.ok || ok === false`,
+ * so without this check the call returns normally, revokeGuestAccess() completes
+ * its try block, and the grant is written REVOKED while the code is still
+ * programmed on the lock. Both components look correct alone; the pair is what
+ * loses the code (queue #26917).
+ *
+ * The proxy's honest states are confirmed_deleted / confirmed_absent (gone) as
+ * against pending_on_device / still_on_device / unknown_phase / unverified (not
+ * proven gone). Treating "not proven gone" as failure is the safe direction for
+ * a lock: the caller records REVOCATION_FAILED, and rah-api's revocation
+ * reconcile timer — which already runs about every ten minutes — is what settles
+ * a merely-pending code afterwards.
  */
 export async function deleteCode(deviceId: string, passwordId: string): Promise<any> {
-  return rahFetch('POST', '/locks/clear-code', { lock: deviceId, password_id: passwordId });
+  const result = await rahFetch('POST', '/locks/clear-code', {
+    lock: deviceId,
+    password_id: passwordId,
+  });
+
+  if (result?.still_on_lock === true) {
+    throw new Error(
+      `RAH lock clear-code did not remove ${passwordId} from ${deviceId}: ` +
+        `still_on_lock=true, verification=${result?.verification ?? 'unknown'}`,
+    );
+  }
+
+  return result;
 }
 
 /**
