@@ -1,5 +1,6 @@
 'use client';
 
+import { setAuthCookie } from '@/lib/auth-cookie';
 import { FirebaseApp, getApps, initializeApp } from 'firebase/app';
 import {
   Auth,
@@ -383,10 +384,74 @@ export async function signInWithApple(): Promise<AppUser | null> {
   return createOrUpdateUser(result.user);
 }
 
+/**
+ * Raised when echo-auth itself is unreachable or erroring.
+ *
+ * Kept distinct from a rejected credential so the caller cannot turn an outage
+ * into "wrong password" -- that would send a user to reset a credential that was
+ * never wrong, and hide the real fault.
+ */
+export class SignInUnavailableError extends Error {
+  constructor() {
+    super('Sign-in is temporarily unavailable');
+    this.name = 'SignInUnavailableError';
+  }
+}
+
+/**
+ * Sign in with email and password.
+ *
+ * echo-auth is the fleet's ONE identity runtime (CLAUDE.md LAW 2026-07-31), so
+ * it is asked first, through our own origin (see app/api/auth/login).
+ *
+ * Firebase remains a FALLBACK, and only for the one case where it is still
+ * needed: echo-auth imported its users once, so an account created since that
+ * import exists in Firebase and not yet in echo_auth -- registration still mints
+ * Firebase accounts. Cutting the fallback before registration moves would lock
+ * those people out. echo-auth handles legacy PASSWORDS itself (it verifies
+ * against Firebase once, then re-hashes to argon2id), so this fallback is about
+ * unknown ACCOUNTS, not unmigrated passwords.
+ *
+ * The fallback runs only on a definite INVALID_CREDENTIALS answer. A 503 is
+ * rethrown, because retrying an outage against Firebase would quietly restore
+ * the dependency this is removing, and would mask that echo-auth is down.
+ */
 export async function signInWithEmail(
   email: string,
   password: string,
 ): Promise<AppUser | null> {
+  let response: Response;
+  try {
+    response = await fetch('/api/auth/login', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+  } catch {
+    throw new SignInUnavailableError();
+  }
+
+  if (response.ok) {
+    const session = await response.json().catch(() => null);
+    if (typeof session?.access_token === 'string' && session.access_token) {
+      // Publish the session before resolving the profile: /api/me authenticates
+      // with this cookie, and AuthContext's Firebase listener will not fire for
+      // an echo-auth sign-in, so nothing else is going to set it.
+      setAuthCookie(session.access_token);
+      return getCurrentUser();
+    }
+    throw new SignInUnavailableError();
+  }
+
+  if (response.status === 503) throw new SignInUnavailableError();
+
+  if (response.status !== 401) {
+    // 400s are our own contract (missing fields); nothing for Firebase to add.
+    const payload = await response.json().catch(() => null);
+    throw new Error(payload?.error || 'Sign-in failed');
+  }
+
   const result = await signInWithEmailAndPassword(getAuthInstance(), email, password);
   return createOrUpdateUser(result.user);
 }

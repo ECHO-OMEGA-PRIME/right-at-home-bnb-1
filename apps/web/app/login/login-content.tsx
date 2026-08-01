@@ -30,7 +30,7 @@ export default function LoginContent() {
     setIsLoading(true);
 
     try {
-      // Firebase email/password auth
+      // echo-auth first, Firebase only for accounts it does not know yet.
       const user = await signInWithEmail(email, password);
 
       if (user) {
@@ -41,7 +41,12 @@ export default function LoginContent() {
     } catch (error: any) {
       console.error('Login error:', error);
 
-      if (error.code === 'auth/user-not-found') {
+      if (error?.name === 'SignInUnavailableError') {
+        // An outage must not be dressed up as a bad credential. Saying "login
+        // failed, try again" here sends someone to reset a password that was
+        // never wrong, and buries the fact that a backend is down.
+        toast.error('Sign-in is temporarily unavailable. Please try again in a moment.');
+      } else if (error.code === 'auth/user-not-found') {
         toast.error('No account found with this email');
       } else if (error.code === 'auth/wrong-password') {
         toast.error('Incorrect password');
