@@ -277,6 +277,16 @@ model Booking {
   specialReqs   String?
   internalNotes String?
 
+  /// The reservation id as the channel knows it (a VRBO reservationId, say).
+  ///
+  /// This is what makes channel webhooks idempotent. Firestore got that for
+  /// free -- `collection('bookings').doc(reservationId).set(..., {merge:true})`
+  /// cannot create a second document -- and a port that inserted instead would
+  /// accumulate a duplicate booking on every webhook retry, which channels do
+  /// routinely. Unique per platform, and nullable so direct bookings (which
+  /// have no external id) are unaffected: Postgres does not conflict NULLs.
+  externalRef   String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -303,6 +313,36 @@ model Booking {
   @@index([platform]) // Filter by booking source
   @@index([createdAt]) // Sort by creation date
   @@index([confirmCode]) // Lookup by confirmation code
+  @@unique([platform, externalRef]) // Channel webhook idempotency -- see externalRef
+}
+
+/// Work queued for the Tuya access lifecycle by a channel webhook.
+///
+/// Replaces the `access_lifecycle_queue` Firestore collection, which keyed
+/// documents on `${bookingId}_${action}` and merged -- so re-delivering the same
+/// webhook could never enqueue the same work twice. `@@unique([bookingRef,
+/// action])` preserves exactly that property.
+///
+/// `containsCredential` is deliberately kept and deliberately always false: the
+/// webhook never generates, stores or transports door codes, and the column
+/// makes that contract explicit to anything reading the queue rather than
+/// leaving it as a comment in one route.
+model AccessLifecycleQueue {
+  id         String   @id @default(cuid())
+  /// The CHANNEL's reservation id, not Booking.id -- the queue is written from
+  /// the webhook and is meaningful even if the booking row is rejected.
+  bookingRef String
+  propertyId String?
+  /// PROVISION | RESCHEDULE | REVOKE
+  action     String
+  status     String   @default("PENDING_VERIFICATION")
+  containsCredential Boolean @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([bookingRef, action])
+  @@index([status])
+  @@index([createdAt])
 }
 
 // ============================================
