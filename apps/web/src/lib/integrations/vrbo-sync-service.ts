@@ -283,12 +283,20 @@ export async function syncPropertyIcal(propertyId: string, vrboListingId: string
           ? `owner-hold-${property.id}@rah-midland.com`
           : `vrbo-${guestKey}@rah-midland.com`;
 
+        const guestName = isOwnerBlock ? `${property.name} — owner hold` : booking.guestName;
+
+        // The update branch assigns real columns rather than `{}`. An empty
+        // update makes Prisma emit an UPDATE with an empty SET clause, which is
+        // a SQL syntax error -- it surfaces only as the generic "Error occurred
+        // during query", and it fails identically for every row regardless of
+        // data. Mocked-Prisma unit tests cannot see it, because no SQL is ever
+        // generated; it took a run against the real database to find.
         const guest = await prisma.guest.upsert({
           where: { email: guestEmail },
-          update: {},
+          update: { name: guestName, platform: 'VRBO' },
           create: {
             email: guestEmail,
-            name: isOwnerBlock ? `${property.name} — owner hold` : booking.guestName,
+            name: guestName,
             platform: 'VRBO',
             platformId: isOwnerBlock ? `owner-hold:${property.id}` : guestKey,
           },
