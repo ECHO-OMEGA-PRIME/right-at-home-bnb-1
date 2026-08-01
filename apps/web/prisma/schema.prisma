@@ -659,6 +659,38 @@ model WorkerProfile {
   @@index([employmentClass])
 }
 
+/// One turn of a Steven AI conversation. Replaces the `rah_steven_sessions` and
+/// `rah_steven_guests` Firestore collections.
+///
+/// A "session" is not a row -- it is simply the messages sharing a sessionId.
+/// The Firestore version stored a session document holding an array of messages
+/// and rewrote the whole array on every turn, trimming to the last 50; that is a
+/// read-modify-write on a hot document, and two concurrent turns lose one of
+/// their messages. Append-only rows with an index make the trim a query concern
+/// instead of a write concern, and concurrent turns cannot clobber each other.
+///
+/// `guestId` deliberately carries NO foreign key. This is an append-only
+/// transcript, and it must never fail to record what was said because the
+/// speaker is not (yet) in the CRM. A referential constraint here would turn an
+/// unknown guest into a 500 from the assistant endpoint and lose the
+/// conversation entirely -- strictly worse than a dangling identifier in a log.
+model StevenMessage {
+  id         String   @id @default(cuid())
+  sessionId  String
+  /// Guest.id when the caller supplied one that exists. Not enforced -- see above.
+  guestId    String?
+  /// 'user' | 'assistant'
+  role       String
+  content    String
+  emotion    String?
+  propertyId String?
+  createdAt  DateTime @default(now())
+
+  @@index([sessionId, createdAt])
+  @@index([guestId, createdAt])
+  @@index([createdAt])
+}
+
 /// A REQUEST to become staff. Deliberately not a role, and deliberately not a
 /// WorkerProfile.
 ///
