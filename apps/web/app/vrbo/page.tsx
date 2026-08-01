@@ -49,8 +49,6 @@ export default function VRBOManagementPage() {
     propertyId: '',
     vrboListingId: '',
     icalUrl: '',
-    title: '',
-    nightlyRate: '',
   });
 
   useEffect(() => {
@@ -104,13 +102,9 @@ export default function VRBOManagementPage() {
         newListing.propertyId,
         newListing.vrboListingId,
         newListing.icalUrl,
-        {
-          title: newListing.title || undefined,
-          nightlyRate: newListing.nightlyRate ? parseFloat(newListing.nightlyRate) : undefined,
-        }
       );
       setShowAddModal(false);
-      setNewListing({ propertyId: '', vrboListingId: '', icalUrl: '', title: '', nightlyRate: '' });
+      setNewListing({ propertyId: '', vrboListingId: '', icalUrl: '' });
       await loadData();
       alert('VRBO listing added successfully!');
     } catch (error) {
@@ -366,27 +360,15 @@ export default function VRBOManagementPage() {
                   <p className="text-xs text-gray-500 mt-1">VRBO Dashboard &rarr; Calendar &rarr; Export</p>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Property Title</label>
-                  <input
-                    type="text"
-                    value={newListing.title}
-                    onChange={(e) => setNewListing({ ...newListing, title: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#500000] focus:border-transparent"
-                    placeholder="e.g., Castleford Estate"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Nightly Rate ($)</label>
-                  <input
-                    type="number"
-                    value={newListing.nightlyRate}
-                    onChange={(e) => setNewListing({ ...newListing, nightlyRate: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#500000] focus:border-transparent"
-                    placeholder="150"
-                  />
-                </div>
+                {/*
+                  Title and nightly rate used to be collected here and written
+                  into the Firestore `vrbo_listings` document. They are
+                  properties OF THE PROPERTY -- Property.name and its rate --
+                  and are edited on the property itself. Connecting a channel
+                  must not be a back door that renames a property or reprices
+                  it, so this form now only binds the two identifiers and the
+                  calendar URL. The listing shows the property's real name.
+                */}
               </div>
 
               <div className="flex justify-end gap-3 mt-6">
