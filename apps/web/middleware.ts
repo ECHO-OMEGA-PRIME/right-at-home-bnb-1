@@ -71,6 +71,12 @@ const INACTIVE_PROPERTY_SLUGS = new Set([
 ]);
 
 const AUTH_COOKIE_NAME = 'rah-auth-token';
+
+// Kept in step with the same defaults in src/lib/api-auth.ts. If these ever
+// disagree, middleware and the route handlers disagree about which tokens are
+// real, and the edge rejects sessions the handlers would have accepted.
+const ECHO_AUTH_ISSUER = process.env.ECHO_AUTH_ISSUER?.trim() || 'https://auth.echo-op.com';
+const ECHO_AUTH_AUDIENCE = process.env.ECHO_AUTH_AUDIENCE?.trim() || 'echo-prime-ai';
 type TokenRole = 'guest' | 'worker' | 'admin' | 'owner';
 const VALID_ROLES = new Set<TokenRole>(['guest', 'worker', 'admin', 'owner']);
 
@@ -115,24 +121,72 @@ function secretMatches(provided: string, expected: string): boolean {
  *
  * This is a gate, not the authorization decision. Route handlers still verify.
  */
-function looksLikeLiveIdToken(token: string): boolean {
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
   const parts = token.split('.');
-  if (parts.length !== 3) return false;
+  if (parts.length !== 3) return null;
   try {
     const b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-    const payload = JSON.parse(atob(b64.padEnd(b64.length + ((4 - (b64.length % 4)) % 4), '=')));
-    // Trim: env values on this project have been observed carrying a trailing
-    // newline (ALLOW_DEV_LOGIN is literally "true\n"). An untrimmed project id
-    // would fail the aud/iss compare for EVERY real token and lock out every
-    // user -- a self-inflicted outage from a stray byte.
-    const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID?.trim();
-    if (typeof payload.exp !== 'number' || payload.exp * 1000 <= Date.now()) return false;
-    if (projectId && payload.aud !== projectId) return false;
-    if (projectId && payload.iss !== `https://securetoken.google.com/${projectId}`) return false;
-    return typeof payload.sub === 'string' && payload.sub.length > 0;
+    return JSON.parse(atob(b64.padEnd(b64.length + ((4 - (b64.length % 4)) % 4), '=')));
   } catch {
-    return false;
+    return null;
   }
+}
+
+function isUnexpired(payload: Record<string, unknown>): boolean {
+  return typeof payload.exp === 'number' && payload.exp * 1000 > Date.now();
+}
+
+function hasSubject(payload: Record<string, unknown>): boolean {
+  return typeof payload.sub === 'string' && payload.sub.length > 0;
+}
+
+function looksLikeLiveIdToken(token: string): boolean {
+  const payload = decodeJwtPayload(token);
+  if (!payload) return false;
+  // Trim: env values on this project have been observed carrying a trailing
+  // newline (ALLOW_DEV_LOGIN is literally "true\n"). An untrimmed project id
+  // would fail the aud/iss compare for EVERY real token and lock out every
+  // user -- a self-inflicted outage from a stray byte.
+  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID?.trim();
+  if (!isUnexpired(payload)) return false;
+  if (projectId && payload.aud !== projectId) return false;
+  if (projectId && payload.iss !== `https://securetoken.google.com/${projectId}`) return false;
+  return hasSubject(payload);
+}
+
+/**
+ * The echo-auth family (LAW 2026-07-31: echo-auth is the ONE identity runtime).
+ *
+ * This has to exist for the frontend cutover to be possible at all. The Firebase
+ * check above asserts `iss === https://securetoken.google.com/<project>`, and an
+ * echo-auth token is issued by `https://auth.echo-op.com` -- so before this,
+ * middleware rejected every echo-auth token at the edge and cleared the cookie,
+ * no matter that `verifyAuthToken` in the route handlers accepts them happily.
+ *
+ * Note the aud values coincide today (`ECHO_AUTH_AUDIENCE` and the Firebase
+ * project id are both `echo-prime-ai`), which is exactly why the issuer must be
+ * checked per family rather than reusing one comparison for both -- otherwise
+ * this "works" by accident and breaks the day either value moves.
+ */
+function looksLikeEchoAuthToken(token: string): boolean {
+  const payload = decodeJwtPayload(token);
+  if (!payload) return false;
+  if (!isUnexpired(payload)) return false;
+  if (payload.iss !== ECHO_AUTH_ISSUER) return false;
+  if (payload.aud !== ECHO_AUTH_AUDIENCE) return false;
+  return hasSubject(payload);
+}
+
+/**
+ * Structural gate for the session cookie.
+ *
+ * Middleware runs on the Edge runtime and cannot verify an RSA signature --
+ * `verifyAuthToken` does that in the route handlers. What this stops is someone
+ * simply setting `rah-auth-token=anything`. Anything from an unrecognised issuer
+ * is refused, so the gate stays closed by default rather than by omission.
+ */
+function looksLikeAcceptableToken(token: string): boolean {
+  return looksLikeLiveIdToken(token) || looksLikeEchoAuthToken(token);
 }
 
 function clearAuthCookie(response: NextResponse): NextResponse {
@@ -260,7 +314,7 @@ export function middleware(request: NextRequest) {
     // never looked at it. Reject anything that is not a structurally valid,
     // unexpired token for this Firebase project. Signature verification still
     // happens in the route handlers via verifyAuthToken.
-    if (!isDevToken(authToken) && !looksLikeLiveIdToken(authToken)) {
+    if (!isDevToken(authToken) && !looksLikeAcceptableToken(authToken)) {
       return clearAuthCookie(
         NextResponse.json(
           { error: 'Authentication required', code: 'UNAUTHORIZED' },
@@ -306,7 +360,12 @@ export function middleware(request: NextRequest) {
 // Exposed for the regression tests in src/lib/__tests__/middleware-auth.test.ts.
 // These two predicates are what closed the 2026-07-30 production auth bypass,
 // so they are worth testing directly rather than only through a full request.
-export const __testing__ = { secretMatches, looksLikeLiveIdToken };
+export const __testing__ = {
+  secretMatches,
+  looksLikeLiveIdToken,
+  looksLikeEchoAuthToken,
+  looksLikeAcceptableToken,
+};
 
 export const config = {
   matcher: [
