@@ -196,6 +196,20 @@ describe('VRBO importer — guest identity', () => {
     expect(new Set(emails).size).toBe(2); // slice(0, 8) made these one address, and it threw
   });
 
+  it('gives the upsert a NON-EMPTY update branch', async () => {
+    // `update: {}` makes Prisma emit an UPDATE with an empty SET clause -- a SQL
+    // syntax error that surfaces only as the generic "Error occurred during
+    // query" and fails every row identically. It shipped to production on
+    // 2026-08-01 and produced 998 errors and 0 writes, because a mocked Prisma
+    // never generates SQL and so cannot fail on its shape. This assertion is the
+    // cheap proxy for that; the real guard is exercising it against a database.
+    feed(ical({ uid: 'uid-alpha-0001', summary: 'Reserved - Dana', start: '20260910', end: '20260914' }));
+
+    await syncPropertyIcal(PROPERTY.id, PROPERTY.vrboId, 'https://vrbo.test/a.ics');
+
+    expect(Object.keys(guestUpsert.mock.calls[0][0].update).length).toBeGreaterThan(0);
+  });
+
   it('upserts rather than creates, so a re-sync of the same reservation is idempotent', async () => {
     feed(ical({ uid: 'uid-alpha-0001', summary: 'Reserved - Dana', start: '20260910', end: '20260914' }));
 
