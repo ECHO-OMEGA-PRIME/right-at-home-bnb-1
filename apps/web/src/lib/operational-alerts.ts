@@ -185,6 +185,31 @@ export async function markNotified(alertId: string, patch: Record<string, unknow
   if (Object.keys(patch).length) await mergeAlertMetadata(alertId, patch);
 }
 
+/**
+ * Acknowledge an alert without resolving it.
+ *
+ * ACKNOWLEDGED still counts as open for de-duplication (see OPEN_STATUSES):
+ * somebody has SEEN the problem, which is not the same as the problem having
+ * gone away. Treating it as closed would let the next sweep raise a fresh alert
+ * for a condition that is still live and already being worked.
+ */
+export async function acknowledgeAlert(
+  alertId: string,
+  acknowledgedBy: string,
+): Promise<boolean> {
+  try {
+    await prisma.operationalAlert.update({
+      where: { id: alertId },
+      data: { status: 'ACKNOWLEDGED', acknowledgedAt: new Date() },
+    });
+    await mergeAlertMetadata(alertId, { acknowledgedBy });
+    return true;
+  } catch (error) {
+    console.error('[operational-alerts] acknowledge failed', { alertId, error });
+    return false;
+  }
+}
+
 export async function resolveAlert(
   alertId: string,
   resolvedBy: string,

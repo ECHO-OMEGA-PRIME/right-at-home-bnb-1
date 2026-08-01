@@ -43,12 +43,19 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('[System Monitor API] Error:', error);
+
+    // 503, and no `activeAlerts`/`alertCount` keys at all. getActiveSystemAlerts
+    // used to swallow a store failure and return [], so this route answered
+    // `alertCount: 0` -- "every system is healthy" -- on the one screen an
+    // operator checks to find out whether anything is broken. A monitor that
+    // cannot reach its own store has to say so, retryably.
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: 'Monitoring store temporarily unavailable',
+        code: 'MONITOR_STORE_UNAVAILABLE'
       },
-      { status: 500 }
+      { status: 503, headers: { 'Retry-After': '30' } }
     );
   }
 }

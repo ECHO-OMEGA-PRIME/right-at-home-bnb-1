@@ -10,8 +10,16 @@
  * - Unacknowledged issues
  */
 
-import { db, getFirebaseAdminStatus, isConfigurationIssue } from './firebase-admin';
-import { Timestamp } from 'firebase-admin/firestore';
+import prisma from './prisma';
+import { getFirebaseAdminStatus, isConfigurationIssue } from './firebase-admin';
+import {
+  ALERT_LOOKUP_UNKNOWN,
+  acknowledgeAlert,
+  createAlert,
+  findOpenAlert,
+  listOpenAlerts,
+  mergeAlertMetadata,
+} from './operational-alerts';
 import { makeCall, sendSMS, CallType } from './twilio';
 import { getBusinessContext, SystemHealth, Alert } from './business-context';
 
@@ -272,18 +280,50 @@ async function checkUnacknowledgedAlerts(alerts: Alert[], result: SystemMonitorR
   }
 }
 
+/** The Setting row replacing the `system_config/updates` Firestore document. */
+const UPDATE_FLAGS_KEY = 'system.update_flags';
+
+interface UpdateFlags {
+  pendingUpdates?: string[];
+  criticalUpdate?: string;
+  flaggedAt?: string;
+}
+
+/**
+ * Read the update flags, or null when there are none.
+ *
+ * A malformed value degrades to null and logs rather than throwing: an
+ * unreadable config row must not take down the whole health sweep, which exists
+ * precisely to report that things are broken.
+ */
+async function readUpdateFlags(): Promise<UpdateFlags | null> {
+  const row = await prisma.setting.findUnique({
+    where: { key: UPDATE_FLAGS_KEY },
+    select: { value: true },
+  });
+  if (!row?.value) return null;
+
+  try {
+    const parsed = JSON.parse(row.value);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? (parsed as UpdateFlags)
+      : null;
+  } catch {
+    console.error('[SystemMonitor] malformed update flags JSON', { key: UPDATE_FLAGS_KEY });
+    return null;
+  }
+}
+
 /**
  * Check if any services need updates (can be configured in database)
  */
 async function checkForUpdates(result: SystemMonitorResult): Promise<void> {
-  if (!db) return;
-
   try {
-    // Check for any update flags in the system_config collection
-    const configDoc = await db.collection('system_config').doc('updates').get();
+    // The `system_config/updates` Firestore document is now a single Setting
+    // row. Same shape, read through the store the rest of the app already uses.
+    const data = await readUpdateFlags();
 
-    if (configDoc.exists) {
-      const data = configDoc.data();
+    if (data) {
 
       if (data?.pendingUpdates && data.pendingUpdates.length > 0) {
         result.issues.push({
@@ -406,15 +446,50 @@ async function sendSMSAboutIssue(issue: SystemAlert, result: SystemMonitorResult
  * Store system alert in database
  */
 async function storeSystemAlert(alert: SystemAlert): Promise<void> {
-  if (!db) return;
+  // De-duplicated on the ISSUE, which the Firestore version never was: it
+  // called `.add()` unconditionally, so a condition that stays broken produced
+  // a brand-new alert on every sweep -- one every 15 minutes, forever, for a
+  // single ongoing outage. A persistent problem is one alert, escalated.
+  const dedupeKey = `system:${alert.type}`;
 
-  try {
-    const docRef = await db.collection('system_alerts').add(alert);
-    alert.id = docRef.id;
-    console.log(`[SystemMonitor] Stored alert: ${docRef.id}`);
-  } catch (e) {
-    console.error('[SystemMonitor] Error storing alert:', e);
+  const existing = await findOpenAlert(dedupeKey);
+
+  if (existing === ALERT_LOOKUP_UNKNOWN) {
+    // We could not tell whether this is already raised. Creating anyway is how
+    // an outage becomes a duplicate-alert storm; the sweep stays quiet instead.
+    console.error('[SystemMonitor] alert store unreadable; not raising', { type: alert.type });
+    return;
   }
+
+  if (existing) {
+    alert.id = existing.id;
+    await mergeAlertMetadata(existing.id, {
+      lastSeenAt: new Date().toISOString(),
+      occurrences: Number(existing.metadata.occurrences ?? 1) + 1,
+      severity: alert.severity,
+      message: alert.message,
+    });
+    return;
+  }
+
+  const stored = await createAlert({
+    alertType: 'SYSTEM',
+    severity: alert.severity === 'emergency' ? 'CRITICAL' : 'NORMAL',
+    title: `${alert.type}: ${alert.message}`.slice(0, 200),
+    message: alert.details ? `${alert.message}\n${alert.details}` : alert.message,
+    dedupeKey,
+    metadata: {
+      type: alert.type,
+      severity: alert.severity,
+      details: alert.details,
+      callMade: alert.callMade,
+      smsSent: alert.smsSent,
+      occurrences: 1,
+    },
+  });
+
+  alert.id = stored.id;
+  console.log(`[SystemMonitor] Stored alert: ${stored.id}`);
 }
 
 /**
@@ -424,43 +499,37 @@ export async function acknowledgeSystemAlert(
   alertId: string,
   acknowledgedBy: string
 ): Promise<boolean> {
-  if (!db) return false;
-
-  try {
-    await db.collection('system_alerts').doc(alertId).update({
-      acknowledged: true,
-      acknowledgedAt: new Date().toISOString(),
-      acknowledgedBy
-    });
-    console.log(`[SystemMonitor] Alert ${alertId} acknowledged by ${acknowledgedBy}`);
-    return true;
-  } catch (e) {
-    console.error('[SystemMonitor] Error acknowledging alert:', e);
-    return false;
-  }
+  const ok = await acknowledgeAlert(alertId, acknowledgedBy);
+  if (ok) console.log(`[SystemMonitor] Alert ${alertId} acknowledged by ${acknowledgedBy}`);
+  return ok;
 }
 
 /**
- * Get active (unacknowledged) system alerts
+ * Get active system alerts.
+ *
+ * A store failure THROWS rather than returning []. An empty list during an
+ * outage reads as "every system is healthy" on the very screen an operator
+ * checks to find out whether anything is broken.
+ *
+ * Note this now includes ACKNOWLEDGED alerts, which the Firestore query
+ * excluded. Acknowledged means somebody has seen it, not that it is fixed --
+ * dropping those from the active list hid live problems the moment anyone
+ * clicked on them.
  */
 export async function getActiveSystemAlerts(): Promise<SystemAlert[]> {
-  if (!db) return [];
+  const stored = await listOpenAlerts('SYSTEM');
 
-  try {
-    const snapshot = await db.collection('system_alerts')
-      .where('acknowledged', '==', false)
-      .orderBy('createdAt', 'desc')
-      .limit(50)
-      .get();
-
-    return snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    })) as SystemAlert[];
-  } catch (e) {
-    console.error('[SystemMonitor] Error getting active alerts:', e);
-    return [];
-  }
+  return stored.slice(0, 50).map((row) => ({
+    id: row.id,
+    type: String(row.metadata.type ?? 'unknown') as SystemAlert['type'],
+    severity: String(row.metadata.severity ?? 'warning') as SystemAlert['severity'],
+    message: row.message,
+    details: row.metadata.details ? String(row.metadata.details) : undefined,
+    createdAt: row.createdAt.toISOString(),
+    callMade: Boolean(row.metadata.callMade),
+    smsSent: Boolean(row.metadata.smsSent),
+    acknowledged: row.status === 'ACKNOWLEDGED',
+  }));
 }
 
 /**
@@ -486,24 +555,26 @@ export async function callCommanderWithSystemStatus(): Promise<{ success: boolea
  * Force flag an update needed (can be called from admin panel)
  */
 export async function flagUpdateNeeded(updateMessage: string, critical: boolean = false): Promise<boolean> {
-  if (!db) return false;
-
   try {
-    const configRef = db.collection('system_config').doc('updates');
-    const doc = await configRef.get();
+    const current = (await readUpdateFlags()) ?? {};
 
-    if (critical) {
-      await configRef.set({
-        criticalUpdate: updateMessage,
-        flaggedAt: new Date().toISOString()
-      }, { merge: true });
-    } else {
-      const existing = doc.exists ? (doc.data()?.pendingUpdates || []) : [];
-      await configRef.set({
-        pendingUpdates: [...existing, updateMessage],
-        flaggedAt: new Date().toISOString()
-      }, { merge: true });
-    }
+    const next: UpdateFlags = critical
+      ? { ...current, criticalUpdate: updateMessage, flaggedAt: new Date().toISOString() }
+      : {
+          ...current,
+          pendingUpdates: [...(current.pendingUpdates ?? []), updateMessage],
+          flaggedAt: new Date().toISOString(),
+        };
+
+    await prisma.setting.upsert({
+      where: { key: UPDATE_FLAGS_KEY },
+      update: { value: JSON.stringify(next) },
+      create: {
+        key: UPDATE_FLAGS_KEY,
+        value: JSON.stringify(next),
+        description: 'Pending and critical update flags surfaced by the system monitor',
+      },
+    });
 
     console.log(`[SystemMonitor] Update flagged: ${updateMessage}`);
     return true;
