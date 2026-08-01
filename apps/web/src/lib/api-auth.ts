@@ -53,6 +53,23 @@ function asRole(value: unknown): ApiUserRole | null {
 const AUTH_COOKIE = 'rah-auth-token';
 const VALID_ROLES = new Set<ApiUserRole>(['guest', 'worker', 'admin', 'owner']);
 
+/**
+ * Postgres `User.role` -> the app's ApiUserRole union.
+ *
+ * The DB vocabulary is wider than the union: CLEANER and MAINTENANCE are both
+ * 'worker'. This is an explicit allowlist rather than a lower-casing shortcut,
+ * so an unrecognised or newly added DB role falls through to 'guest' instead of
+ * being coerced into whatever it happens to resemble.
+ */
+const DB_ROLE_MAP: Record<string, ApiUserRole> = {
+  GUEST: 'guest',
+  WORKER: 'worker',
+  CLEANER: 'worker',
+  MAINTENANCE: 'worker',
+  ADMIN: 'admin',
+  OWNER: 'owner',
+};
+
 function devLoginEnabled(): boolean {
   return process.env.NODE_ENV === 'development' && process.env.ALLOW_DEV_LOGIN === 'true';
 }
@@ -119,26 +136,49 @@ export async function verifyAuthToken(token: string | undefined): Promise<ApiUse
     };
   }
 
-  const db = firebaseAdminModule.db;
-  if (!db) throw new RoleStoreUnavailableError('firestore client unavailable');
-
-  let userDoc;
+  // No claim on the token. Fall back to the POSTGRES role store, not Firestore.
+  //
+  // Firestore was the original fallback, and it made authorization depend on a
+  // Google project whose billing state can wall it: when every billing account
+  // on the org closed, Firestore returned 429 RESOURCE_EXHAUSTED on every read
+  // and production login went down with it. Postgres is already this app's
+  // system of record (46 routes use @/lib/prisma) and is hosted off GCP, so a
+  // Google billing lapse can no longer decide whether anyone can sign in.
+  //
+  // The never-fail-open property is kept and is now actually stronger. A read
+  // FAILURE still raises RoleStoreUnavailableError (typed 503, retryable) and
+  // never assumes a role. A read that SUCCEEDS but matches no row is no longer
+  // ambiguous the way an unreadable Firestore document was -- it is a positive
+  // statement that this uid has no elevated role -- so 'guest' there is a fact
+  // rather than a guess.
+  // Imported lazily, mirroring how firebase-admin is loaded above, so the
+  // common path -- a token that already carries its role claim -- never pulls
+  // the Prisma client into the request at all.
+  let userRow: { role: string } | null;
   try {
-    userDoc = await db.collection('users').doc(decodedToken.uid).get();
+    const { prisma } = await import('@/lib/prisma');
+    userRow = await prisma.user.findFirst({
+      where: { authUid: decodedToken.uid, isActive: true },
+      select: { role: true },
+    });
   } catch (error) {
-    // Do NOT downgrade to 'guest' here: a read failure is indistinguishable
-    // from an absent document, and silently guessing either way is wrong.
     throw new RoleStoreUnavailableError(error);
   }
 
-  const data = userDoc.exists ? userDoc.data() : undefined;
-  const role = asRole(data?.role) ?? 'guest';
+  // Postgres stores roles upper-case, and its vocabulary is wider than the
+  // app's ApiUserRole union: CLEANER and MAINTENANCE are both 'worker'. Map
+  // explicitly -- an unrecognised value must fall to 'guest', never be
+  // coerced into something more privileged.
+  const role = asRole(DB_ROLE_MAP[(userRow?.role ?? '').toUpperCase()]) ?? 'guest';
 
   return {
     uid: decodedToken.uid,
     email: decodedToken.email || null,
     role,
-    workerType: typeof data?.workerType === 'string' ? data.workerType : null,
+    // workerType lives on WorkerProfile, not User. The custom-claim path above
+    // carries it, which is the path every provisioned account uses; a
+    // DB-sourced role therefore reports null rather than inventing one.
+    workerType: null,
     isDevMode: false,
   };
 }

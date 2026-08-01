@@ -15,7 +15,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
 const verifyIdToken = vi.fn();
-const docGet = vi.fn();
+const findFirst = vi.fn();
 
 vi.mock('firebase-admin/auth', () => ({
   getAuth: () => ({ verifyIdToken }),
@@ -23,7 +23,15 @@ vi.mock('firebase-admin/auth', () => ({
 
 vi.mock('@/lib/firebase-admin', () => ({
   default: { name: 'test-app' },
-  db: { collection: () => ({ doc: () => ({ get: docGet }) }) },
+}));
+
+// The role store is Postgres, not Firestore. This mock MUST exist: without it
+// the Prisma client throws "Environment variable not found: DATABASE_URL",
+// which surfaces as RoleStoreUnavailableError and makes the store-down tests
+// pass for entirely the wrong reason.
+vi.mock('@/lib/prisma', () => ({
+  prisma: { user: { findFirst } },
+  default: { user: { findFirst } },
 }));
 
 import { RoleStoreUnavailableError, requireAuth, verifyAuthToken } from '../api-auth';
@@ -47,18 +55,18 @@ describe('verifyAuthToken', () => {
   it('returns null when the token itself is invalid', async () => {
     verifyIdToken.mockRejectedValue(new Error('Firebase ID token has expired'));
     await expect(verifyAuthToken(TOKEN)).resolves.toBeNull();
-    expect(docGet).not.toHaveBeenCalled();
+    expect(findFirst).not.toHaveBeenCalled();
   });
 
   it('throws RoleStoreUnavailableError when the role read fails', async () => {
     verifyIdToken.mockResolvedValue({ uid: 'u1', email: 'a@b.com' });
-    docGet.mockRejectedValue(Object.assign(new Error('Quota exceeded.'), { code: 8 }));
+    findFirst.mockRejectedValue(Object.assign(new Error('connection refused'), { code: 'P1001' }));
     await expect(verifyAuthToken(TOKEN)).rejects.toBeInstanceOf(RoleStoreUnavailableError);
   });
 
   it('does not fail open when the role store is down', async () => {
     verifyIdToken.mockResolvedValue({ uid: 'u1', email: 'a@b.com' });
-    docGet.mockRejectedValue(new Error('Quota exceeded.'));
+    findFirst.mockRejectedValue(new Error('connection refused'));
     // Specifically: it must not resolve to a usable user of ANY role.
     await expect(verifyAuthToken(TOKEN)).rejects.toThrow();
   });
@@ -67,19 +75,19 @@ describe('verifyAuthToken', () => {
     verifyIdToken.mockResolvedValue({ uid: 'u1', email: 'a@b.com', role: 'owner' });
     const user = await verifyAuthToken(TOKEN);
     expect(user).toMatchObject({ uid: 'u1', role: 'owner', isDevMode: false });
-    expect(docGet).not.toHaveBeenCalled();
+    expect(findFirst).not.toHaveBeenCalled();
   });
 
   it('ignores an invalid role claim and falls back to the role store', async () => {
     verifyIdToken.mockResolvedValue({ uid: 'u1', email: 'a@b.com', role: 'superuser' });
-    docGet.mockResolvedValue({ exists: true, data: () => ({ role: 'worker' }) });
+    findFirst.mockResolvedValue({ role: 'WORKER' });
     await expect(verifyAuthToken(TOKEN)).resolves.toMatchObject({ role: 'worker' });
-    expect(docGet).toHaveBeenCalled();
+    expect(findFirst).toHaveBeenCalled();
   });
 
   it('treats a missing user document as guest', async () => {
     verifyIdToken.mockResolvedValue({ uid: 'u1', email: 'a@b.com' });
-    docGet.mockResolvedValue({ exists: false, data: () => undefined });
+    findFirst.mockResolvedValue(null);
     await expect(verifyAuthToken(TOKEN)).resolves.toMatchObject({ role: 'guest' });
   });
 
@@ -98,7 +106,7 @@ describe('requireAuth', () => {
 
   it('returns a retryable 503 - not 401 - when the role store is down', async () => {
     verifyIdToken.mockResolvedValue({ uid: 'u1', email: 'a@b.com' });
-    docGet.mockRejectedValue(new Error('Quota exceeded.'));
+    findFirst.mockRejectedValue(new Error('connection refused'));
 
     const { user, error } = await requireAuth(requestWithToken(TOKEN));
 
