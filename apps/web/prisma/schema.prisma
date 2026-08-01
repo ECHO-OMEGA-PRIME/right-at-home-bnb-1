@@ -1133,6 +1133,21 @@ model OperationalAlert {
   notifiedAt       DateTime?
   acknowledgedAt   DateTime?
   resolvedAt       DateTime?
+  resolvedBy       String?
+  /// Identifies the real-world thing this alert is ABOUT (a cleaning schedule
+  /// id, a system check name), so "is there already an open alert for this?"
+  /// is one indexed query.
+  ///
+  /// This is what makes de-duplication possible at all. The Firestore version
+  /// kept the same idea as `cleanerScheduleId`, and when that store was
+  /// unreachable the lookup returned "no existing alert" -- so every run
+  /// re-alerted and phoned a real person every 15 minutes for the length of the
+  /// outage. De-duplication that fails open is not de-duplication.
+  dedupeKey        String?
+  /// Alert-kind-specific detail as JSON (cleaner name, phone, hours late, which
+  /// notifications went out). Kept out of columns because the shape differs per
+  /// alertType and none of it is queried.
+  metadata         String?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
@@ -1146,6 +1161,8 @@ model OperationalAlert {
   @@index([bookingId])
   @@index([workOrderId])
   @@index([assignedToUserId, status])
+  @@index([dedupeKey, status]) // "already an open alert for this thing?"
+  @@index([alertType, status])
 }
 
 // ============================================

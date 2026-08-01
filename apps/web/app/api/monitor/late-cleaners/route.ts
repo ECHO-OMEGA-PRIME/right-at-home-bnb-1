@@ -100,12 +100,18 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('[Monitor API] Error getting alerts:', error);
 
+    // 503, and never an empty `alerts` array. getActiveCleanerAlerts used to
+    // swallow a store failure and return [], which this route would have
+    // rendered as a cheerful "count: 0" -- indistinguishable from a morning
+    // where no cleaner is late. An alerts screen that cannot reach its store
+    // must say so, and say it in a way a caller can retry.
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: 'Alert store temporarily unavailable',
+        code: 'ALERT_STORE_UNAVAILABLE',
       },
-      { status: 500 }
+      { status: 503, headers: { 'Retry-After': '30' } }
     );
   }
 }
