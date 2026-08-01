@@ -1,23 +1,27 @@
 /**
- * Right at Home BnB - Cleaning Crew System
- * Checklists, photo verification, and issue reporting
+ * Right at Home BnB - Cleaning domain: checklist data and pure helpers.
+ *
+ * Split out of `cleaning-system.ts`, which glued this static domain to a
+ * Firestore data layer. Nothing ever called the Firestore half -- all three
+ * consumers (the cleaning API route and the cleaning / notifications pages)
+ * imported only types, the master checklist and pure lookups -- yet importing
+ * any of them pulled `firebase/firestore` into the module graph, including
+ * into a server route that has been fully on Prisma for some time.
+ *
+ * The Firestore half was also a superseded twin of `app/api/cleaning/route.ts`:
+ * createCleaningReport/startCleaningJob/updateChecklistItem/addCleaningIssue/
+ * addVerificationPhoto/completeCleaningJob mirrored its create/start/
+ * complete_item/report_issue/add_photo/complete actions, minus the property
+ * scoping and completion gates the route enforces. It is deleted rather than
+ * migrated: rewriting an unreferenced duplicate against Postgres would just
+ * recreate the ambiguity about which one is authoritative.
+ *
+ * Keep this module free of I/O. It is imported by both client components and
+ * server routes precisely because it has no data layer.
+ *
  * @author ECHO OMEGA PRIME
  */
 
-import { db } from './firestore';
-import {
-  collection,
-  doc,
-  setDoc,
-  getDoc,
-  getDocs,
-  updateDoc,
-  query,
-  where,
-  orderBy,
-  serverTimestamp,
-  Timestamp,
-} from 'firebase/firestore';
 
 // ============================================
 // TYPES
@@ -210,220 +214,6 @@ export const masterChecklist: ChecklistItem[] = [
 ];
 
 // ============================================
-// FIREBASE COLLECTIONS
-// ============================================
-
-const COLLECTIONS = {
-  CLEANING_REPORTS: 'rah_cleaning_reports',
-  CLEANING_ISSUES: 'rah_cleaning_issues',
-  CLEANING_PHOTOS: 'rah_cleaning_photos',
-};
-
-// ============================================
-// CLEANING REPORT FUNCTIONS
-// ============================================
-
-export async function createCleaningReport(
-  propertyId: string,
-  propertyName: string,
-  cleanerId: string,
-  cleanerName: string,
-  jobType: CleaningReport['jobType'],
-  scheduledAt: Date,
-  bookingId?: string
-): Promise<string> {
-  const id = `clean_${propertyId}_${Date.now()}`;
-  const reportRef = doc(db(), COLLECTIONS.CLEANING_REPORTS, id);
-
-  // Initialize checklist with all items uncompleted
-  const checklist: CompletedChecklistItem[] = masterChecklist.map(item => ({
-    itemId: item.id,
-    completed: false,
-  }));
-
-  const report: Omit<CleaningReport, 'id' | 'scheduledAt'> & { scheduledAt: any; createdAt: any } = {
-    propertyId,
-    propertyName,
-    cleanerId,
-    cleanerName,
-    bookingId,
-    jobType,
-    status: 'not_started',
-    scheduledAt: Timestamp.fromDate(scheduledAt),
-    checklist,
-    issues: [],
-    verificationPhotos: [],
-    createdAt: serverTimestamp(),
-  };
-
-  await setDoc(reportRef, report);
-  return id;
-}
-
-export async function startCleaningJob(reportId: string): Promise<void> {
-  const reportRef = doc(db(), COLLECTIONS.CLEANING_REPORTS, reportId);
-  await updateDoc(reportRef, {
-    status: 'in_progress',
-    startedAt: serverTimestamp(),
-  });
-}
-
-export async function updateChecklistItem(
-  reportId: string,
-  itemId: string,
-  completed: boolean,
-  photoUrl?: string,
-  notes?: string
-): Promise<void> {
-  const reportRef = doc(db(), COLLECTIONS.CLEANING_REPORTS, reportId);
-  const reportSnap = await getDoc(reportRef);
-
-  if (!reportSnap.exists()) return;
-
-  const checklist = reportSnap.data().checklist as CompletedChecklistItem[];
-  const itemIndex = checklist.findIndex(item => item.itemId === itemId);
-
-  if (itemIndex === -1) return;
-
-  checklist[itemIndex] = {
-    ...checklist[itemIndex],
-    completed,
-    completedAt: completed ? new Date() : undefined,
-    photoUrl,
-    notes,
-  };
-
-  await updateDoc(reportRef, { checklist });
-}
-
-export async function addCleaningIssue(
-  reportId: string,
-  issue: Omit<CleaningIssue, 'id' | 'reportedAt' | 'status'>
-): Promise<string> {
-  const reportRef = doc(db(), COLLECTIONS.CLEANING_REPORTS, reportId);
-  const reportSnap = await getDoc(reportRef);
-
-  if (!reportSnap.exists()) throw new Error('Report not found');
-
-  const issues = reportSnap.data().issues as CleaningIssue[];
-  const issueId = `issue_${Date.now()}`;
-
-  const newIssue: CleaningIssue = {
-    ...issue,
-    id: issueId,
-    reportedAt: new Date(),
-    status: 'reported',
-  };
-
-  issues.push(newIssue);
-  await updateDoc(reportRef, { issues });
-
-  return issueId;
-}
-
-export async function addVerificationPhoto(
-  reportId: string,
-  area: string,
-  photoUrl: string
-): Promise<void> {
-  const reportRef = doc(db(), COLLECTIONS.CLEANING_REPORTS, reportId);
-  const reportSnap = await getDoc(reportRef);
-
-  if (!reportSnap.exists()) return;
-
-  const photos = reportSnap.data().verificationPhotos || [];
-  photos.push({
-    area,
-    photoUrl,
-    takenAt: new Date(),
-  });
-
-  await updateDoc(reportRef, { verificationPhotos: photos });
-}
-
-export async function completeCleaningJob(
-  reportId: string,
-  overallNotes?: string,
-  suppliesUsed?: string[],
-  suppliesNeeded?: string[]
-): Promise<void> {
-  const reportRef = doc(db(), COLLECTIONS.CLEANING_REPORTS, reportId);
-  const reportSnap = await getDoc(reportRef);
-
-  if (!reportSnap.exists()) return;
-
-  const data = reportSnap.data();
-  const startedAt = data.startedAt?.toDate();
-  const now = new Date();
-
-  let timeSpentMinutes: number | undefined;
-  if (startedAt) {
-    timeSpentMinutes = Math.round((now.getTime() - startedAt.getTime()) / 60000);
-  }
-
-  await updateDoc(reportRef, {
-    status: 'completed',
-    completedAt: serverTimestamp(),
-    overallNotes,
-    suppliesUsed,
-    suppliesNeeded,
-    timeSpentMinutes,
-  });
-}
-
-export async function getCleaningReport(reportId: string): Promise<CleaningReport | null> {
-  const reportRef = doc(db(), COLLECTIONS.CLEANING_REPORTS, reportId);
-  const reportSnap = await getDoc(reportRef);
-
-  if (!reportSnap.exists()) return null;
-
-  const data = reportSnap.data();
-  return {
-    id: reportSnap.id,
-    ...data,
-    scheduledAt: data.scheduledAt?.toDate(),
-    startedAt: data.startedAt?.toDate(),
-    completedAt: data.completedAt?.toDate(),
-  } as CleaningReport;
-}
-
-export async function getCleanerReports(cleanerId: string): Promise<CleaningReport[]> {
-  const reportsRef = collection(db(), COLLECTIONS.CLEANING_REPORTS);
-  const q = query(
-    reportsRef,
-    where('cleanerId', '==', cleanerId),
-    orderBy('scheduledAt', 'desc')
-  );
-
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map(doc => ({
-    id: doc.id,
-    ...doc.data(),
-    scheduledAt: doc.data().scheduledAt?.toDate(),
-    startedAt: doc.data().startedAt?.toDate(),
-    completedAt: doc.data().completedAt?.toDate(),
-  })) as CleaningReport[];
-}
-
-export async function getPropertyReports(propertyId: string): Promise<CleaningReport[]> {
-  const reportsRef = collection(db(), COLLECTIONS.CLEANING_REPORTS);
-  const q = query(
-    reportsRef,
-    where('propertyId', '==', propertyId),
-    orderBy('scheduledAt', 'desc')
-  );
-
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map(doc => ({
-    id: doc.id,
-    ...doc.data(),
-    scheduledAt: doc.data().scheduledAt?.toDate(),
-    startedAt: doc.data().startedAt?.toDate(),
-    completedAt: doc.data().completedAt?.toDate(),
-  })) as CleaningReport[];
-}
-
-// ============================================
 // HELPER FUNCTIONS
 // ============================================
 
@@ -469,11 +259,11 @@ export function getCategoryCompletionStatus(
 }
 
 // ============================================
-// SERVICE REQUEST FUNCTIONS
+// NOTIFICATION / SERVICE-REQUEST TYPES
+//
+// The types stay; the Firestore readers and writers that used them do not.
+// `app/notifications/page.tsx` consumes these as shapes only.
 // ============================================
-
-const SERVICE_REQUESTS_COLLECTION = 'rah_service_requests';
-const NOTIFICATIONS_COLLECTION = 'rah_notifications';
 
 export interface OwnerNotification {
   id: string;
@@ -493,222 +283,6 @@ export interface OwnerNotification {
   actionTakenAt?: Date;
 }
 
-export async function createServiceRequest(
-  reportId: string,
-  propertyId: string,
-  propertyAddress: string,
-  type: ServiceRequest['type'],
-  urgency: ServiceRequest['urgency'],
-  description: string,
-  photoUrls: string[],
-  createdBy: string
-): Promise<string> {
-  const id = `svc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  const requestRef = doc(db(), SERVICE_REQUESTS_COLLECTION, id);
-
-  const request: Omit<ServiceRequest, 'id' | 'createdAt'> & { createdAt: any } = {
-    reportId,
-    propertyId,
-    propertyAddress,
-    type,
-    urgency,
-    description,
-    photoUrls,
-    createdBy,
-    status: 'pending',
-    createdAt: serverTimestamp(),
-  };
-
-  await setDoc(requestRef, request);
-
-  // Create notification for Steven
-  await createOwnerNotification({
-    type: 'service_request',
-    title: getServiceNotificationTitle(type, urgency),
-    message: `${description}\n\nProperty: ${propertyAddress}`,
-    propertyId,
-    propertyAddress,
-    reportId,
-    serviceRequestId: id,
-    photoUrls,
-    serviceType: type,
-    urgency: urgency === 'urgent' ? 'urgent' : urgency === 'soon' ? 'high' : 'medium',
-  });
-
-  return id;
-}
-
-function getServiceNotificationTitle(type: ServiceRequest['type'], urgency: ServiceRequest['urgency']): string {
-  const urgencyPrefix = urgency === 'urgent' ? '🚨 URGENT: ' : urgency === 'soon' ? '⚠️ ' : '';
-  const typeLabels: Record<ServiceRequest['type'], string> = {
-    yard: 'Yard Work Needed',
-    handyman: 'Handyman Needed',
-    plumber: 'Plumbing Issue',
-    electrician: 'Electrical Issue',
-    hvac: 'HVAC Issue',
-    appliance: 'Appliance Repair Needed'
-  };
-  return `${urgencyPrefix}${typeLabels[type]}`;
-}
-
-export async function createOwnerNotification(data: Omit<OwnerNotification, 'id' | 'createdAt'>): Promise<string> {
-  const id = `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  const notifRef = doc(db(), NOTIFICATIONS_COLLECTION, id);
-
-  await setDoc(notifRef, {
-    ...data,
-    createdAt: serverTimestamp(),
-  });
-
-  // In production, this would also:
-  // 1. Send push notification via Firebase Cloud Messaging
-  // 2. Send SMS via Twilio to Steven's phone
-  console.log(`[NOTIFICATION] Created: ${data.title} for ${data.propertyAddress}`);
-
-  return id;
-}
-
-export async function getOwnerNotifications(unreadOnly: boolean = false): Promise<OwnerNotification[]> {
-  const notifsRef = collection(db(), NOTIFICATIONS_COLLECTION);
-  let q = query(notifsRef, orderBy('createdAt', 'desc'));
-
-  if (unreadOnly) {
-    q = query(notifsRef, where('readAt', '==', null), orderBy('createdAt', 'desc'));
-  }
-
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map(doc => ({
-    id: doc.id,
-    ...doc.data(),
-    createdAt: doc.data().createdAt?.toDate(),
-    readAt: doc.data().readAt?.toDate(),
-    actionTakenAt: doc.data().actionTakenAt?.toDate(),
-  })) as OwnerNotification[];
-}
-
-export async function markNotificationRead(notificationId: string): Promise<void> {
-  const notifRef = doc(db(), NOTIFICATIONS_COLLECTION, notificationId);
-  await updateDoc(notifRef, {
-    readAt: serverTimestamp(),
-  });
-}
-
-export async function takeNotificationAction(
-  notificationId: string,
-  action: OwnerNotification['actionTaken'],
-  serviceProviderId?: string
-): Promise<void> {
-  const notifRef = doc(db(), NOTIFICATIONS_COLLECTION, notificationId);
-  const notifSnap = await getDoc(notifRef);
-
-  if (!notifSnap.exists()) return;
-
-  await updateDoc(notifRef, {
-    actionTaken: action,
-    actionTakenAt: serverTimestamp(),
-    readAt: serverTimestamp(),
-  });
-
-  // Update the service request status
-  const serviceRequestId = notifSnap.data().serviceRequestId;
-  if (serviceRequestId && action !== 'dismissed') {
-    const requestRef = doc(db(), SERVICE_REQUESTS_COLLECTION, serviceRequestId);
-    await updateDoc(requestRef, {
-      status: 'notified',
-      assignedTo: serviceProviderId,
-    });
-  }
-}
-
-export async function submitCompletionQuestions(
-  reportId: string,
-  questions: CompletionQuestions,
-  propertyAddress: string
-): Promise<string[]> {
-  const reportRef = doc(db(), COLLECTIONS.CLEANING_REPORTS, reportId);
-  const reportSnap = await getDoc(reportRef);
-
-  if (!reportSnap.exists()) throw new Error('Report not found');
-
-  const data = reportSnap.data();
-  const serviceRequestIds: string[] = [];
-
-  // Save completion questions
-  await updateDoc(reportRef, { completionQuestions: questions });
-
-  // Create service requests based on answers
-  if (questions.yardWorkNeeded) {
-    const id = await createServiceRequest(
-      reportId,
-      data.propertyId,
-      propertyAddress,
-      'yard',
-      'routine',
-      questions.yardWorkNotes || 'Yard work needed - see photos',
-      questions.yardWorkPhotos || [],
-      data.cleanerId
-    );
-    serviceRequestIds.push(id);
-  }
-
-  if (questions.maintenanceNeeded) {
-    const id = await createServiceRequest(
-      reportId,
-      data.propertyId,
-      propertyAddress,
-      'handyman',
-      'soon',
-      questions.maintenanceNotes || 'Maintenance needed - see photos',
-      questions.maintenancePhotos || [],
-      data.cleanerId
-    );
-    serviceRequestIds.push(id);
-  }
-
-  if (questions.hvacIssues) {
-    const id = await createServiceRequest(
-      reportId,
-      data.propertyId,
-      propertyAddress,
-      'hvac',
-      'urgent',
-      questions.hvacNotes || 'HVAC issue reported',
-      [],
-      data.cleanerId
-    );
-    serviceRequestIds.push(id);
-  }
-
-  if (questions.applianceIssues) {
-    const id = await createServiceRequest(
-      reportId,
-      data.propertyId,
-      propertyAddress,
-      'appliance',
-      'soon',
-      questions.applianceNotes || 'Appliance issue reported',
-      [],
-      data.cleanerId
-    );
-    serviceRequestIds.push(id);
-  }
-
-  if (questions.guestLeftItems) {
-    await createOwnerNotification({
-      type: 'guest_left_items',
-      title: '📦 Guest Left Items Behind',
-      message: questions.guestItemsDescription || 'Guest left personal items at property',
-      propertyId: data.propertyId,
-      propertyAddress,
-      reportId,
-      photoUrls: questions.guestItemsPhotos || [],
-      urgency: 'medium',
-    });
-  }
-
-  return serviceRequestIds;
-}
-
 export function getServiceProvider(type: ServiceRequest['type']): ServiceProvider | undefined {
   return serviceProviders.find(p => p.type === type);
 }
@@ -716,37 +290,3 @@ export function getServiceProvider(type: ServiceRequest['type']): ServiceProvide
 export function getAllServiceProviders(): ServiceProvider[] {
   return serviceProviders;
 }
-
-// ============================================
-// EXPORTS
-// ============================================
-
-export const CleaningSystem = {
-  masterChecklist,
-  serviceProviders,
-  createReport: createCleaningReport,
-  startJob: startCleaningJob,
-  updateItem: updateChecklistItem,
-  addIssue: addCleaningIssue,
-  addPhoto: addVerificationPhoto,
-  complete: completeCleaningJob,
-  getReport: getCleaningReport,
-  getCleanerReports,
-  getPropertyReports,
-  getByCategory: getChecklistByCategory,
-  getRequiredPhotos: getRequiredPhotoItems,
-  getCompletionPercentage: calculateCompletionPercentage,
-  getCategoryStatus: getCategoryCompletionStatus,
-  // Service requests
-  createServiceRequest,
-  submitCompletionQuestions,
-  getServiceProvider,
-  getAllServiceProviders,
-  // Notifications
-  createOwnerNotification,
-  getOwnerNotifications,
-  markNotificationRead,
-  takeNotificationAction,
-};
-
-export default CleaningSystem;

@@ -12,7 +12,7 @@ import { propertyScopeFor, scopeAllows, scopedWhere } from '@/lib/tenant-scope';
 import {
   masterChecklist,
   getChecklistForProperty
-} from '@/lib/cleaning-system';
+} from '@/lib/cleaning-domain';
 
 // ============================================================================
 // GET - List cleaning jobs or get specific job
