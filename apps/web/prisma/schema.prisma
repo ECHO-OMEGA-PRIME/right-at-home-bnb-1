@@ -144,10 +144,34 @@ model PropertyPhoto {
   isPrimary  Boolean  @default(false)
   sortOrder  Int      @default(0)
   createdAt  DateTime @default(now())
+  /// Where the image was imported FROM (a VRBO CDN URL, say). Kept so a
+  /// re-import can recognise a photo it already has; `url` is our own origin
+  /// path and therefore cannot answer that question.
+  sourceUrl  String?
 
-  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  property Property        @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  blob     PropertyPhotoBlob?
 
   @@index([propertyId])
+  @@index([propertyId, sourceUrl])
+}
+
+/// The bytes of a property photo, deliberately in their OWN table.
+///
+/// Several call sites load photos with `photos: true` (work orders, the cleaner
+/// leaderboard, operations-service). A `Bytes` column on PropertyPhoto would
+/// silently pull every image into memory on each of those queries. Splitting it
+/// means the metadata stays cheap and the bytes are fetched only by the route
+/// that serves them.
+model PropertyPhotoBlob {
+  id          String   @id @default(cuid())
+  photoId     String   @unique
+  data        Bytes
+  contentType String
+  byteSize    Int
+  createdAt   DateTime @default(now())
+
+  photo PropertyPhoto @relation(fields: [photoId], references: [id], onDelete: Cascade)
 }
 
 // ============================================
