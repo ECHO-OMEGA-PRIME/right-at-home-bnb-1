@@ -1,0 +1,11 @@
+apps/web/app/api/messages/automated/route.ts
+apps/web/app/bookings/page.tsx
+apps/web/src/lib/page-auth.ts
+apps/web/src/lib/secure-notifications.ts
+apps/web/src/lib/integrations/vrbo-sync-service.ts
+apps/web/src/lib/ownerrez-client.ts
+backend/database/seed.py
+apps/web/src/lib/api-auth.ts
+apps/web/app/api/bookings/sync/route.ts
+apps/web/next.config.js
+apps/web/vercel.json

@@ -22,21 +22,40 @@ import type {
 } from '../types';
 
 // API base URL - configurable per platform
+const sanitizeBaseUrl = (raw?: string | null): string => {
+  if (!raw) return '';
+
+  const trimmed = raw.replace(/\\r|\\n/g, '').trim();
+  if (!trimmed) return '';
+
+  try {
+    const url = new URL(trimmed);
+    if (url.hostname.endsWith('.bmcii1976.workers.dev')) return '';
+    return `${url.protocol}//${url.host}${url.pathname === '/' ? '' : url.pathname}`.replace(/\/$/, '');
+  } catch {
+    return '';
+  }
+};
+
 const getBaseUrl = (): string => {
   // Next.js (web)
-  if (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_API_URL) {
-    return process.env.NEXT_PUBLIC_API_URL;
+  if (typeof process !== 'undefined') {
+    const nextBase = sanitizeBaseUrl(process.env.NEXT_PUBLIC_API_URL);
+    if (nextBase) return nextBase;
   }
   // Expo (mobile)
-  if (typeof process !== 'undefined' && process.env.EXPO_PUBLIC_API_URL) {
-    return process.env.EXPO_PUBLIC_API_URL;
+  if (typeof process !== 'undefined') {
+    const expoBase = sanitizeBaseUrl(process.env.EXPO_PUBLIC_API_URL);
+    if (expoBase) return expoBase;
   }
   // Vite/Electron (desktop)
-  if (typeof process !== 'undefined' && process.env.VITE_API_URL) {
-    return process.env.VITE_API_URL;
+  if (typeof process !== 'undefined') {
+    const viteBase = sanitizeBaseUrl(process.env.VITE_API_URL);
+    if (viteBase) return viteBase;
   }
-  // Default to production
-  return 'https://rightathome.vercel.app/api';
+  // Default to same-origin so deployed web builds keep using their own /api
+  // routes instead of a dead or stale worker host.
+  return '';
 };
 
 class RightAtHomeAPI {

@@ -1,0 +1,20 @@
+{
+  "checked_utc": "2026-07-24T05:34:14.620020+00:00",
+  "firebase_login_exit_code": 127,
+  "firebase_logged_in_accounts": [],
+  "firebase_login_error_present": true,
+  "firebase_projects_exit_code": 127,
+  "firebase_project_ids": [],
+  "rightathome_visible": false,
+  "firebase_projects_error_present": true,
+  "gcloud_exit_code": 127,
+  "active_gcloud_accounts": [],
+  "gcloud_error_present": true,
+  "credential_store_files": [
+    {
+      "path": "C:\\Users\\bobmc\\.config\\configstore\\firebase-tools.json",
+      "bytes": 316,
+      "modified_utc": "2026-07-24T00:01:45.162069+00:00"
+    }
+  ]
+}

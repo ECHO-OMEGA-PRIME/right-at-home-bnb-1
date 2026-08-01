@@ -1,0 +1,10 @@
+﻿{
+    "checked_utc":  "2026-07-24T00:09:56.4984852Z",
+    "project_is_rightathome_prod":  false,
+    "project_is_echo_prime_ai":  false,
+    "auth_is_rightathome_prod":  false,
+    "auth_is_echo_prime_ai":  false,
+    "bucket_is_rightathome_prod":  false,
+    "bucket_is_echo_prime_ai":  false,
+    "firebase_identity_consistent":  false
+}

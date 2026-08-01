@@ -1,0 +1,205 @@
+
+> rightathome-web@1.0.0 build C:\ECHO_OMEGA_PRIME\WEBSITES\right-at-home-bnb\apps\web
+> prisma generate && next build
+
+Prisma schema loaded from prisma\schema.prisma
+
+✔ Generated Prisma Client (v5.22.0) to .\..\..\node_modules\.pnpm\@prisma+client@5.22.0_prisma@5.22.0\node_modules\@prisma\client in 650ms
+
+Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
+
+Tip: Need your database queries to be 1000x faster? Accelerate offers you that and more: https://pris.ly/tip-2-accelerate
+
+   ▲ Next.js 14.1.0
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully
+   Skipping validation of types
+   Skipping linting
+   Collecting page data ...
+   Generating static pages (0/130) ...
+   Generating static pages (32/130) 
+   Generating static pages (64/130) 
+   Generating static pages (97/130) 
+ ✓ Generating static pages (130/130) 
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                     Size     First Load JS
+┌ ○ /                                           55.6 kB         192 kB
+├ ○ /_not-found                                 891 B          85.5 kB
+├ ○ /admin/accounting                           4.68 kB         195 kB
+├ ○ /admin/accounting/ap                        5.28 kB        89.9 kB
+├ ○ /admin/accounting/ar                        4.99 kB        89.6 kB
+├ ○ /admin/accounting/reports                   5.4 kB           90 kB
+├ ○ /admin/accounting/transactions              4.88 kB        89.5 kB
+├ ○ /admin/costs                                6.29 kB         132 kB
+├ ○ /admin/crm                                  5.43 kB         138 kB
+├ λ /admin/crm/[guestId]                        7.36 kB        98.7 kB
+├ ○ /admin/dispatch                             5.09 kB          94 kB
+├ ○ /admin/finance                              11.1 kB         421 kB
+├ ○ /admin/integrations                         6.45 kB          91 kB
+├ ○ /admin/inventory                            4.41 kB          89 kB
+├ ○ /admin/paypal                               9.37 kB         135 kB
+├ ○ /admin/payroll                              5.18 kB        89.8 kB
+├ ○ /admin/payroll/employees                    5.35 kB        89.9 kB
+├ ○ /admin/payroll/run                          5.49 kB        90.1 kB
+├ ○ /admin/planner                              5.25 kB         131 kB
+├ ○ /admin/reviews                              5.15 kB         131 kB
+├ ○ /admin/service-costs                        6.18 kB        90.8 kB
+├ ○ /admin/smart-home                           6.75 kB        91.3 kB
+├ ○ /admin/taxes                                4.66 kB        89.2 kB
+├ ○ /admin/vrbo-images                          7.79 kB         128 kB
+├ ○ /admin/workers                              5.03 kB        94.7 kB
+├ ○ /analytics                                  4.02 kB         388 kB
+├ λ /api/accounting/journal-entries             0 B                0 B
+├ λ /api/accounting/reports/balance-sheet       0 B                0 B
+├ λ /api/accounting/reports/pnl                 0 B                0 B
+├ ○ /api/accounting/summary                     0 B                0 B
+├ λ /api/admin/property-info                    0 B                0 B
+├ λ /api/admin/save-property-images             0 B                0 B
+├ λ /api/admin/vrbo-ical                        0 B                0 B
+├ λ /api/admin/vrbo-mailbridge/status           0 B                0 B
+├ λ /api/admin/vrbo-messages                    0 B                0 B
+├ λ /api/admin/vrbo-scrape                      0 B                0 B
+├ λ /api/admin/vrbo-status                      0 B                0 B
+├ λ /api/area-intelligence                      0 B                0 B
+├ λ /api/bookings                               0 B                0 B
+├ λ /api/bookings/[id]                          0 B                0 B
+├ λ /api/bookings/availability                  0 B                0 B
+├ λ /api/bookings/calendar                      0 B                0 B
+├ λ /api/bookings/capture                       0 B                0 B
+├ λ /api/bookings/checkout                      0 B                0 B
+├ ○ /api/bookings/conflicts                     0 B                0 B
+├ λ /api/bookings/sync                          0 B                0 B
+├ ○ /api/bookings/sync/status                   0 B                0 B
+├ λ /api/calls                                  0 B                0 B
+├ λ /api/calls/ai-respond                       0 B                0 B
+├ λ /api/calls/context-call                     0 B                0 B
+├ λ /api/calls/emergency-ack                    0 B                0 B
+├ λ /api/calls/emergency-callback               0 B                0 B
+├ λ /api/calls/gather                           0 B                0 B
+├ λ /api/calls/incoming                         0 B                0 B
+├ λ /api/calls/status                           0 B                0 B
+├ λ /api/calls/transcribe                       0 B                0 B
+├ λ /api/calls/tts                              0 B                0 B
+├ λ /api/checkout                               0 B                0 B
+├ λ /api/checkout/square                        0 B                0 B
+├ λ /api/cleaning                               0 B                0 B
+├ λ /api/concierge                              0 B                0 B
+├ λ /api/concierge/chat                         0 B                0 B
+├ λ /api/costs                                  0 B                0 B
+├ λ /api/costs/summary                          0 B                0 B
+├ λ /api/crm/guests                             0 B                0 B
+├ λ /api/crm/guests/[id]                        0 B                0 B
+├ ○ /api/cron/autonomy-loop                     0 B                0 B
+├ λ /api/cron/guest-messages                    0 B                0 B
+├ λ /api/cron/monitor                           0 B                0 B
+├ λ /api/cron/operations                        0 B                0 B
+├ λ /api/cron/vrbo-sync                         0 B                0 B
+├ λ /api/dashboard/stats                        0 B                0 B
+├ λ /api/debug                                  0 B                0 B
+├ λ /api/dispatch/employees                     0 B                0 B
+├ λ /api/dispatch/tasks                         0 B                0 B
+├ λ /api/dispatch/tasks/[id]                    0 B                0 B
+├ λ /api/email/send                             0 B                0 B
+├ λ /api/expenses                               0 B                0 B
+├ λ /api/guests                                 0 B                0 B
+├ λ /api/health                                 0 B                0 B
+├ λ /api/integrations/ical                      0 B                0 B
+├ λ /api/integrations/paypal/auth               0 B                0 B
+├ λ /api/integrations/paypal/balance            0 B                0 B
+├ λ /api/integrations/paypal/callback           0 B                0 B
+├ λ /api/integrations/paypal/invoices           0 B                0 B
+├ λ /api/integrations/paypal/transactions       0 B                0 B
+├ λ /api/integrations/vrbo/messages             0 B                0 B
+├ λ /api/integrations/vrbo/sync                 0 B                0 B
+├ λ /api/integrations/vrbo/webhook              0 B                0 B
+├ λ /api/inventory                              0 B                0 B
+├ λ /api/inventory/movements                    0 B                0 B
+├ λ /api/invoices                               0 B                0 B
+├ λ /api/invoices/[id]                          0 B                0 B
+├ λ /api/messages/automated                     0 B                0 B
+├ λ /api/monitor/late-cleaners                  0 B                0 B
+├ λ /api/monitor/system                         0 B                0 B
+├ λ /api/notes                                  0 B                0 B
+├ λ /api/operations/dashboard                   0 B                0 B
+├ λ /api/operations/guest-requests              0 B                0 B
+├ λ /api/operations/payroll                     0 B                0 B
+├ λ /api/operations/service-schedules           0 B                0 B
+├ λ /api/operations/work-orders                 0 B                0 B
+├ λ /api/operations/work-orders/[id]/check-in   0 B                0 B
+├ λ /api/operations/work-orders/[id]/checklist  0 B                0 B
+├ λ /api/operations/work-orders/[id]/complete   0 B                0 B
+├ λ /api/ownerrez                               0 B                0 B
+├ λ /api/ownerrez/webhook                       0 B                0 B
+├ λ /api/payroll/calculate                      0 B                0 B
+├ λ /api/payroll/employees                      0 B                0 B
+├ λ /api/payroll/employees/[id]                 0 B                0 B
+├ λ /api/payroll/runs                           0 B                0 B
+├ λ /api/payroll/runs/[id]                      0 B                0 B
+├ λ /api/properties                             0 B                0 B
+├ λ /api/properties/[id]                        0 B                0 B
+├ λ /api/properties/new                         0 B                0 B
+├ λ /api/reviews                                0 B                0 B
+├ λ /api/reviews/[id]/respond                   0 B                0 B
+├ λ /api/service-costs                          0 B                0 B
+├ λ /api/settings                               0 B                0 B
+├ λ /api/smart-home                             0 B                0 B
+├ λ /api/smart-home/locks                       0 B                0 B
+├ λ /api/smart-home/thermostats                 0 B                0 B
+├ λ /api/steven-ai                              0 B                0 B
+├ λ /api/sync                                   0 B                0 B
+├ λ /api/taxes                                  0 B                0 B
+├ λ /api/vrbo/sync                              0 B                0 B
+├ λ /api/weather                                0 B                0 B
+├ λ /api/webhooks/stripe                        0 B                0 B
+├ λ /api/webhooks/vrbo                          0 B                0 B
+├ ○ /booking/cancelled                          993 B          92.4 kB
+├ ○ /booking/complete                           2.83 kB        94.2 kB
+├ ○ /booking/confirm                            3.02 kB        94.4 kB
+├ ○ /booking/success                            3.43 kB         130 kB
+├ ○ /bookings                                   16.9 kB         289 kB
+├ ○ /calendar                                   4.39 kB         277 kB
+├ ○ /cleaners                                   9.51 kB         308 kB
+├ ○ /cleaning                                   11.5 kB         286 kB
+├ ○ /concierge                                  13.1 kB         283 kB
+├ ○ /dashboard                                  1.35 kB         213 kB
+├ ○ /dev-login                                  155 B          84.7 kB
+├ ○ /finance                                    4.14 kB         274 kB
+├ ○ /guest/dashboard                            158 B           227 kB
+├ ○ /guests                                     10.7 kB         309 kB
+├ ○ /lawn-service                               7.29 kB         273 kB
+├ ○ /locks                                      7.79 kB         278 kB
+├ ○ /login                                      6.71 kB         267 kB
+├ ○ /maintenance                                8.49 kB         274 kB
+├ ○ /messages                                   8.21 kB         279 kB
+├ ○ /notifications                              4.89 kB         270 kB
+├ ○ /owner                                      157 B           227 kB
+├ ○ /owner/properties                           3.79 kB         269 kB
+├ ○ /privacy-policy                             183 B          91.6 kB
+├ ○ /properties                                 12.7 kB         318 kB
+├ λ /properties/[id]                            7.46 kB         151 kB
+├ λ /properties/[id]/book                       4.64 kB         103 kB
+├ λ /properties/new                             10.4 kB         140 kB
+├ ○ /register                                   7.59 kB         263 kB
+├ ○ /robots.txt                                 0 B                0 B
+├ ○ /settings                                   14.8 kB         285 kB
+├ ○ /sitemap.xml                                0 B                0 B
+├ ○ /smart-home                                 11.6 kB         282 kB
+├ ○ /steven                                     5.77 kB         271 kB
+├ ○ /terms-of-service                           183 B          91.6 kB
+├ ○ /vrbo                                       6.36 kB         272 kB
+└ ○ /worker                                     157 B           227 kB
++ First Load JS shared by all                   84.6 kB
+  ├ chunks/4083-74157119e7ba55a0.js             29.1 kB
+  ├ chunks/f4944d3e-b8851997bfb13409.js         53.4 kB
+  └ other shared chunks (total)                 2.12 kB
+
+
+ƒ Middleware                                    43 kB
+
+○  (Static)   prerendered as static content
+λ  (Dynamic)  server-rendered on demand using Node.js
+

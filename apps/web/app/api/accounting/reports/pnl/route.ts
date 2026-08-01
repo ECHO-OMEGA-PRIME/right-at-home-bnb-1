@@ -1,49 +1,43 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireOneOfRoles } from '@/lib/api-auth';
+import { reportJournalLines } from '@/lib/ledger';
 
 // ── Mock journal data for P&L computation ────────────────────────────────
-const journalLines: any[] = [
-  // Revenue entries
-  { date: '2026-03-01', account_code: '4000', account_name: 'Rental Revenue', debit_cents: 0, credit_cents: 175000, property_id: 'PROP-001' },
-  { date: '2026-03-05', account_code: '4000', account_name: 'Rental Revenue', debit_cents: 0, credit_cents: 225000, property_id: 'PROP-002' },
-  { date: '2026-03-10', account_code: '4000', account_name: 'Rental Revenue', debit_cents: 0, credit_cents: 350000, property_id: 'PROP-001' },
-  { date: '2026-03-12', account_code: '4000', account_name: 'Rental Revenue', debit_cents: 0, credit_cents: 125000, property_id: 'PROP-002' },
-  { date: '2026-03-01', account_code: '4010', account_name: 'Cleaning Fee Revenue', debit_cents: 0, credit_cents: 25000, property_id: 'PROP-001' },
-  { date: '2026-03-05', account_code: '4010', account_name: 'Cleaning Fee Revenue', debit_cents: 0, credit_cents: 37500, property_id: 'PROP-002' },
-  { date: '2026-03-08', account_code: '4020', account_name: 'Pet Fee Revenue', debit_cents: 0, credit_cents: 15000, property_id: 'PROP-001' },
+// Journal lines come from real JournalEntryLine rows via @/lib/ledger. This
+// route previously aggregated a hardcoded `journalLines` array, so the P&L it
+// reported was invented (queue #26855). The aggregation and filtering below
+// are unchanged -- only the source is.
 
-  // Expense entries
-  { date: '2026-03-01', account_code: '5000', account_name: 'Wage Expense', debit_cents: 160000, credit_cents: 0, property_id: null },
-  { date: '2026-03-15', account_code: '5000', account_name: 'Wage Expense', debit_cents: 160000, credit_cents: 0, property_id: null },
-  { date: '2026-03-01', account_code: '5010', account_name: 'Employer Payroll Tax', debit_cents: 12240, credit_cents: 0, property_id: null },
-  { date: '2026-03-15', account_code: '5010', account_name: 'Employer Payroll Tax', debit_cents: 12240, credit_cents: 0, property_id: null },
-  { date: '2026-03-02', account_code: '5100', account_name: 'Utilities', debit_cents: 22000, credit_cents: 0, property_id: 'PROP-001' },
-  { date: '2026-03-02', account_code: '5100', account_name: 'Utilities', debit_cents: 23000, credit_cents: 0, property_id: 'PROP-002' },
-  { date: '2026-03-05', account_code: '5200', account_name: 'Cleaning Supplies', debit_cents: 8500, credit_cents: 0, property_id: 'PROP-001' },
-  { date: '2026-03-07', account_code: '5200', account_name: 'Cleaning Supplies', debit_cents: 10000, credit_cents: 0, property_id: 'PROP-002' },
-  { date: '2026-03-10', account_code: '5300', account_name: 'Maintenance & Repairs', debit_cents: 32000, credit_cents: 0, property_id: 'PROP-001' },
-  { date: '2026-03-01', account_code: '5400', account_name: 'Insurance', debit_cents: 25000, credit_cents: 0, property_id: null },
-  { date: '2026-03-08', account_code: '6000', account_name: 'Platform Fees', debit_cents: 43750, credit_cents: 0, property_id: null },
-  { date: '2026-03-10', account_code: '6100', account_name: 'Marketing', debit_cents: 15000, credit_cents: 0, property_id: null },
-  { date: '2026-03-01', account_code: '6200', account_name: 'Software & Subs', debit_cents: 8500, credit_cents: 0, property_id: null },
-  { date: '2026-03-01', account_code: '6300', account_name: 'Property Management', debit_cents: 12000, credit_cents: 0, property_id: null },
-];
-
-// ── GET /api/accounting/reports/pnl ──────────────────────────────────────
 export async function GET(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const params = request.nextUrl.searchParams;
     const startDate = params.get('start') ?? new Date().toISOString().slice(0, 8) + '01';
     const endDate = params.get('end') ?? new Date().toISOString().split('T')[0];
     const propertyFilter = params.get('property_id');
 
+    const journalLines = await reportJournalLines({
+      from: new Date(`${startDate}T00:00:00.000Z`),
+      to: new Date(`${endDate}T23:59:59.999Z`),
+    });
+
     // Filter by date range and optional property
     let filtered = journalLines.filter(
       (l) => l.date >= startDate && l.date <= endDate,
     );
+
+    // Unallocated lines (property_id null) used to be folded into WHICHEVER
+    // property was asked for. Asking about each property in turn therefore
+    // charged the whole company's overhead to every one of them, so no two
+    // properties could be compared and the per-property figures did not sum to
+    // the company total. They are now excluded and reported on their own line,
+    // so the cost is still visible but belongs to nobody in particular.
+    const unallocated = propertyFilter
+      ? filtered.filter((l) => l.property_id === null)
+      : [];
     if (propertyFilter) {
-      filtered = filtered.filter(
-        (l) => l.property_id === propertyFilter || l.property_id === null,
-      );
+      filtered = filtered.filter((l) => l.property_id === propertyFilter);
     }
 
     // Aggregate revenue lines (4xxx accounts — credit-normal)
@@ -77,10 +71,33 @@ export async function GET(request: NextRequest) {
     const totalExpensesCents = expenseLines.reduce((s, e) => s + e.amount_cents, 0);
     const netIncomeCents = totalRevenueCents - totalExpensesCents;
 
+    // The ledger is currently EMPTY (0 JournalEntry, 0 JournalEntryLine against
+    // 27 seeded accounts), so this report returns zeros for a business with 762
+    // confirmed bookings. Say so, rather than presenting a clean $0 P&L that
+    // looks like a finished report of a business that did nothing.
+    const ledgerEmpty = journalLines.length === 0;
+
     return NextResponse.json({
       report: 'profit_and_loss',
       period: { start: startDate, end: endDate },
       property_id: propertyFilter ?? 'all',
+      source: 'journal_ledger',
+      ledger_empty: ledgerEmpty,
+      warnings: ledgerEmpty
+        ? [
+            'No journal entries exist for this period, so every figure below is zero because nothing has been posted to the ledger — not because the business had no activity. For revenue actually recorded against properties, use /api/accounting/reports/property-pnl.',
+          ]
+        : [],
+      // Costs that belong to the business rather than to one property. Only
+      // populated when a single property was requested; otherwise they are
+      // already inside the totals.
+      unallocated: propertyFilter
+        ? {
+            note: 'Not included in the figures above — company-level lines that are not attributable to this property.',
+            debit_cents: unallocated.reduce((s, l) => s + l.debit_cents, 0),
+            credit_cents: unallocated.reduce((s, l) => s + l.credit_cents, 0),
+          }
+        : null,
       revenue: {
         lines: revenueLines,
         total_cents: totalRevenueCents,

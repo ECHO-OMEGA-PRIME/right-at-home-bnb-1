@@ -101,6 +101,10 @@ export async function POST(req: NextRequest) {
         guestCount: guestCount || 1,
         platform: "DIRECT",
         confirmCode: bookingRef,
+        // Same value, kept in a column the capture route will NOT overwrite.
+        // confirmCode becomes the transaction id once payment completes, which
+        // is why the order reference needs a home of its own.
+        paypalOrderRef: bookingRef,
         nightlyRate,
         totalNights,
         subtotal,

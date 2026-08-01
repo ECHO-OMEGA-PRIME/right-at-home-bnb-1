@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { paypalFetch } from "@/lib/integrations/paypal-client";
+import { requireOneOfRoles } from '@/lib/api-auth';
+
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 /**
  * GET /api/integrations/paypal/transactions
@@ -14,6 +18,8 @@ import { paypalFetch } from "@/lib/integrations/paypal-client";
  *   fields      - "all" for full details, "transaction_info" for summary (default "all")
  */
 export async function GET(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const { searchParams } = new URL(request.url);
 

@@ -17,27 +17,35 @@ datasource db {
 // ============================================
 
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  name          String
-  phone         String?
-  avatarUrl     String?
-  role          String    @default("GUEST")
-  isActive      Boolean   @default(true)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id        String   @id @default(cuid())
+  email     String   @unique
+  authUid   String?  @unique
+  name      String
+  phone     String?
+  avatarUrl String?
+  role      String   @default("GUEST")
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  cleaningJobs  CleaningJob[]
-  expenses      Expense[]
-  approvedMsgs  Message[]     @relation("ApprovedBy")
+  cleaningJobs     CleaningJob[]
+  expenses         Expense[]
+  approvedMsgs     Message[]          @relation("ApprovedBy")
+  workerProfile    WorkerProfile?
+  requestedWork    WorkOrder[]        @relation("WorkOrderRequestedBy")
+  requestedActions ConciergeAction[]  @relation("ConciergeActionRequestedBy")
+  approvedActions  ConciergeAction[]  @relation("ConciergeActionApprovedBy")
+  accessGrants     AccessGrant[]
+  assignedAlerts   OperationalAlert[] @relation("AlertAssignee")
+  staffApplications StaffApplication[]
 
   // Performance indexes
   @@index([email])
   @@index([role])
-  @@index([isActive])                     // Filter active users
-  @@index([role, isActive])               // Composite: active users by role
-  @@index([createdAt])                    // Sort by creation date
+  @@index([isActive]) // Filter active users
+  @@index([role, isActive]) // Composite: active users by role
+  @@index([createdAt]) // Sort by creation date
 }
 
 // ============================================
@@ -45,30 +53,30 @@ model User {
 // ============================================
 
 model Property {
-  id              String    @id @default(cuid())
-  name            String
-  address         String
-  city            String    @default("Midland")
-  state           String    @default("TX")
-  zipCode         String?
-  latitude        Float?
-  longitude       Float?
+  id        String  @id @default(cuid())
+  name      String
+  address   String
+  city      String  @default("Midland")
+  state     String  @default("TX")
+  zipCode   String?
+  latitude  Float?
+  longitude Float?
 
   // Property Details
-  bedrooms        Int
-  bathrooms       Float
-  maxGuests       Int
-  squareFeet      Int?
-  propertyType    String    @default("HOUSE")
+  bedrooms     Int
+  bathrooms    Float
+  maxGuests    Int
+  squareFeet   Int?
+  propertyType String @default("HOUSE")
 
   // Amenities & Info (stored as JSON string)
-  amenities       String?
-  wifiNetwork     String?
-  wifiPassword    String?
-  parkingInfo     String?
-  checkInInstr    String?
-  checkOutInstr   String?
-  houseRules      String?
+  amenities     String?
+  wifiNetwork   String?
+  wifiPassword  String?
+  parkingInfo   String?
+  checkInInstr  String?
+  checkOutInstr String?
+  houseRules    String?
 
   // Cleaning
   cleaningChecklist String?
@@ -79,46 +87,91 @@ model Property {
   securityDeposit Float?
 
   // External IDs
-  airbnbId        String?
-  vrboId          String?
+  airbnbId String?
+  vrboId   String?
+
+  /// Cross-system property key (#26898). The public catalogue publishes ids
+  /// like `Humble-3106` and the lock hardware names its devices `garfield`,
+  /// `castleford`, `lincolngreen` -- both use this scheme, not Property.id.
+  /// Added rather than renaming Property.id, because a published id that
+  /// Airbnb/VRBO configs may reference must not change underneath them.
+  slug     String? @unique
 
   // Status
-  status          String    @default("ACTIVE")
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  status    String   @default("ACTIVE")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  bookings        Booking[]
-  cleaningJobs    CleaningJob[]
-  smartLock       SmartLock?
-  expenses        Expense[]
-  photos          PropertyPhoto[]
-  vrboSync        VrboSync?
+  bookings           Booking[]
+  cleaningJobs       CleaningJob[]
+  smartLock          SmartLock?
+  expenses           Expense[]
+  photos             PropertyPhoto[]
+  vrboSync           VrboSync?
+  workOrders         WorkOrder[]
+  serviceRates       PropertyServiceRate[]
+  checklistTemplates PropertyChecklistTemplate[]
+  serviceSchedules   ServiceSchedule[]
+  accessGrants       AccessGrant[]
+  guestRequests      GuestRequest[]
+  operationalAlerts  OperationalAlert[]
+
+  // Financial ledger back-relations (P1 objective 2, added 2026-07-30)
+  journalEntries     JournalEntry[]
+  invoices           Invoice[]
+  inventoryItems     InventoryItem[]
+  reviews            Review[]
+  thermostats        Thermostat[]
 
   // Performance indexes
   @@index([status])
   @@index([city])
-  @@index([status, city])             // Composite: filter by status and city
-  @@index([propertyType])             // Filter by property type
-  @@index([bedrooms])                 // Filter by bedroom count
-  @@index([nightlyRate])              // Sort/filter by price
-  @@index([airbnbId])                 // Lookup by external ID
-  @@index([vrboId])                   // Lookup by external ID
-  @@index([createdAt])                // Sort by creation date
+  @@index([status, city]) // Composite: filter by status and city
+  @@index([propertyType]) // Filter by property type
+  @@index([bedrooms]) // Filter by bedroom count
+  @@index([nightlyRate]) // Sort/filter by price
+  @@index([airbnbId]) // Lookup by external ID
+  @@index([vrboId]) // Lookup by external ID
+  @@index([createdAt]) // Sort by creation date
 }
 
 model PropertyPhoto {
-  id          String    @id @default(cuid())
-  propertyId  String
-  url         String
-  caption     String?
-  isPrimary   Boolean   @default(false)
-  sortOrder   Int       @default(0)
-  createdAt   DateTime  @default(now())
+  id         String   @id @default(cuid())
+  propertyId String
+  url        String
+  caption    String?
+  isPrimary  Boolean  @default(false)
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+  /// Where the image was imported FROM (a VRBO CDN URL, say). Kept so a
+  /// re-import can recognise a photo it already has; `url` is our own origin
+  /// path and therefore cannot answer that question.
+  sourceUrl  String?
 
-  property    Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  property Property        @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  blob     PropertyPhotoBlob?
 
   @@index([propertyId])
+  @@index([propertyId, sourceUrl])
+}
+
+/// The bytes of a property photo, deliberately in their OWN table.
+///
+/// Several call sites load photos with `photos: true` (work orders, the cleaner
+/// leaderboard, operations-service). A `Bytes` column on PropertyPhoto would
+/// silently pull every image into memory on each of those queries. Splitting it
+/// means the metadata stays cheap and the bytes are fetched only by the route
+/// that serves them.
+model PropertyPhotoBlob {
+  id          String   @id @default(cuid())
+  photoId     String   @unique
+  data        Bytes
+  contentType String
+  byteSize    Int
+  createdAt   DateTime @default(now())
+
+  photo PropertyPhoto @relation(fields: [photoId], references: [id], onDelete: Cascade)
 }
 
 // ============================================
@@ -126,54 +179,55 @@ model PropertyPhoto {
 // ============================================
 
 model Guest {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  name          String
-  phone         String?
+  id    String  @id @default(cuid())
+  email String  @unique
+  name  String
+  phone String?
 
   // Source
-  platform      String    @default("DIRECT")
-  platformId    String?
+  platform   String  @default("DIRECT")
+  platformId String?
 
   // CRM Data
-  firstStay     DateTime?
-  lastStay      DateTime?
-  totalStays    Int       @default(0)
-  totalSpent    Float     @default(0)
-  avgRating     Float?
+  firstStay  DateTime?
+  lastStay   DateTime?
+  totalStays Int       @default(0)
+  totalSpent Float     @default(0)
+  avgRating  Float?
 
   // Tags & Preferences (stored as JSON string)
-  tags          String?
-  notes         String?
-  preferences   String?
+  tags        String?
+  notes       String?
+  preferences String?
 
   // VIP Status
-  isVip         Boolean   @default(false)
-  vipTier       String?
+  isVip   Boolean @default(false)
+  vipTier String?
 
   // Special Dates
-  birthday      DateTime?
-  anniversary   DateTime?
+  birthday    DateTime?
+  anniversary DateTime?
 
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  bookings      Booking[]
-  messages      Message[]
+  bookings         Booking[]
+  messages         Message[]
   conciergeQueries ConciergeQuery[]
+  guestRequests    GuestRequest[]
 
   // Performance indexes
   @@index([email])
   @@index([isVip])
-  @@index([platform])                     // Filter by booking platform
-  @@index([platform, platformId])         // Lookup by platform ID
-  @@index([totalStays])                   // Sort by stay count (loyalty)
-  @@index([totalSpent])                   // Sort by revenue (VIP identification)
-  @@index([lastStay])                     // Filter by recency
-  @@index([isVip, totalSpent])            // Composite: VIP ranking
-  @@index([createdAt])                    // Sort by registration date
-  @@index([birthday])                     // Birthday campaign targeting
+  @@index([platform]) // Filter by booking platform
+  @@index([platform, platformId]) // Lookup by platform ID
+  @@index([totalStays]) // Sort by stay count (loyalty)
+  @@index([totalSpent]) // Sort by revenue (VIP identification)
+  @@index([lastStay]) // Filter by recency
+  @@index([isVip, totalSpent]) // Composite: VIP ranking
+  @@index([createdAt]) // Sort by registration date
+  @@index([birthday]) // Birthday campaign targeting
 }
 
 // ============================================
@@ -181,45 +235,70 @@ model Guest {
 // ============================================
 
 model Booking {
-  id            String    @id @default(cuid())
-  propertyId    String
-  guestId       String
+  id         String @id @default(cuid())
+  propertyId String
+  guestId    String
 
   // Dates
-  checkIn       DateTime
-  checkOut      DateTime
+  checkIn  DateTime
+  checkOut DateTime
 
   // Details
-  guestCount    Int       @default(1)
-  platform      String    @default("DIRECT")
-  confirmCode   String?
+  guestCount  Int     @default(1)
+  platform    String  @default("DIRECT")
+  confirmCode String?
 
   // Pricing
-  nightlyRate   Float
-  totalNights   Int
-  subtotal      Float
-  cleaningFee   Float?
-  serviceFee    Float?
-  taxes         Float?
-  totalPrice    Float
+  nightlyRate Float
+  totalNights Int
+  subtotal    Float
+  cleaningFee Float?
+  serviceFee  Float?
+  taxes       Float?
+  totalPrice  Float
+
+  /// The reference stamped onto the PayPal order at checkout (RAH-xxxx), kept
+  /// in its OWN column. It used to live in confirmCode, which the capture route
+  /// then overwrote with the transaction id -- destroying the only proof that a
+  /// given PayPal order belonged to this booking, and breaking legitimate
+  /// retries. confirmCode is also read by the invoice path, so it could not
+  /// simply be repurposed.
+  paypalOrderRef String?
+  /// PayPal capture id, so a repeated capture of the SAME transaction can be
+  /// recognised and answered idempotently instead of charging again.
+  paypalCaptureId String?
 
   // Access
   accessCode    String?
   codeExpiresAt DateTime?
 
   // Status
-  status        String    @default("CONFIRMED")
+  status        String  @default("CONFIRMED")
   specialReqs   String?
   internalNotes String?
 
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  /// The reservation id as the channel knows it (a VRBO reservationId, say).
+  ///
+  /// This is what makes channel webhooks idempotent. Firestore got that for
+  /// free -- `collection('bookings').doc(reservationId).set(..., {merge:true})`
+  /// cannot create a second document -- and a port that inserted instead would
+  /// accumulate a duplicate booking on every webhook retry, which channels do
+  /// routinely. Unique per platform, and nullable so direct bookings (which
+  /// have no external id) are unaffected: Postgres does not conflict NULLs.
+  externalRef   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  property      Property  @relation(fields: [propertyId], references: [id])
-  guest         Guest     @relation(fields: [guestId], references: [id])
+  property      Property           @relation(fields: [propertyId], references: [id])
+  guest         Guest              @relation(fields: [guestId], references: [id])
   cleaningJob   CleaningJob?
   messages      Message[]
+  workOrders    WorkOrder[]
+  accessGrants  AccessGrant[]
+  guestRequests GuestRequest[]
+  alerts        OperationalAlert[]
 
   // Performance indexes
   @@index([propertyId])
@@ -227,13 +306,43 @@ model Booking {
   @@index([checkIn])
   @@index([checkOut])
   @@index([status])
-  @@index([propertyId, checkIn])          // Composite: property availability queries
-  @@index([propertyId, status])           // Composite: property bookings by status
+  @@index([propertyId, checkIn]) // Composite: property availability queries
+  @@index([propertyId, status]) // Composite: property bookings by status
   @@index([propertyId, checkIn, checkOut]) // Composite: date range availability
-  @@index([platform, status])             // Filter by platform and status
-  @@index([platform])                     // Filter by booking source
-  @@index([createdAt])                    // Sort by creation date
-  @@index([confirmCode])                  // Lookup by confirmation code
+  @@index([platform, status]) // Filter by platform and status
+  @@index([platform]) // Filter by booking source
+  @@index([createdAt]) // Sort by creation date
+  @@index([confirmCode]) // Lookup by confirmation code
+  @@unique([platform, externalRef]) // Channel webhook idempotency -- see externalRef
+}
+
+/// Work queued for the Tuya access lifecycle by a channel webhook.
+///
+/// Replaces the `access_lifecycle_queue` Firestore collection, which keyed
+/// documents on `${bookingId}_${action}` and merged -- so re-delivering the same
+/// webhook could never enqueue the same work twice. `@@unique([bookingRef,
+/// action])` preserves exactly that property.
+///
+/// `containsCredential` is deliberately kept and deliberately always false: the
+/// webhook never generates, stores or transports door codes, and the column
+/// makes that contract explicit to anything reading the queue rather than
+/// leaving it as a comment in one route.
+model AccessLifecycleQueue {
+  id         String   @id @default(cuid())
+  /// The CHANNEL's reservation id, not Booking.id -- the queue is written from
+  /// the webhook and is meaningful even if the booking row is rejected.
+  bookingRef String
+  propertyId String?
+  /// PROVISION | RESCHEDULE | REVOKE
+  action     String
+  status     String   @default("PENDING_VERIFICATION")
+  containsCredential Boolean @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([bookingRef, action])
+  @@index([status])
+  @@index([createdAt])
 }
 
 // ============================================
@@ -241,63 +350,63 @@ model Booking {
 // ============================================
 
 model CleaningJob {
-  id            String    @id @default(cuid())
-  propertyId    String
-  cleanerId     String?
-  bookingId     String?   @unique
+  id         String  @id @default(cuid())
+  propertyId String
+  cleanerId  String?
+  bookingId  String? @unique
 
   // Scheduling
-  scheduledAt   DateTime
-  startedAt     DateTime?
-  completedAt   DateTime?
+  scheduledAt DateTime
+  startedAt   DateTime?
+  completedAt DateTime?
 
   // Type
-  jobType       String    @default("TURNOVER")
+  jobType String @default("TURNOVER")
 
   // Status
-  status        String    @default("SCHEDULED")
+  status String @default("SCHEDULED")
 
   // GPS Verification
-  checkInLat    Float?
-  checkInLng    Float?
-  checkOutLat   Float?
-  checkOutLng   Float?
+  checkInLat  Float?
+  checkInLng  Float?
+  checkOutLat Float?
+  checkOutLng Float?
 
   // Checklist & Photos (stored as JSON string)
   checklistProgress String?
-  photos        String?
+  photos            String?
 
   // Quality
   score         Int?
   scoreFeedback String?
 
   // Notes
-  notes         String?
-  issues        String?
+  notes  String?
+  issues String?
 
   // Duration
-  durationMins  Int?
+  durationMins Int?
 
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  property      Property  @relation(fields: [propertyId], references: [id])
-  cleaner       User?     @relation(fields: [cleanerId], references: [id])
-  booking       Booking?  @relation(fields: [bookingId], references: [id])
+  property Property @relation(fields: [propertyId], references: [id])
+  cleaner  User?    @relation(fields: [cleanerId], references: [id])
+  booking  Booking? @relation(fields: [bookingId], references: [id])
 
   // Performance indexes
   @@index([propertyId])
   @@index([cleanerId])
   @@index([status])
   @@index([scheduledAt])
-  @@index([propertyId, scheduledAt])      // Composite: property cleaning schedule
-  @@index([cleanerId, status])            // Composite: cleaner's active jobs
-  @@index([cleanerId, scheduledAt])       // Composite: cleaner's schedule
-  @@index([scheduledAt, status])          // Composite: upcoming jobs by status
-  @@index([jobType, status])              // Filter by job type and status
-  @@index([createdAt])                    // Sort by creation date
-  @@index([completedAt])                  // Query completed jobs
+  @@index([propertyId, scheduledAt]) // Composite: property cleaning schedule
+  @@index([cleanerId, status]) // Composite: cleaner's active jobs
+  @@index([cleanerId, scheduledAt]) // Composite: cleaner's schedule
+  @@index([scheduledAt, status]) // Composite: upcoming jobs by status
+  @@index([jobType, status]) // Filter by job type and status
+  @@index([createdAt]) // Sort by creation date
+  @@index([completedAt]) // Query completed jobs
 }
 
 // ============================================
@@ -305,14 +414,14 @@ model CleaningJob {
 // ============================================
 
 model SmartLock {
-  id            String    @id @default(cuid())
-  propertyId    String    @unique
+  id         String @id @default(cuid())
+  propertyId String @unique
 
   // Device Info
-  brand         String
-  model         String?
-  deviceId      String
-  serialNumber  String?
+  brand        String
+  model        String?
+  deviceId     String
+  serialNumber String?
 
   // Current State
   currentCode   String?
@@ -322,13 +431,13 @@ model SmartLock {
   isOnline      Boolean   @default(true)
 
   // Access Log (stored as JSON string)
-  accessLog     String?
+  accessLog String?
 
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  property      Property  @relation(fields: [propertyId], references: [id])
+  property Property @relation(fields: [propertyId], references: [id])
 
   @@index([brand])
 }
@@ -338,50 +447,50 @@ model SmartLock {
 // ============================================
 
 model Message {
-  id            String    @id @default(cuid())
-  guestId       String
-  bookingId     String?
+  id        String  @id @default(cuid())
+  guestId   String
+  bookingId String?
 
   // Message Details
-  type          String
-  channel       String    @default("EMAIL")
-  subject       String?
-  body          String
+  type    String
+  channel String  @default("EMAIL")
+  subject String?
+  body    String
 
   // Status
-  status        String    @default("DRAFT")
+  status String @default("DRAFT")
 
   // Scheduling
-  scheduledFor  DateTime?
-  sentAt        DateTime?
+  scheduledFor DateTime?
+  sentAt       DateTime?
 
   // Approval
-  approvedBy    String?
-  approvedAt    DateTime?
+  approvedBy String?
+  approvedAt DateTime?
 
   // AI Analysis
-  sentiment     String?
+  sentiment      String?
   sentimentScore Float?
 
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  guest         Guest     @relation(fields: [guestId], references: [id])
-  booking       Booking?  @relation(fields: [bookingId], references: [id])
-  approver      User?     @relation("ApprovedBy", fields: [approvedBy], references: [id])
+  guest    Guest    @relation(fields: [guestId], references: [id])
+  booking  Booking? @relation(fields: [bookingId], references: [id])
+  approver User?    @relation("ApprovedBy", fields: [approvedBy], references: [id])
 
   // Performance indexes
   @@index([guestId])
   @@index([bookingId])
   @@index([status])
   @@index([type])
-  @@index([channel])                      // Filter by message channel
-  @@index([guestId, type])                // Composite: guest messages by type
-  @@index([status, scheduledFor])         // Composite: scheduled messages queue
-  @@index([sentAt])                       // Query sent messages
-  @@index([createdAt])                    // Sort by creation date
-  @@index([sentiment])                    // Filter by sentiment analysis
+  @@index([channel]) // Filter by message channel
+  @@index([guestId, type]) // Composite: guest messages by type
+  @@index([status, scheduledFor]) // Composite: scheduled messages queue
+  @@index([sentAt]) // Query sent messages
+  @@index([createdAt]) // Sort by creation date
+  @@index([sentiment]) // Filter by sentiment analysis
 }
 
 // ============================================
@@ -389,52 +498,60 @@ model Message {
 // ============================================
 
 model Expense {
-  id            String    @id @default(cuid())
-  propertyId    String
-  createdById   String?
+  id          String  @id @default(cuid())
+  propertyId  String?
+  createdById String?
 
   // Expense Details
-  category      String
-  subcategory   String?
-  amount        Float
-  description   String
-  vendor        String?
+  category    String
+  subcategory String?
+  amount      Float
+  description String
+  vendor      String?
 
   // Date
-  date          DateTime
+  date DateTime
 
   // Receipt
-  receiptUrl    String?
+  receiptUrl String?
 
   // Tax
   isTaxDeductible Boolean @default(true)
-  taxCategory   String?
+  taxCategory     String?
 
   // Status
-  status        String    @default("PENDING")
+  status String @default("PENDING")
+
+  // Payment
+  paymentMethod String?
+
+  /// The stay this cost belongs to, when it is attributable to one.
+  bookingId String?
+  /// A recurring cost (subscription, utility) rather than a one-off.
+  recurring Boolean @default(false)
 
   // Notes
-  notes         String?
+  notes String?
 
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  property      Property  @relation(fields: [propertyId], references: [id])
-  createdBy     User?     @relation(fields: [createdById], references: [id])
+  property  Property? @relation(fields: [propertyId], references: [id])
+  createdBy User?    @relation(fields: [createdById], references: [id])
 
   // Performance indexes
   @@index([propertyId])
   @@index([category])
   @@index([date])
-  @@index([propertyId, date])             // Composite: property expenses by date
-  @@index([propertyId, category])         // Composite: property expenses by category
-  @@index([category, date])               // Composite: expenses report
-  @@index([status])                       // Filter by approval status
-  @@index([isTaxDeductible])              // Filter for tax reports
+  @@index([propertyId, date]) // Composite: property expenses by date
+  @@index([propertyId, category]) // Composite: property expenses by category
+  @@index([category, date]) // Composite: expenses report
+  @@index([status]) // Filter by approval status
+  @@index([isTaxDeductible]) // Filter for tax reports
   @@index([isTaxDeductible, taxCategory]) // Composite: tax category reports
-  @@index([vendor])                       // Group by vendor
-  @@index([createdAt])                    // Sort by creation date
+  @@index([vendor]) // Group by vendor
+  @@index([createdAt]) // Sort by creation date
 }
 
 // ============================================
@@ -442,30 +559,30 @@ model Expense {
 // ============================================
 
 model ConciergeQuery {
-  id            String    @id @default(cuid())
-  guestId       String?
-  propertyId    String?
+  id         String  @id @default(cuid())
+  guestId    String?
+  propertyId String?
 
   // Query & Response
-  query         String
-  response      String
+  query    String
+  response String
 
   // Classification
-  category      String?
-  intent        String?
+  category String?
+  intent   String?
 
   // Quality
-  wasHelpful    Boolean?
-  rating        Int?
+  wasHelpful Boolean?
+  rating     Int?
 
   // Voice
-  voiceUsed     Boolean   @default(false)
-  audioUrl      String?
+  voiceUsed Boolean @default(false)
+  audioUrl  String?
 
-  createdAt     DateTime  @default(now())
+  createdAt DateTime @default(now())
 
   // Relations
-  guest         Guest?    @relation(fields: [guestId], references: [id])
+  guest Guest? @relation(fields: [guestId], references: [id])
 
   @@index([guestId])
   @@index([category])
@@ -477,33 +594,33 @@ model ConciergeQuery {
 // ============================================
 
 model AuditLog {
-  id            String    @id @default(cuid())
-  userId        String?
-  action        String
-  entity        String
-  entityId      String?
-  oldValues     String?
-  newValues     String?
-  ipAddress     String?
-  userAgent     String?
-  createdAt     DateTime  @default(now())
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  entity    String
+  entityId  String?
+  oldValues String?
+  newValues String?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
 
   // Performance indexes
   @@index([userId])
   @@index([entity])
   @@index([createdAt])
-  @@index([entity, entityId])             // Composite: lookup entity history
-  @@index([action])                       // Filter by action type
-  @@index([userId, createdAt])            // Composite: user activity history
-  @@index([entity, action])               // Composite: entity action reports
+  @@index([entity, entityId]) // Composite: lookup entity history
+  @@index([action]) // Filter by action type
+  @@index([userId, createdAt]) // Composite: user activity history
+  @@index([entity, action]) // Composite: entity action reports
 }
 
 model Setting {
-  id            String    @id @default(cuid())
-  key           String    @unique
-  value         String
-  description   String?
-  updatedAt     DateTime  @updatedAt
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  description String?
+  updatedAt   DateTime @updatedAt
 }
 
 // ============================================
@@ -511,17 +628,17 @@ model Setting {
 // ============================================
 
 model VrboSync {
-  id              String    @id @default(cuid())
-  propertyId      String
-  vrboListingId   String
-  icalUrl         String?
-  lastIcalSync    DateTime?
-  lastScrapeSync  DateTime?
-  syncEnabled     Boolean   @default(true)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id             String    @id @default(cuid())
+  propertyId     String
+  vrboListingId  String
+  icalUrl        String?
+  lastIcalSync   DateTime?
+  lastScrapeSync DateTime?
+  syncEnabled    Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
-  property        Property  @relation(fields: [propertyId], references: [id])
+  property Property @relation(fields: [propertyId], references: [id])
 
   @@unique([propertyId])
   @@unique([vrboListingId])
@@ -529,20 +646,994 @@ model VrboSync {
 }
 
 model SyncLog {
-  id              String    @id @default(cuid())
-  propertyId      String?
-  syncType        String    // ical_import, ical_export, scrape_bookings, scrape_messages, rate_push
-  source          String    // vrbo, airbnb, booking
-  status          String    // success, partial, failed
-  itemsProcessed  Int       @default(0)
-  itemsCreated    Int       @default(0)
-  itemsUpdated    Int       @default(0)
-  errorMessage    String?
-  durationMs      Int?
-  metadata        String?
-  createdAt       DateTime  @default(now())
+  id             String   @id @default(cuid())
+  propertyId     String?
+  syncType       String // ical_import, ical_export, scrape_bookings, scrape_messages, rate_push
+  source         String // vrbo, airbnb, booking
+  status         String // success, partial, failed
+  itemsProcessed Int      @default(0)
+  itemsCreated   Int      @default(0)
+  itemsUpdated   Int      @default(0)
+  errorMessage   String?
+  durationMs     Int?
+  metadata       String?
+  createdAt      DateTime @default(now())
 
   @@index([propertyId, createdAt])
   @@index([syncType, createdAt])
   @@index([status])
+}
+
+// ============================================
+// OPERATIONS, DISPATCH, ACCESS & PAY
+// ============================================
+
+model WorkerProfile {
+  id                    String   @id @default(cuid())
+  userId                String   @unique
+  workerType            String
+  /// Which cleaning crew this worker belongs to ("A" / "B").
+  ///
+  /// The P0 acceptance matrix froze Crew A and Crew B as a requirement and the
+  /// schema had NO crew concept at all -- only a `// CLEANING & CREW` section
+  /// comment. Scheduling, dispatch and the turnover workflows all talk about
+  /// crews, so the grouping has to exist somewhere other than in people's heads.
+  ///
+  /// Deliberately a nullable String on WorkerProfile rather than a Crew model:
+  /// there are two crews and no evidence yet that a crew carries attributes of
+  /// its own (a lead, a rate, a schedule). Adding a table for a two-value
+  /// grouping would be inventing structure the business has not asked for. If
+  /// crews later need their own fields, this promotes to a relation cleanly.
+  crew                  String?
+  employmentClass       String   @default("EMPLOYEE")
+  dispatchPriority      Int      @default(100)
+  autoDispatchEligible  Boolean  @default(true)
+  defaultPayType        String   @default("PER_JOB")
+  hourlyRateCents       Int?
+  paymentMethod         String?
+  paymentDestinationRef String?
+  tuyaIdentityRef       String?
+  isAvailable           Boolean  @default(true)
+  maxConcurrentJobs     Int      @default(1)
+  scheduleJson          String?
+
+  // ---- Employment / HR (added 2026-07-30) --------------------------------
+  hireDate              DateTime?
+  defaultHours          Int?
+  addressLine           String?
+
+  /// LAST FOUR DIGITS ONLY. The full SSN is deliberately NOT stored anywhere in
+  /// this system: the only consumer is a masked display, and data you do not
+  /// hold cannot be leaked, subpoenaed, or mis-handled. The API layer rejects
+  /// any input longer than 4 digits so a full SSN cannot be quietly written
+  /// into this column. Owner/admin only, never logged.
+  ssnLast4              String?
+  w4FilingStatus        String?
+  w4Allowances          Int?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workOrders       WorkOrder[]
+  payEntries       WorkerPayEntry[]
+  serviceSchedules ServiceSchedule[]
+
+  @@index([workerType, isAvailable])
+  @@index([autoDispatchEligible, dispatchPriority])
+  @@index([employmentClass])
+}
+
+/// One turn of a Steven AI conversation. Replaces the `rah_steven_sessions` and
+/// `rah_steven_guests` Firestore collections.
+///
+/// A "session" is not a row -- it is simply the messages sharing a sessionId.
+/// The Firestore version stored a session document holding an array of messages
+/// and rewrote the whole array on every turn, trimming to the last 50; that is a
+/// read-modify-write on a hot document, and two concurrent turns lose one of
+/// their messages. Append-only rows with an index make the trim a query concern
+/// instead of a write concern, and concurrent turns cannot clobber each other.
+///
+/// `guestId` deliberately carries NO foreign key. This is an append-only
+/// transcript, and it must never fail to record what was said because the
+/// speaker is not (yet) in the CRM. A referential constraint here would turn an
+/// unknown guest into a 500 from the assistant endpoint and lose the
+/// conversation entirely -- strictly worse than a dangling identifier in a log.
+model StevenMessage {
+  id         String   @id @default(cuid())
+  sessionId  String
+  /// Guest.id when the caller supplied one that exists. Not enforced -- see above.
+  guestId    String?
+  /// 'user' | 'assistant'
+  role       String
+  content    String
+  emotion    String?
+  propertyId String?
+  createdAt  DateTime @default(now())
+
+  @@index([sessionId, createdAt])
+  @@index([guestId, createdAt])
+  @@index([createdAt])
+}
+
+/// A REQUEST to become staff. Deliberately not a role, and deliberately not a
+/// WorkerProfile.
+///
+/// The signup form lets a visitor tick "Staff" and pick cleaner / yard crew /
+/// handyman. The old flow wrote that choice straight into the role store and
+/// showed a "pending approval" toast, but nothing anywhere enforced the
+/// pending part -- and `CLEANER` maps to the `worker` role, so anyone who
+/// self-registered as a cleaner held worker permissions on every route guarded
+/// by `requireRole(request, 'worker')` from the moment they submitted the form.
+///
+/// Splitting the request from the grant is what makes "pending" real: this row
+/// records what somebody asked for and confers nothing. An owner or admin
+/// provisions `User.role` and the `WorkerProfile` separately, which is the only
+/// path that grants anything.
+model StaffApplication {
+  id            String   @id @default(cuid())
+  userId        String
+  /// What the applicant asked to be: cleaner | yard_crew | handyman. Stored as
+  /// submitted rather than mapped to a role, precisely so that reading this
+  /// column can never be mistaken for reading an authorization.
+  requestedType String
+  status        String   @default("PENDING")
+  reviewedAt    DateTime?
+  reviewedBy    String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model PropertyServiceRate {
+  id            String    @id @default(cuid())
+  propertyId    String
+  serviceType   String
+  amountCents   Int
+  currency      String    @default("USD")
+  effectiveFrom DateTime  @default(now())
+  effectiveTo   DateTime?
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@unique([propertyId, serviceType, effectiveFrom])
+  @@index([propertyId, serviceType, isActive])
+}
+
+model PropertyChecklistTemplate {
+  id          String   @id @default(cuid())
+  propertyId  String
+  serviceType String
+  name        String
+  version     Int      @default(1)
+  itemsJson   String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@unique([propertyId, serviceType, version])
+  @@index([propertyId, serviceType, isActive])
+}
+
+model WorkOrder {
+  id                String    @id @default(cuid())
+  propertyId        String
+  bookingId         String?
+  requestedByUserId String?
+  assignedWorkerId  String?
+  serviceType       String
+  source            String    @default("SYSTEM")
+  status            String    @default("PENDING")
+  dispatchMode      String    @default("MANUAL")
+  priority          Int       @default(50)
+  title             String
+  description       String?
+  scheduledStart    DateTime?
+  dueAt             DateTime?
+  acceptedAt        DateTime?
+  checkedInAt       DateTime?
+  completedAt       DateTime?
+  checkedOutAt      DateTime?
+  checkInLat        Float?
+  checkInLng        Float?
+  checkOutLat       Float?
+  checkOutLng       Float?
+  timerSeconds      Int?
+  payAmountCents    Int?
+  paymentStatus     String    @default("UNAPPROVED")
+  reportSummary     String?
+  damageReported    Boolean   @default(false)
+  theftReported     Boolean   @default(false)
+  maintenanceNeeded Boolean   @default(false)
+  yardNeeded        Boolean   @default(false)
+  poolNeeded        Boolean   @default(false)
+  reportSubmittedAt DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  property       Property                 @relation(fields: [propertyId], references: [id])
+  booking        Booking?                 @relation(fields: [bookingId], references: [id])
+  requestedBy    User?                    @relation("WorkOrderRequestedBy", fields: [requestedByUserId], references: [id])
+  assignedWorker WorkerProfile?           @relation(fields: [assignedWorkerId], references: [id])
+  checklistItems WorkOrderChecklistItem[]
+  photos         WorkOrderPhoto[]
+  issues         WorkOrderIssue[]
+  payEntry       WorkerPayEntry?
+  accessGrant    AccessGrant?
+  guestRequests  GuestRequest[]
+  alerts         OperationalAlert[]
+
+  @@index([propertyId, status])
+  @@index([bookingId])
+  @@index([assignedWorkerId, status])
+  @@index([serviceType, status])
+  @@index([scheduledStart])
+  @@index([dueAt, status])
+  @@index([dispatchMode, status, priority])
+}
+
+model WorkOrderChecklistItem {
+  id               String    @id @default(cuid())
+  workOrderId      String
+  templateItemKey  String
+  label            String
+  sortOrder        Int       @default(0)
+  required         Boolean   @default(true)
+  requiresPhoto    Boolean   @default(false)
+  completed        Boolean   @default(false)
+  completedAt      DateTime?
+  evidencePhotoUrl String?
+  notes            String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  workOrder WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+
+  @@unique([workOrderId, templateItemKey])
+  @@index([workOrderId, completed])
+}
+
+model WorkOrderPhoto {
+  id               String   @id @default(cuid())
+  workOrderId      String
+  objectUrl        String
+  objectSha256     String?
+  category         String   @default("GENERAL")
+  caption          String?
+  uploadedByUserId String?
+  takenAt          DateTime @default(now())
+  createdAt        DateTime @default(now())
+
+  workOrder WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+
+  @@index([workOrderId, category])
+}
+
+model WorkOrderIssue {
+  id            String    @id @default(cuid())
+  workOrderId   String
+  issueType     String
+  severity      String    @default("NORMAL")
+  description   String
+  status        String    @default("REPORTED")
+  photoUrlsJson String?
+  resolvedAt    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  workOrder WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+
+  @@index([workOrderId, status])
+  @@index([issueType, severity, status])
+}
+
+model ServiceSchedule {
+  id             String    @id @default(cuid())
+  propertyId     String
+  workerId       String?
+  serviceType    String
+  recurrenceRule String
+  timezone       String    @default("America/Chicago")
+  nextRunAt      DateTime?
+  durationMins   Int?
+  isActive       Boolean   @default(true)
+  notes          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  property Property       @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  worker   WorkerProfile? @relation(fields: [workerId], references: [id])
+
+  @@index([serviceType, isActive, nextRunAt])
+  @@index([workerId, isActive])
+  @@index([propertyId, serviceType])
+}
+
+model AccessGrant {
+  id                 String    @id @default(cuid())
+  propertyId         String
+  bookingId          String?
+  workOrderId        String?   @unique
+  userId             String?
+  subjectType        String
+  provider           String    @default("TUYA")
+  externalGrantRef   String    @unique
+  secretRef          String?
+  status             String    @default("PENDING")
+  startsAt           DateTime
+  endsAt             DateTime
+  deliveredAt        DateTime?
+  revokedAt          DateTime?
+  deliveryChannel    String?
+  deliveryReceiptRef String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  property  Property   @relation(fields: [propertyId], references: [id])
+  booking   Booking?   @relation(fields: [bookingId], references: [id])
+  workOrder WorkOrder? @relation(fields: [workOrderId], references: [id])
+  user      User?      @relation(fields: [userId], references: [id])
+
+  @@index([propertyId, status])
+  @@index([bookingId])
+  @@index([userId, status])
+  @@index([startsAt, endsAt, status])
+}
+
+model GuestRequest {
+  id                  String    @id @default(cuid())
+  propertyId          String
+  bookingId           String?
+  guestId             String
+  assignedWorkOrderId String?
+  category            String
+  description         String
+  urgency             String    @default("NORMAL")
+  status              String    @default("OPEN")
+  sourceChannel       String    @default("WEB")
+  requestedAt         DateTime  @default(now())
+  acknowledgedAt      DateTime?
+  resolvedAt          DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  property          Property   @relation(fields: [propertyId], references: [id])
+  booking           Booking?   @relation(fields: [bookingId], references: [id])
+  guest             Guest      @relation(fields: [guestId], references: [id])
+  assignedWorkOrder WorkOrder? @relation(fields: [assignedWorkOrderId], references: [id])
+
+  @@index([guestId, status])
+  @@index([bookingId])
+  @@index([propertyId, status, urgency])
+  @@index([assignedWorkOrderId])
+}
+
+model PayrollBatch {
+  id            String    @id @default(cuid())
+  /// Holds the pay-period END date. The historical name says "week" but runs
+  /// may be semi-monthly; the @unique is KEPT deliberately -- it is what stops
+  /// payroll being run twice for the same period, which is a real hazard.
+  weekEnding    DateTime  @unique
+  periodStart   DateTime?
+  payDate       DateTime?
+  status        String    @default("DRAFT")
+  totalCents    Int       @default(0)
+  /// Run totals. totalCents remains the net payable; these break it down.
+  totalGrossCents       Int @default(0)
+  totalNetCents         Int @default(0)
+  totalEmployerTaxCents Int @default(0)
+  paymentMethod String?
+  /// Set once the run is approved/processed and its journal entry is posted.
+  /// Presence of this is what makes approval idempotent: a second approve
+  /// cannot double-post payroll into the ledger.
+  journalEntryId String?
+  approvedAt    DateTime?
+  paidAt        DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  entries WorkerPayEntry[]
+
+  @@index([status, weekEnding])
+}
+
+model WorkerPayEntry {
+  id                 String    @id @default(cuid())
+  workerId           String
+  /// Optional: a payroll-run entry covers a pay PERIOD, not a single job, so it
+  /// has no work order. @unique is kept -- Postgres allows many NULLs, so
+  /// job-based pay still gets exactly one entry per work order.
+  workOrderId        String?   @unique
+  payrollBatchId     String?
+  /// Gross for the period (or the job amount for work-order pay).
+  amountCents        Int
+
+  // ---- Payroll-run breakdown (added 2026-07-30) ------------------------
+  hours                 Float?
+  federalCents          Int @default(0)
+  socialSecurityCents   Int @default(0)
+  medicareCents         Int @default(0)
+  stateCents            Int @default(0)
+  netCents              Int @default(0)
+  /// Employer-side contributions -- a cost to the business, not withheld from
+  /// the worker. Kept separate so they can never be netted off gross by mistake.
+  employerSsCents       Int @default(0)
+  employerMedicareCents Int @default(0)
+  futaCents             Int @default(0)
+  /// State unemployment. Stored, not recomputed on read: a historical run must
+  /// retain the rate that was actually applied when it was processed.
+  sutaCents             Int @default(0)
+  currency           String    @default("USD")
+  status             String    @default("EARNED")
+  earnedAt           DateTime  @default(now())
+  approvedAt         DateTime?
+  paidAt             DateTime?
+  paymentMethod      String?
+  externalPaymentRef String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  worker       WorkerProfile @relation(fields: [workerId], references: [id])
+  workOrder    WorkOrder?    @relation(fields: [workOrderId], references: [id])
+  payrollBatch PayrollBatch? @relation(fields: [payrollBatchId], references: [id])
+
+  @@index([workerId, status, earnedAt])
+  @@index([payrollBatchId])
+}
+
+model ConciergeAction {
+  id                String    @id @default(cuid())
+  requestedByUserId String?
+  approvedByUserId  String?
+  actorType         String
+  actionType        String
+  targetType        String?
+  targetId          String?
+  riskLevel         String    @default("LOW")
+  requiresApproval  Boolean   @default(false)
+  approvalStatus    String    @default("NOT_REQUIRED")
+  status            String    @default("QUEUED")
+  idempotencyKey    String    @unique
+  inputJson         String?
+  resultJson        String?
+  failureReason     String?
+  approvedAt        DateTime?
+  executedAt        DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  requestedBy User? @relation("ConciergeActionRequestedBy", fields: [requestedByUserId], references: [id])
+  approvedBy  User? @relation("ConciergeActionApprovedBy", fields: [approvedByUserId], references: [id])
+
+  @@index([status, riskLevel])
+  @@index([requestedByUserId, createdAt])
+  @@index([actionType, targetType, targetId])
+}
+
+model OperationalAlert {
+  id               String    @id @default(cuid())
+  propertyId       String?
+  bookingId        String?
+  workOrderId      String?
+  assignedToUserId String?
+  alertType        String
+  severity         String    @default("NORMAL")
+  title            String
+  message          String
+  status           String    @default("OPEN")
+  notifiedAt       DateTime?
+  acknowledgedAt   DateTime?
+  resolvedAt       DateTime?
+  resolvedBy       String?
+  /// Identifies the real-world thing this alert is ABOUT (a cleaning schedule
+  /// id, a system check name), so "is there already an open alert for this?"
+  /// is one indexed query.
+  ///
+  /// This is what makes de-duplication possible at all. The Firestore version
+  /// kept the same idea as `cleanerScheduleId`, and when that store was
+  /// unreachable the lookup returned "no existing alert" -- so every run
+  /// re-alerted and phoned a real person every 15 minutes for the length of the
+  /// outage. De-duplication that fails open is not de-duplication.
+  dedupeKey        String?
+  /// Alert-kind-specific detail as JSON (cleaner name, phone, hours late, which
+  /// notifications went out). Kept out of columns because the shape differs per
+  /// alertType and none of it is queried.
+  metadata         String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  property   Property?  @relation(fields: [propertyId], references: [id])
+  booking    Booking?   @relation(fields: [bookingId], references: [id])
+  workOrder  WorkOrder? @relation(fields: [workOrderId], references: [id])
+  assignedTo User?      @relation("AlertAssignee", fields: [assignedToUserId], references: [id])
+
+  @@index([status, severity, createdAt])
+  @@index([propertyId, status])
+  @@index([bookingId])
+  @@index([workOrderId])
+  @@index([assignedToUserId, status])
+  @@index([dedupeKey, status]) // "already an open alert for this thing?"
+  @@index([alertType, status])
+}
+
+// ============================================
+// VRBO MAILBRIDGE SHADOW EVIDENCE & RECONCILIATION
+// ============================================
+
+model VrboMailCursor {
+  mailbox     String   @id
+  uidValidity BigInt
+  lastUid     BigInt   @default(0)
+  updatedAt   DateTime @default(now())
+
+  @@index([updatedAt])
+}
+
+model VrboMailMessage {
+  id                String   @id
+  mailbox           String
+  uidValidity       BigInt
+  uid               BigInt
+  internetMessageId String?
+  fromAddress       String?
+  subject           String
+  receivedAt        DateTime
+  rawSha256         String
+  bodyText          String?
+  headersJson       Json?
+  parserVersion     String
+  eventType         String
+  parseStatus       String
+  parsedJson        Json?
+  parseError        String?
+  ingestedAt        DateTime @default(now())
+
+  @@unique([mailbox, uidValidity, uid])
+  @@index([receivedAt])
+  @@index([parseStatus, eventType])
+  @@index([rawSha256])
+}
+
+model VrboReservationEvidence {
+  id                String   @id
+  sourceType        String
+  sourceKey         String
+  reservationKey    String
+  propertyId        String?
+  vrboListingId     String?
+  reservationId     String?
+  confirmationCode  String?
+  eventType         String?
+  status            String?
+  checkIn           DateTime?
+  checkOut          DateTime?
+  guestName         String?
+  guestEmail        String?
+  guestPhone        String?
+  guestCount        Int?
+  totalAmountCents  Int?
+  currency          String   @default("USD")
+  observedAt        DateTime
+  parserVersion     String
+  payloadSha256     String
+  payloadJson       Json
+  validationStatus  String   @default("VALID")
+  validationErrors  Json?
+  createdAt         DateTime @default(now())
+
+  @@unique([sourceType, sourceKey, payloadSha256])
+  @@index([reservationKey, observedAt])
+  @@index([sourceType, createdAt])
+  @@index([validationStatus])
+}
+
+model VrboReservationLedger {
+  reservationKey    String   @id
+  propertyId        String?
+  vrboListingId     String?
+  reservationId     String?
+  confirmationCode  String?
+  status             String?
+  checkIn            DateTime?
+  checkOut           DateTime?
+  guestName          String?
+  guestEmail         String?
+  guestPhone         String?
+  guestCount         Int?
+  totalAmountCents   Int?
+  currency           String   @default("USD")
+  consensusStatus    String
+  sourceCount        Int
+  evidenceCount      Int
+  sourceFingerprint  String
+  canonicalJson      Json
+  disagreementJson   Json?
+  validationErrors   Json?
+  firstSeenAt        DateTime
+  lastSeenAt         DateTime
+  lastReconciledAt   DateTime
+  updatedAt          DateTime
+
+  @@index([consensusStatus, lastReconciledAt])
+  @@index([propertyId, checkIn])
+  @@index([vrboListingId])
+}
+
+model VrboReconciliationRun {
+  id               String    @id
+  startedAt        DateTime
+  completedAt      DateTime?
+  mode             String    @default("SHADOW")
+  status           String
+  evidenceCount    Int       @default(0)
+  reservationCount Int       @default(0)
+  consistentCount  Int       @default(0)
+  unverifiedCount  Int       @default(0)
+  syncAtRiskCount  Int       @default(0)
+  errorCount       Int       @default(0)
+  detailsJson      Json?
+  createdAt        DateTime  @default(now())
+
+  @@index([status, startedAt])
+  @@index([syncAtRiskCount, startedAt])
+}
+
+// ============================================
+// FINANCIAL LEDGER  (P1 objective 2)
+// ============================================
+// Added 2026-07-30. The accounting, invoicing, tax and inventory API routes
+// served hardcoded in-memory arrays with no persistence of any kind, and no
+// ledger schema existed -- see queue #26855. P5 (property-level P&L, tax-ready
+// exports) is built on top of those routes, so it could only ever have graded
+// fabricated numbers.
+//
+// Money is stored as INTEGER CENTS, not Float. The existing Expense.amount is a
+// Float, which is wrong for money and is left alone here rather than migrated
+// under a security-focused change; the API routes already speak *_cents, so
+// cents is also the convention these endpoints expect.
+
+/// Chart of accounts. `type` is one of asset|liability|equity|revenue|expense
+/// and `normalSide` is debit|credit (strings, matching this schema's existing
+/// convention of no enums).
+model LedgerAccount {
+  id         String  @id @default(cuid())
+  code       String  @unique
+  name       String
+  type       String
+  normalSide String
+  isActive   Boolean @default(true)
+
+  lines JournalEntryLine[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([type])
+}
+
+/// One balanced double-entry transaction. The sum of its lines' debitCents must
+/// equal the sum of their creditCents; this is enforced in the service layer
+/// (a cross-row invariant Postgres cannot express as a simple CHECK).
+/// Append-only in spirit: corrections post a reversing entry rather than edit.
+model JournalEntry {
+  id         String  @id @default(cuid())
+  entryDate  DateTime
+  memo       String
+  reference  String?
+  propertyId String?
+  createdById String?
+
+  /// Set when this entry reverses another; the reversed entry keeps its history.
+  reversesId String? @unique
+
+  postedAt DateTime @default(now())
+
+  property Property? @relation(fields: [propertyId], references: [id])
+  lines    JournalEntryLine[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([entryDate])
+  @@index([propertyId])
+}
+
+model JournalEntryLine {
+  id             String @id @default(cuid())
+  journalEntryId String
+  accountId      String
+
+  debitCents  Int @default(0)
+  creditCents Int @default(0)
+
+  /// Per-line property attribution is what makes property-level P&L possible
+  /// without re-deriving it from memos.
+  propertyId String?
+  memo       String?
+
+  journalEntry JournalEntry  @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+  account      LedgerAccount @relation(fields: [accountId], references: [id])
+
+  @@index([journalEntryId])
+  @@index([accountId])
+  @@index([propertyId])
+}
+
+model Invoice {
+  id          String @id @default(cuid())
+  number      String @unique
+  propertyId  String?
+  guestId     String?
+  /// The stay this invoice bills for, so an invoice can be re-derived from and
+  /// reconciled against its booking rather than trusting client-sent figures.
+  bookingId   String?
+  status      String  @default("draft")
+  issueDate   DateTime
+  dueDate     DateTime?
+  /// When it was actually settled -- needed to place the payment in the right
+  /// accounting/tax period, which updatedAt cannot be trusted to represent.
+  paidDate    DateTime?
+  /// Stored alongside totalCents because tax is a reported figure, not one to
+  /// re-derive later from a rate that may since have changed.
+  subtotalCents Int   @default(0)
+  taxCents      Int   @default(0)
+  totalCents  Int     @default(0)
+  paidCents   Int     @default(0)
+  currency    String  @default("USD")
+  notes       String?
+
+  property Property?     @relation(fields: [propertyId], references: [id])
+  lines    InvoiceLine[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([propertyId])
+}
+
+model InvoiceLine {
+  id            String @id @default(cuid())
+  invoiceId     String
+  description   String
+  quantity      Int    @default(1)
+  unitCents     Int
+  totalCents    Int
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+}
+
+/// A closed accounting/tax window. `lockedAt` is what makes a period immutable,
+/// which P5 requires ("period locking").
+model TaxPeriod {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  /// hot | sales | property | income | payroll
+  type        String    @default("hot")
+  description String?
+  periodStart DateTime
+  periodEnd   DateTime
+
+  /// The liability for this period. Rate is stored as a fraction (0.06 = 6%).
+  taxableRevenueCents Int   @default(0)
+  taxRate             Float @default(0)
+  taxDueCents         Int   @default(0)
+  taxPaidCents        Int   @default(0)
+
+  /// pending | filed | paid | overdue
+  status   String    @default("pending")
+  dueDate  DateTime?
+  paidDate DateTime?
+
+  /// lockedAt is what makes a closed period immutable (P5 "period locking").
+  lockedAt    DateTime?
+  lockedById  String?
+  notes       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([periodStart, periodEnd])
+}
+
+model InventoryItem {
+  id           String  @id @default(cuid())
+  /// Optional: the API contract allows an item with no SKU. Postgres permits
+  /// multiple NULLs in a unique column, so uniqueness still holds for real SKUs.
+  sku          String? @unique
+  name         String
+  category     String  @default("other")
+  unit         String  @default("each")
+  /// parLevel is the reorder threshold; reorderQuantity is how much to buy.
+  parLevel     Int     @default(0)
+  reorderQuantity Int  @default(10)
+  unitCostCents Int    @default(0)
+  supplier     String?
+  storageLocation String?
+  lastCountedAt DateTime?
+  propertyId   String?
+  isActive     Boolean @default(true)
+
+  property  Property?           @relation(fields: [propertyId], references: [id])
+  movements InventoryMovement[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([propertyId])
+}
+
+/// Append-only stock ledger. `quantityDelta` is signed: negative is consumption.
+model InventoryMovement {
+  id         String @id @default(cuid())
+  itemId     String
+  propertyId String?
+  quantityDelta Int
+  reason     String
+  reference  String?
+  createdById String?
+
+  item InventoryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([itemId])
+  @@index([propertyId])
+}
+
+// ============================================
+// OPERATIONAL NOTES  (P1, added 2026-07-30)
+// ============================================
+
+/// Free-form operational notes pinned to a property, booking or guest.
+/// Replaces an in-memory array that discarded every note on cold start --
+/// including things like "front gate code changed", which is exactly the sort
+/// of note whose loss causes a real operational failure.
+model Note {
+  id         String  @id @default(cuid())
+  /// general | property | booking | guest | maintenance
+  type       String  @default("general")
+  propertyId String?
+  bookingId  String?
+  guestId    String?
+  title      String
+  content    String
+  pinned     Boolean @default(false)
+  author     String  @default("system")
+  /// JSON array of strings, matching this schema's existing convention for
+  /// tag/amenity lists rather than introducing a relation for free text.
+  tags       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([type])
+  @@index([propertyId])
+  @@index([bookingId])
+  @@index([guestId])
+  @@index([pinned])
+}
+
+/// A recurring third-party service the business pays for (Twilio, Vercel,
+/// Supabase...). Distinct from PropertyServiceRate, which is what WE charge for
+/// a service at a property; this is what we are charged to operate.
+///
+/// monthlyCost is DOLLARS as a float, matching the route contract this backs
+/// and the rest of the money-as-dollars fields in this app. Cents-as-Int is the
+/// better representation, but mixing the two silently is worse than either.
+model ServiceSubscription {
+  id           String    @id @default(cuid())
+  /// Unique so re-POSTing a service updates it rather than creating a duplicate
+  /// row -- the route this backs has always been an upsert by service name.
+  service      String    @unique
+  category     String
+  description  String
+  monthlyCost  Float     @default(0)
+  billingCycle String    @default("monthly")
+  status       String    @default("active")
+  usageMetric  String?
+  currentUsage Int?
+  usageLimit   Int?
+  notes        String?
+  lastBilled   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([status, category])
+}
+
+/// A guest review, from any platform.
+///
+/// Replaces TWO separate in-memory arrays that both claimed to hold reviews and
+/// disagreed with each other: id REV-002 was a 4-star Airbnb review from
+/// "Sarah J." in one route and a 5-star Google review from "Sarah Johnson" in
+/// the other, so posting a response through /respond left the list view
+/// unchanged. One row, two response shapes rendered from it.
+model Review {
+  id         String  @id @default(cuid())
+  propertyId String
+  bookingId  String?
+  guestId    String?
+  /// Denormalised: reviews outlive the guest record, and platform imports often
+  /// carry only a display name ("Sarah J.") with no matching Guest row.
+  guestName  String
+  platform   String  @default("direct")
+  rating     Int
+  comment    String
+
+  response    String?
+  respondedAt DateTime?
+
+  /// Per-category sub-ratings (cleanliness, communication, ...) as JSON, matching
+  /// how the rest of this schema stores optional structured blobs.
+  categories String?
+
+  /// Stay dates, where the source platform provides them.
+  checkIn  DateTime?
+  checkOut DateTime?
+
+  status    String   @default("published")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId, status])
+  @@index([platform])
+  @@index([rating])
+  @@index([respondedAt])
+}
+
+/// A registered thermostat.
+///
+/// Replaces an in-memory array that invented two devices, reported them
+/// is_online: true, and answered every write with "Thermostat settings
+/// updated". Nothing was ever sent anywhere. Someone setting a vacant Midland
+/// property to 82F cooling to save money would have believed it took effect.
+///
+/// This table records which thermostats EXIST. It deliberately does not store a
+/// current temperature or an online flag as truth: those are properties of a
+/// device we cannot currently reach (the Tuya client in this repo speaks to
+/// locks only), and a cached reading presented as live is the same lie in a
+/// slower form. lastSeenAt/lastTempF are nullable and explicitly historical.
+model Thermostat {
+  id         String @id @default(cuid())
+  propertyId String
+  name       String @default("Main Thermostat")
+  /// e.g. ecobee_smart_thermostat, nest_learning_thermostat
+  deviceType String
+  /// Vendor device identifier, once an integration exists to use it.
+  deviceId   String? @unique
+
+  /// Desired settings, as recorded here. NOT proof the device is running them.
+  targetTempF     Int?
+  mode            String  @default("off")
+  fanMode         String  @default("auto")
+  scheduleEnabled Boolean @default(false)
+  /// Occupied/unoccupied setpoints as JSON.
+  schedule        String?
+
+  /// Last values actually observed from a device, and when. Null until an
+  /// integration exists to observe anything.
+  lastTempF     Int?
+  lastHumidity  Int?
+  lastSeenAt    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId])
 }

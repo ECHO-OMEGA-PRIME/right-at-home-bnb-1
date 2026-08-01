@@ -216,6 +216,12 @@ export interface UserSettings {
   timezone: string;
   dateFormat: string;
   apiUrl: string;
+  autoSync?: boolean;
+  syncInterval?: string;
+  syncOnStartup?: boolean;
+  autoBackup?: boolean;
+  requirePassword?: boolean;
+  autoLock?: boolean;
 }
 
 // API Response Types

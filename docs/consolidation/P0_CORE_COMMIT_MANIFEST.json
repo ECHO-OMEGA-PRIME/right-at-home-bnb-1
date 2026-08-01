@@ -1,0 +1,369 @@
+{
+  "generated_utc": "2026-07-24T00:58:47.737689+00:00",
+  "candidate": "C:\\ECHO_OMEGA_PRIME\\WORKTREES\\rah-p0-core-20260723",
+  "source_head": "f4ee582e74c3ce6c14dae0e5d00e1d44a5355916",
+  "branch": "p0/rah-core-candidate-20260723",
+  "total_changed_file_count": 68,
+  "commit_unit_code": {
+    "count": 56,
+    "paths": [
+      {
+        "path": ".env.example",
+        "status": " M",
+        "sha256": "8f6447274fbae76377371728901a1e2fe52786a462d332a09b8f7925877e6820"
+      },
+      {
+        "path": ".github/workflows/ci.yml",
+        "status": " M",
+        "sha256": "e25499f3d61af7f2fccfd5d4e71432915d53112782919a6c04cbc664ab73b47b"
+      },
+      {
+        "path": "apps/mobile/.env.example",
+        "status": " M",
+        "sha256": "ea3aff561168908b97c10cd92209628f5efe61511dd1c83c7229e633cf57d1b3"
+      },
+      {
+        "path": "apps/mobile/src/screens/IssueReportScreen.tsx",
+        "status": " M",
+        "sha256": "8c0dcdee5926028d254f2ca792e150f232c4bd50e96dc11acfc8720c8e644068"
+      },
+      {
+        "path": "apps/mobile/src/services/auth.ts",
+        "status": " M",
+        "sha256": "e511008462c62daaa9ccbbcfbfaf7306c6bccc1176839bfa0fdc16afb5a42cf3"
+      },
+      {
+        "path": "apps/mobile/src/services/camera.ts",
+        "status": " M",
+        "sha256": "b35e33de3dd5f04f33c0d422b9ab6f550ece0af9138387bf9a847992289d2303"
+      },
+      {
+        "path": "apps/mobile/src/services/firebase-config.ts",
+        "status": "??",
+        "sha256": "56f9d590f382e6fbb439faeec43d5ff29e777a78b5d4de980031da561f8b9b1c"
+      },
+      {
+        "path": "apps/mobile/src/services/notifications.ts",
+        "status": " M",
+        "sha256": "d76ee538d63de1a36f76beec103c66f9f290de324cc22dd774c3af4a4f8babb0"
+      },
+      {
+        "path": "apps/web/.env.example",
+        "status": " M",
+        "sha256": "8b7daa0cf9e633cd5142ee91bfcc232753af7c17003444618dd6ad71f3be1a49"
+      },
+      {
+        "path": "apps/web/VERCEL_ENV_SETUP.md",
+        "status": " M",
+        "sha256": "ad9ad361e724fe7b1d54c3a99652047194b62331b4b947f9c9c2c8da06f84fcf"
+      },
+      {
+        "path": "apps/web/app/api/bookings/calendar/route.ts",
+        "status": " M",
+        "sha256": "957e1d64cac51e250cad1a91ac0cf98eddcbc8620aaf062b9791acf29a892da6"
+      },
+      {
+        "path": "apps/web/app/api/bookings/sync/route.ts",
+        "status": " M",
+        "sha256": "a475c7210eaacd1c1c38e74a8e2267e25f1877f1bbcabce8110b434793b5491e"
+      },
+      {
+        "path": "apps/web/app/api/cron/guest-messages/route.ts",
+        "status": " M",
+        "sha256": "141b8b5af98efbc3e3a07d457bc1e008d8484b93f960504958d5b4505dde56df"
+      },
+      {
+        "path": "apps/web/app/api/cron/vrbo-sync/route.ts",
+        "status": " M",
+        "sha256": "344d119ea91ab1fd058b49d45dc202cf07c6261264f0449241986f40e3efbc16"
+      },
+      {
+        "path": "apps/web/app/api/health/route.ts",
+        "status": " M",
+        "sha256": "11e9fc819f0f1f07486cd898331566bd28d8d95dc9e0510af151b6f0fa8166ef"
+      },
+      {
+        "path": "apps/web/app/api/integrations/paypal/balance/route.ts",
+        "status": " M",
+        "sha256": "4d2186d52abdd1174958ab2755927236b39df5c8b94d22a9477969e2f41a02a2"
+      },
+      {
+        "path": "apps/web/app/api/integrations/paypal/callback/route.ts",
+        "status": " M",
+        "sha256": "6adba2fc5d7284576ee99b2d58bc084a8b76096450e485a6436d60391bda47a3"
+      },
+      {
+        "path": "apps/web/app/api/integrations/paypal/transactions/route.ts",
+        "status": " M",
+        "sha256": "3a9a79d807445146ebe9d935cc7bd3e1c779ba0c29901350cf8d32a54cd6c5a8"
+      },
+      {
+        "path": "apps/web/app/api/messages/automated/route.ts",
+        "status": " M",
+        "sha256": "81e09610a4ffd3ac6a950d89488316768804c9ddf41bbf3acfbbea64a7cd6a66"
+      },
+      {
+        "path": "apps/web/app/api/webhooks/vrbo/route.ts",
+        "status": " M",
+        "sha256": "7306b04e356b621eb1577cb61cae36c4247aa63caa715b08709ef6504f1e7baf"
+      },
+      {
+        "path": "apps/web/app/bookings/page.tsx",
+        "status": " M",
+        "sha256": "ac41b34a496ce217450098b8ae9dd71d233b427d18ad23e6931af2b86899352d"
+      },
+      {
+        "path": "apps/web/app/properties/layout.tsx",
+        "status": "??",
+        "sha256": "d3a0dea9e21298a1db2d134352976d7ed9e0cdb43f527a74b84148904efe2668"
+      },
+      {
+        "path": "apps/web/app/properties/new/layout.tsx",
+        "status": "??",
+        "sha256": "e2e60b86e4cf652411c3c1d1c5b065f6e45d5d3c770fe66d7ed73cbf07c2df1e"
+      },
+      {
+        "path": "apps/web/app/providers.tsx",
+        "status": " M",
+        "sha256": "7f649be4c3cba0748ca28a353b0e16952b6714a5e1a0234c75310320ed11087a"
+      },
+      {
+        "path": "apps/web/middleware.ts",
+        "status": " M",
+        "sha256": "f79e31af99e2e1011c9f3a4188e47e260e693b84a250871de533cd93132e96cd"
+      },
+      {
+        "path": "apps/web/next.config.js",
+        "status": " M",
+        "sha256": "ed853494995b474efeae92e4690d0ec1ee119b297e3593931abfa0e53718e1bc"
+      },
+      {
+        "path": "apps/web/src/context/AuthContext.tsx",
+        "status": " M",
+        "sha256": "10b3137b721ffe4f2c1c3c6a35dc53467bfe97041d8e07b88f2e591467fbcb2d"
+      },
+      {
+        "path": "apps/web/src/lib/api-auth.ts",
+        "status": " M",
+        "sha256": "a7fd1a4621e8e77510e591dad6068ffce04246f64c3eb35fcae9822198b09bbe"
+      },
+      {
+        "path": "apps/web/src/lib/auth.ts",
+        "status": " M",
+        "sha256": "675554b7b890e42083163507d5e3464b813e055fa02156feaf255b32da43bf9e"
+      },
+      {
+        "path": "apps/web/src/lib/firebase-admin.ts",
+        "status": " M",
+        "sha256": "6a60fc7f67897132193d83b3f625f7f7906bcd1b973d0d955447cc9037cd4683"
+      },
+      {
+        "path": "apps/web/src/lib/firebase-client-config.ts",
+        "status": "??",
+        "sha256": "11756b6012d51975ff80191b1ec2726f0f319d52a1a95c4bcd3320a2c5dce355"
+      },
+      {
+        "path": "apps/web/src/lib/integrations/vrbo-sync-service.ts",
+        "status": " M",
+        "sha256": "e49640fae56f77055e6c4b4f203b6fe4f1ab59c007dafdeb0509fe7f2fbd3e0c"
+      },
+      {
+        "path": "apps/web/src/lib/ownerrez-client.ts",
+        "status": " M",
+        "sha256": "fa1da815cff335bf64beff5f275afccc4095cc6ba0a6a5b414a2aec24fa1d84b"
+      },
+      {
+        "path": "apps/web/src/lib/page-auth.ts",
+        "status": "??",
+        "sha256": "8d7015f1ce75faab3b9015d9518d80c7df541df35f035b6f175006380c905d1f"
+      },
+      {
+        "path": "apps/web/src/lib/secure-notifications.ts",
+        "status": "??",
+        "sha256": "7d59bd59f2e0c0767e1245efe6023b93630f6ba853c289f83ec03a13f2278d3b"
+      },
+      {
+        "path": "apps/web/src/lib/shared/firebase/index.ts",
+        "status": " M",
+        "sha256": "aa7510a9c0151cae90e3dcfec3b9da56c63e999771a42a83575578a9e4af82f7"
+      },
+      {
+        "path": "apps/web/tools/sync-vercel-env.py",
+        "status": " M",
+        "sha256": "c7a2bd16de957a1c56801d11bbebb5474c967685f5ecd280e73d7d0c740825cf"
+      },
+      {
+        "path": "apps/web/vercel.json",
+        "status": " M",
+        "sha256": "d5de3a9400a7d0f5cd621f56c347a7cf32dc7a85070a4beac0ce97a8684e8538"
+      },
+      {
+        "path": "apps/web/vercel_env_output.txt",
+        "status": " M",
+        "sha256": "065ccb876ae137bd967613423e26a4f28b24fe4012029e65286afbdf0d76f26c"
+      },
+      {
+        "path": "backend/.env.example",
+        "status": " M",
+        "sha256": "1624428f3d6af8cdd7f55302ee94ae5f8a8f364e651b4c2638e06f158fc69574"
+      },
+      {
+        "path": "backend/.env.railway",
+        "status": " M",
+        "sha256": "eed4c55de90540f26ffc17739b51bfde3e56770775b024861ca68e4c1b334608"
+      },
+      {
+        "path": "backend/database/seed.py",
+        "status": " M",
+        "sha256": "c255a1c59b6988ad128a6c0cb7e1b2511eb2f8cead6a56e6345479ff24dac505"
+      },
+      {
+        "path": "backend/routers/photos.py",
+        "status": " M",
+        "sha256": "3de0c95f10a2e4fa85dc3267a0396ade2d8bcdcb271c22bf28d3819205e68777"
+      },
+      {
+        "path": "deploy.ps1",
+        "status": " M",
+        "sha256": "b42346bd7344db87374aa937563c3c70fb795a17735afacbc8ba20fb8c408bc9"
+      },
+      {
+        "path": "packages/cloud-sync/src/firebase-config.ts",
+        "status": " M",
+        "sha256": "a6a467bd5ff4d67c03394a4e7f9f717a2446980c66cb1d428eef456ec7da581d"
+      },
+      {
+        "path": "packages/shared/package.json",
+        "status": " M",
+        "sha256": "a82e8f771da0278d95371bd517be460cb093a2af2c22cf2ff5515540f282a3d3"
+      },
+      {
+        "path": "packages/shared/src/api/index.ts",
+        "status": " M",
+        "sha256": "b60f9f434f5f7436dbd584417d1228b09b2acdfccc10b579bd9f68df1fd22f93"
+      },
+      {
+        "path": "packages/shared/src/firebase/index.ts",
+        "status": " M",
+        "sha256": "31c2f2871c34663d1636c59db904b644ee3ee10f11af9943305658ac8df790fc"
+      },
+      {
+        "path": "packages/shared/src/sync/index.ts",
+        "status": " M",
+        "sha256": "911cc125e9a0399ccd587e9ca25eb356060149b445a40b186b9d21ed5191df8f"
+      },
+      {
+        "path": "packages/testing/integration/sync.test.ts",
+        "status": " M",
+        "sha256": "4ca8df008b05f7027e709b93a7cf17163fdf5f5c3f264d276cdfb9b8c711af38"
+      },
+      {
+        "path": "packages/testing/src/index.ts",
+        "status": " M",
+        "sha256": "a4b68c1a846fcb647acf79472099df364f1e46284ad360fcff94ad8ef5c24fe3"
+      },
+      {
+        "path": "packages/testing/utils/mocks.ts",
+        "status": " M",
+        "sha256": "cb42086e4f479a16b104ffd070e46c0bdda8be363b344eb7b505de99eac51b03"
+      },
+      {
+        "path": "packages/testing/validation/validate-sync.ts",
+        "status": " M",
+        "sha256": "0bc0ab3409cf6715c47939f03d850ca0c3f497cec2df5f963befd41c4c59cfa0"
+      },
+      {
+        "path": "tools/p0_static_assertions.mjs",
+        "status": "??",
+        "sha256": "f81d398b206d39ecc200ec599d0a80d2ccf65bf0db24356304c0c527228e1236"
+      },
+      {
+        "path": "tools/vrbo_image_scraper.py",
+        "status": " M",
+        "sha256": "68ae4a042641e799ebdae68c24686568754253d56e064d4945057d529e3b8d2c"
+      },
+      {
+        "path": "turbo.json",
+        "status": " M",
+        "sha256": "a633bc69701095560533aaf3257b61fdc06bb1c3314457b9572c3b474eca9fcb"
+      }
+    ]
+  },
+  "commit_unit_evidence_docs": {
+    "count": 6,
+    "paths": [
+      {
+        "path": "docs/consolidation/P0_ACCEPTANCE_MATRIX.md",
+        "status": "??",
+        "sha256": "2a5ec60a4c7d11ec5d617167d9d53f337155f919347238b6aa3d434eb263065e"
+      },
+      {
+        "path": "docs/consolidation/P0_NONFUNCTIONAL_REQUIREMENTS.md",
+        "status": "??",
+        "sha256": "d9700ede7676cafc0c6d4b02adaeeaa05759eeb939ff11dfdee04c5e7f23fdc1"
+      },
+      {
+        "path": "docs/consolidation/P0_PRODUCTION_FIREBASE_DIAGNOSIS_2026-07-23.md",
+        "status": "??",
+        "sha256": "e528da687b53f99c45a5e4b6201af34551ca94ba32a04f4158bccdcafbe3661a"
+      },
+      {
+        "path": "docs/consolidation/P0_SCOPE_FREEZE.md",
+        "status": "??",
+        "sha256": "faf32f52b525ff79c5c1fdb2e23057b1c3cc289f91aa7191ea558bbd5ed79938"
+      },
+      {
+        "path": "docs/consolidation/P0_SECURITY_ROTATION_RUNBOOK.md",
+        "status": "??",
+        "sha256": "b114c9e2aa25941459922e8f76e1410045b52eef1571a0ddb30276e6e47928b2"
+      },
+      {
+        "path": "docs/consolidation/P0_VERIFIED_INVENTORY.md",
+        "status": "??",
+        "sha256": "7e85c015d888624b3ec259e1c61222414c5ae423d42b2e3f92af8ab05eaa8582"
+      }
+    ]
+  },
+  "excluded_generated_or_helper": {
+    "count": 6,
+    "paths": [
+      {
+        "path": ".p0_commit_manifest.py",
+        "status": "??",
+        "sha256": "1f9ba3e1fdccca9b69c304e205877873312ed02b64c5160e2e008daea87fad68"
+      },
+      {
+        "path": ".p0_core_validate.ps1",
+        "status": "??",
+        "sha256": "6448e95d8f3518036822f551b810e7fbb6f54284d00bd910951febc6f0f39cff"
+      },
+      {
+        "path": ".p0_finalize_provenance.py",
+        "status": "??",
+        "sha256": "ac3132cf68c1f6ac8e872038b4cf50c4be7db8f5e1f1e8dfd6f57370a2b61a2b"
+      },
+      {
+        "path": ".p0_normalize_line_endings.py",
+        "status": "??",
+        "sha256": "31891d01543916c6de8569d3d9cd211e695f183ce8d970fcfe93858680300001"
+      },
+      {
+        "path": ".p0_patch_static_hardening.py",
+        "status": "??",
+        "sha256": "31c4cf71e22c59491e09a0d472373324040db45a28f97756f451cc063a1e8d33"
+      },
+      {
+        "path": ".p0_secret_scan.py",
+        "status": "??",
+        "sha256": "81c11f8d22b433c12f5f56f4a9537cec0420465055fa2364930ca9b8351d8b6c"
+      }
+    ]
+  },
+  "staged_path_count": 0,
+  "policy": {
+    "staging_performed": false,
+    "commit_performed": false,
+    "push_performed": false,
+    "deployment_performed": false
+  }
+}

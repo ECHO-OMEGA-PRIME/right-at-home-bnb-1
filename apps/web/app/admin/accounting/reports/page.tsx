@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Download,
   Calendar,
@@ -19,100 +19,35 @@ function formatMoney(cents: number): string {
 
 type ReportTab = 'pnl' | 'balance' | 'cashflow';
 
-const pnlData: { revenue: { label: string; amount: number }[]; expenses: { label: string; amount: number }[] } = {
-  revenue: [
-    { label: 'Airbnb Revenue', amount: 9845200 },
-    { label: 'VRBO Revenue', amount: 4312800 },
-    { label: 'Booking.com Revenue', amount: 2876400 },
-    { label: 'Direct Bookings', amount: 1245000 },
-    { label: 'Cleaning Fees', amount: 312000 },
-    { label: 'Late Fees & Penalties', amount: 45800 },
-    { label: 'Pet Fees', amount: 108000 },
-  ],
-  expenses: [
-    { label: 'Mortgage Interest', amount: 2145000 },
-    { label: 'Property Taxes', amount: 1876500 },
-    { label: 'Utilities (Electric/Gas/Water)', amount: 486200 },
-    { label: 'Internet & Cable (22 units)', amount: 154000 },
-    { label: 'Insurance', amount: 345600 },
-    { label: 'Cleaning Services', amount: 756000 },
-    { label: 'Maintenance & Repairs', amount: 423500 },
-    { label: 'Supplies & Amenities', amount: 198400 },
-    { label: 'Platform Fees (Airbnb/VRBO)', amount: 873310 },
-    { label: 'Property Management Software', amount: 44900 },
-    { label: 'Landscaping', amount: 132000 },
-    { label: 'Pest Control', amount: 66000 },
-    { label: 'Marketing & Advertising', amount: 89500 },
-    { label: 'Legal & Professional', amount: 125000 },
-    { label: 'Depreciation', amount: 812000 },
-    { label: 'Miscellaneous', amount: 45200 },
-  ],
-};
+interface Line { label: string; amount: number }
 
-const balanceSheetData = {
-  assets: {
-    current: [
-      { label: 'Cash - Operating Account', amount: 2452180 },
-      { label: 'Cash - Reserve Account', amount: 1000000 },
-      { label: 'Accounts Receivable', amount: 487500 },
-      { label: 'Security Deposits Held', amount: 220000 },
-      { label: 'Prepaid Insurance', amount: 172800 },
-      { label: 'Supplies Inventory', amount: 34500 },
-    ],
-    fixed: [
-      { label: 'Real Estate - 22 Properties', amount: 485000000 },
-      { label: 'Furniture & Fixtures', amount: 44000000 },
-      { label: 'Appliances & Equipment', amount: 17600000 },
-      { label: 'Less: Accumulated Depreciation', amount: -9744000 },
-    ],
-  },
-  liabilities: {
-    current: [
-      { label: 'Accounts Payable', amount: 345600 },
-      { label: 'Credit Card Balance', amount: 187200 },
-      { label: 'Accrued Expenses', amount: 234500 },
-      { label: 'Security Deposits Liability', amount: 220000 },
-      { label: 'Current Portion of Mortgages', amount: 1560000 },
-    ],
-    longTerm: [
-      { label: 'Mortgage Payable (18 properties)', amount: 321000000 },
-      { label: 'Equipment Loans', amount: 2400000 },
-    ],
-  },
-  equity: [
-    { label: 'Owner\'s Equity - Bobby McWilliams', amount: 0 },
-    { label: 'Retained Earnings', amount: 0 },
-    { label: 'Current Year Net Income', amount: 8913100 },
-  ],
-};
-
-const cashFlowData = {
-  operating: [
-    { label: 'Net Income', amount: 8913100 },
-    { label: 'Add: Depreciation', amount: 812000 },
-    { label: 'Decrease in Accounts Receivable', amount: 125000 },
-    { label: 'Increase in Accounts Payable', amount: 87600 },
-    { label: 'Increase in Accrued Expenses', amount: 45200 },
-    { label: 'Decrease in Prepaid Expenses', amount: -57600 },
-  ],
-  investing: [
-    { label: 'Purchase of Property (Unit 22)', amount: -22500000 },
-    { label: 'Furniture & Fixtures - New Unit', amount: -2000000 },
-    { label: 'Capital Improvements (5 units)', amount: -876500 },
-    { label: 'Sale of Old Appliances', amount: 15000 },
-  ],
-  financing: [
-    { label: 'New Mortgage - Unit 22', amount: 18000000 },
-    { label: 'Mortgage Principal Payments', amount: -1560000 },
-    { label: 'Owner Distributions', amount: -500000 },
-    { label: 'Equipment Loan Proceeds', amount: 0 },
-  ],
-};
+/**
+ * This page used to render module-level CONSTANTS: a $187,451 P&L, a full
+ * balance sheet, and a cash-flow statement itemising transactions that never
+ * happened ("Purchase of Property (Unit 22)", -$225,000). The Download CSV
+ * button wrote those invented figures to a file an accountant could file taxes
+ * from.
+ *
+ * The API routes behind these reports were made real earlier (queue #26855);
+ * that sweep fixed routes and never touched the pages, so this one kept
+ * serving fiction from a page nobody re-read. It now fetches the same
+ * endpoints, and where no real source exists it says so instead of inventing
+ * one.
+ *
+ * The real books: $851,410 of booking revenue and ZERO recorded costs. Expect
+ * the P&L to be sparse — that is the actual state of the accounts, and it is
+ * the thing worth showing.
+ */
+async function getJson(url: string) {
+  const res = await fetch(url, { credentials: 'include' });
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+  return res.json();
+}
 
 export default function ReportsPage() {
   const [activeTab, setActiveTab] = useState<ReportTab>('pnl');
-  const [dateFrom, setDateFrom] = useState('2026-03-01');
-  const [dateTo, setDateTo] = useState('2026-03-17');
+  const [dateFrom, setDateFrom] = useState(() => `${new Date().getUTCFullYear()}-01-01`);
+  const [dateTo, setDateTo] = useState(() => new Date().toISOString().slice(0, 10));
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     revenue: true,
     expenses: true,
@@ -136,56 +71,77 @@ export default function ReportsPage() {
     { key: 'cashflow', label: 'Cash Flow', icon: DollarSign },
   ];
 
-  const totalRevenue = pnlData.revenue.reduce((sum, item) => sum + item.amount, 0);
-  const totalExpenses = pnlData.expenses.reduce((sum, item) => sum + item.amount, 0);
+  const [pnl, setPnl] = useState<{ revenue: Line[]; expenses: Line[]; ledgerEmpty: boolean } | null>(null);
+  const [balance, setBalance] = useState<{
+    current: Line[]; fixed: Line[]; currentLiabilities: Line[]; longTermLiabilities: Line[];
+  } | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setLoadError(null);
+    Promise.all([
+      getJson(`/api/accounting/reports/pnl?start=${dateFrom}&end=${dateTo}`),
+      getJson(`/api/accounting/reports/balance-sheet?as_of=${dateTo}`),
+    ])
+      .then(([p, b]) => {
+        if (cancelled) return;
+        setPnl({
+          revenue: (p.revenue?.lines ?? []).map((l: any) => ({
+            label: `${l.code} ${l.name}`, amount: l.amount_cents,
+          })),
+          expenses: (p.expenses?.lines ?? []).map((l: any) => ({
+            label: `${l.code} ${l.name}`, amount: l.amount_cents,
+          })),
+          ledgerEmpty: Boolean(p.ledger_empty),
+        });
+        // The balance sheet returns `items` with `balance_cents`; the P&L
+        // returns `lines` with `amount_cents`. Assuming they matched produced
+        // undefined everywhere and rendered every section as $0 -- which looks
+        // exactly like a real, empty balance sheet. Read the contract.
+        const sec = (rows: any[]) =>
+          (rows ?? []).map((l: any) => ({ label: `${l.code} ${l.name}`, amount: l.balance_cents }));
+        setBalance({
+          current: sec(b.assets?.current?.items),
+          fixed: sec(b.assets?.fixed?.items),
+          currentLiabilities: sec(b.liabilities?.current?.items),
+          longTermLiabilities: sec(b.liabilities?.long_term?.items),
+        });
+      })
+      .catch((e) => !cancelled && setLoadError(e.message))
+      .finally(() => !cancelled && setLoading(false));
+    return () => { cancelled = true; };
+  }, [dateFrom, dateTo]);
+
+  const sum = (rows: Line[]) => rows.reduce((s, i) => s + i.amount, 0);
+
+  const totalRevenue = sum(pnl?.revenue ?? []);
+  const totalExpenses = sum(pnl?.expenses ?? []);
   const netIncome = totalRevenue - totalExpenses;
 
-  const totalCurrentAssets = balanceSheetData.assets.current.reduce((s, i) => s + i.amount, 0);
-  const totalFixedAssets = balanceSheetData.assets.fixed.reduce((s, i) => s + i.amount, 0);
+  const totalCurrentAssets = sum(balance?.current ?? []);
+  const totalFixedAssets = sum(balance?.fixed ?? []);
   const totalAssets = totalCurrentAssets + totalFixedAssets;
 
-  const totalCurrentLiabilities = balanceSheetData.liabilities.current.reduce((s, i) => s + i.amount, 0);
-  const totalLongTermLiabilities = balanceSheetData.liabilities.longTerm.reduce((s, i) => s + i.amount, 0);
+  const totalCurrentLiabilities = sum(balance?.currentLiabilities ?? []);
+  const totalLongTermLiabilities = sum(balance?.longTermLiabilities ?? []);
   const totalLiabilities = totalCurrentLiabilities + totalLongTermLiabilities;
   const totalEquity = totalAssets - totalLiabilities;
 
-  const operatingCashFlow = cashFlowData.operating.reduce((s, i) => s + i.amount, 0);
-  const investingCashFlow = cashFlowData.investing.reduce((s, i) => s + i.amount, 0);
-  const financingCashFlow = cashFlowData.financing.reduce((s, i) => s + i.amount, 0);
-  const netCashChange = operatingCashFlow + investingCashFlow + financingCashFlow;
-
+  /**
+   * Hands off to the server rather than building CSV here.
+   *
+   * The old version did `rows.join(',')` with no escaping, so one property name
+   * containing a comma shifted every column after it — a file that opens
+   * cleanly with the wrong numbers under the wrong headings. It also had no
+   * defence against a name beginning with "=", which Excel executes.
+   */
   function exportCSV() {
-    let csv = '';
-    if (activeTab === 'pnl') {
-      csv = 'Category,Item,Amount\n';
-      pnlData.revenue.forEach((r) => { csv += `Revenue,${r.label},${(r.amount / 100).toFixed(2)}\n`; });
-      csv += `Revenue,TOTAL REVENUE,${(totalRevenue / 100).toFixed(2)}\n`;
-      pnlData.expenses.forEach((e) => { csv += `Expenses,${e.label},${(e.amount / 100).toFixed(2)}\n`; });
-      csv += `Expenses,TOTAL EXPENSES,${(totalExpenses / 100).toFixed(2)}\n`;
-      csv += `Net,NET INCOME,${(netIncome / 100).toFixed(2)}\n`;
-    } else if (activeTab === 'balance') {
-      csv = 'Category,Item,Amount\n';
-      balanceSheetData.assets.current.forEach((a) => { csv += `Current Assets,${a.label},${(a.amount / 100).toFixed(2)}\n`; });
-      balanceSheetData.assets.fixed.forEach((a) => { csv += `Fixed Assets,${a.label},${(a.amount / 100).toFixed(2)}\n`; });
-      csv += `TOTAL,TOTAL ASSETS,${(totalAssets / 100).toFixed(2)}\n`;
-      balanceSheetData.liabilities.current.forEach((l) => { csv += `Current Liabilities,${l.label},${(l.amount / 100).toFixed(2)}\n`; });
-      balanceSheetData.liabilities.longTerm.forEach((l) => { csv += `Long-Term Liabilities,${l.label},${(l.amount / 100).toFixed(2)}\n`; });
-      csv += `TOTAL,TOTAL LIABILITIES,${(totalLiabilities / 100).toFixed(2)}\n`;
-      csv += `TOTAL,TOTAL EQUITY,${(totalEquity / 100).toFixed(2)}\n`;
-    } else {
-      csv = 'Category,Item,Amount\n';
-      cashFlowData.operating.forEach((o) => { csv += `Operating,${o.label},${(o.amount / 100).toFixed(2)}\n`; });
-      cashFlowData.investing.forEach((i) => { csv += `Investing,${i.label},${(i.amount / 100).toFixed(2)}\n`; });
-      cashFlowData.financing.forEach((f) => { csv += `Financing,${f.label},${(f.amount / 100).toFixed(2)}\n`; });
-      csv += `Net,NET CHANGE IN CASH,${(netCashChange / 100).toFixed(2)}\n`;
-    }
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `rah-bnb-${activeTab}-${dateFrom}-to-${dateTo}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    const report = activeTab === 'balance' ? 'tax-summary' : 'revenue';
+    window.location.href =
+      `/api/accounting/exports?report=${report}&start=${dateFrom}&end=${dateTo}`;
   }
 
   function renderSection(
@@ -336,8 +292,8 @@ export default function ReportsPage() {
                 </div>
               </div>
 
-              {renderSection('Revenue', 'revenue', pnlData.revenue, totalRevenue, 'Total Revenue', 'text-emerald-700')}
-              {renderSection('Operating Expenses', 'expenses', pnlData.expenses, totalExpenses, 'Total Expenses', 'text-red-700')}
+              {renderSection('Revenue', 'revenue', (pnl?.revenue ?? []), totalRevenue, 'Total Revenue', 'text-emerald-700')}
+              {renderSection('Operating Expenses', 'expenses', (pnl?.expenses ?? []), totalExpenses, 'Total Expenses', 'text-red-700')}
 
               {/* Net Income */}
               <div className={`flex items-center justify-between px-5 py-4 rounded-lg border-2 ${netIncome >= 0 ? 'border-[#500000] bg-[#500000]/5' : 'border-red-500 bg-red-50'}`}>
@@ -384,16 +340,16 @@ export default function ReportsPage() {
               </div>
 
               <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider pt-2">Assets</h3>
-              {renderSection('Current Assets', 'currentAssets', balanceSheetData.assets.current, totalCurrentAssets, 'Total Current Assets', 'text-blue-700')}
-              {renderSection('Fixed Assets (Property, Plant & Equipment)', 'fixedAssets', balanceSheetData.assets.fixed, totalFixedAssets, 'Total Fixed Assets', 'text-blue-700')}
+              {renderSection('Current Assets', 'currentAssets', (balance?.current ?? []), totalCurrentAssets, 'Total Current Assets', 'text-blue-700')}
+              {renderSection('Fixed Assets (Property, Plant & Equipment)', 'fixedAssets', (balance?.fixed ?? []), totalFixedAssets, 'Total Fixed Assets', 'text-blue-700')}
               <div className="flex items-center justify-between px-5 py-3 rounded-lg bg-blue-50 border-2 border-blue-300">
                 <span className="text-sm font-bold text-blue-800">TOTAL ASSETS</span>
                 <span className="text-base font-bold text-blue-800">{formatMoney(totalAssets)}</span>
               </div>
 
               <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider pt-2">Liabilities & Equity</h3>
-              {renderSection('Current Liabilities', 'currentLiabilities', balanceSheetData.liabilities.current, totalCurrentLiabilities, 'Total Current Liabilities', 'text-amber-700')}
-              {renderSection('Long-Term Liabilities', 'longTermLiabilities', balanceSheetData.liabilities.longTerm, totalLongTermLiabilities, 'Total Long-Term Liabilities', 'text-amber-700')}
+              {renderSection('Current Liabilities', 'currentLiabilities', (balance?.currentLiabilities ?? []), totalCurrentLiabilities, 'Total Current Liabilities', 'text-amber-700')}
+              {renderSection('Long-Term Liabilities', 'longTermLiabilities', (balance?.longTermLiabilities ?? []), totalLongTermLiabilities, 'Total Long-Term Liabilities', 'text-amber-700')}
               <div className="flex items-center justify-between px-5 py-3 rounded-lg bg-amber-50 border-2 border-amber-300">
                 <span className="text-sm font-bold text-amber-800">TOTAL LIABILITIES</span>
                 <span className="text-base font-bold text-amber-800">{formatMoney(totalLiabilities)}</span>
@@ -403,7 +359,9 @@ export default function ReportsPage() {
                 'Owner\'s Equity',
                 'equity',
                 [
-                  ...balanceSheetData.equity.slice(0, -1),
+                  // Derived from the ledger, not a stored equity list. The
+                  // invented owner-contribution lines that used to sit here
+                  // described capital that was never put in.
                   { label: 'Current Year Net Income', amount: netIncome },
                   { label: 'Retained Earnings (Computed)', amount: totalEquity - netIncome },
                 ],
@@ -430,64 +388,33 @@ export default function ReportsPage() {
 
           {/* Cash Flow Statement */}
           {activeTab === 'cashflow' && (
-            <div className="space-y-4">
-              <div className="text-center pb-4 border-b border-gray-200">
-                <h2 className="text-lg font-bold text-gray-900">Cash Flow Statement</h2>
-                <p className="text-xs text-gray-500 mt-1">
-                  Right at Home BnB LLC &middot; {new Date(dateFrom).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })} - {new Date(dateTo).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-                </p>
-              </div>
+            <div className="p-8 text-center">
+              {/*
+                There is no cash-flow data source. What stood here was a
+                fabricated statement itemising transactions that never
+                happened -- "Purchase of Property (Unit 22)" at -$225,000,
+                "New Mortgage - Unit 22" at $180,000, an ending cash balance
+                of $34,521.80 -- rendered from a module constant.
 
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-                <div className="bg-emerald-50 rounded-lg p-4 border border-emerald-200">
-                  <p className="text-xs font-medium text-emerald-600 uppercase">Operating</p>
-                  <p className="text-lg font-bold text-emerald-700 mt-1">{formatMoney(operatingCashFlow)}</p>
-                </div>
-                <div className="bg-red-50 rounded-lg p-4 border border-red-200">
-                  <p className="text-xs font-medium text-red-600 uppercase">Investing</p>
-                  <p className="text-lg font-bold text-red-700 mt-1">{formatMoney(investingCashFlow)}</p>
-                </div>
-                <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                  <p className="text-xs font-medium text-blue-600 uppercase">Financing</p>
-                  <p className="text-lg font-bold text-blue-700 mt-1">{formatMoney(financingCashFlow)}</p>
-                </div>
-                <div className={`rounded-lg p-4 border ${netCashChange >= 0 ? 'bg-[#500000]/5 border-[#500000]/20' : 'bg-red-50 border-red-200'}`}>
-                  <p className={`text-xs font-medium uppercase ${netCashChange >= 0 ? 'text-[#500000]' : 'text-red-600'}`}>Net Change</p>
-                  <p className={`text-lg font-bold mt-1 ${netCashChange >= 0 ? 'text-[#500000]' : 'text-red-700'}`}>
-                    {formatMoney(netCashChange)}
-                  </p>
-                </div>
-              </div>
-
-              {renderSection('Cash from Operating Activities', 'operating', cashFlowData.operating, operatingCashFlow, 'Net Cash from Operations', 'text-emerald-700')}
-              {renderSection('Cash from Investing Activities', 'investing', cashFlowData.investing, investingCashFlow, 'Net Cash from Investing', 'text-red-700')}
-              {renderSection('Cash from Financing Activities', 'financing', cashFlowData.financing, financingCashFlow, 'Net Cash from Financing', 'text-blue-700')}
-
-              <div className={`flex items-center justify-between px-5 py-4 rounded-lg border-2 ${netCashChange >= 0 ? 'border-[#500000] bg-[#500000]/5' : 'border-red-500 bg-red-50'}`}>
-                <span className={`text-base font-bold ${netCashChange >= 0 ? 'text-[#500000]' : 'text-red-700'}`}>
-                  NET CHANGE IN CASH
-                </span>
-                <span className={`text-lg font-bold ${netCashChange >= 0 ? 'text-[#500000]' : 'text-red-700'}`}>
-                  {formatMoney(netCashChange)}
-                </span>
-              </div>
-
-              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600">Beginning Cash Balance</span>
-                  <span className="font-medium text-gray-900">{formatMoney(3452180 - netCashChange)}</span>
-                </div>
-                <div className="flex items-center justify-between text-sm mt-2">
-                  <span className="text-gray-600">Net Change in Cash</span>
-                  <span className={`font-medium ${netCashChange >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                    {netCashChange >= 0 ? '+' : ''}{formatMoney(netCashChange)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-sm mt-2 pt-2 border-t border-gray-200">
-                  <span className="font-semibold text-gray-900">Ending Cash Balance</span>
-                  <span className="font-bold text-gray-900">{formatMoney(3452180)}</span>
-                </div>
-              </div>
+                Building a real cash-flow statement needs bank activity this
+                system does not hold. Saying so is the only honest option:
+                an invented statement of where the money went is worse than
+                an empty tab, because it answers a question nobody can check.
+              */}
+              <BarChart3 className="w-10 h-10 mx-auto text-gray-300" />
+              <h3 className="mt-4 text-base font-semibold text-gray-900">
+                Cash flow is not available
+              </h3>
+              <p className="mt-2 text-sm text-gray-500 max-w-xl mx-auto">
+                A cash-flow statement needs bank and payment activity, which this
+                system does not yet record. The figures previously shown here were
+                placeholders and did not come from the accounts.
+              </p>
+              <p className="mt-3 text-sm text-gray-500 max-w-xl mx-auto">
+                The Profit &amp; Loss and Balance Sheet tabs are built from the real
+                ledger. For revenue actually recorded against each property, use the
+                property P&amp;L report.
+              </p>
             </div>
           )}
         </div>

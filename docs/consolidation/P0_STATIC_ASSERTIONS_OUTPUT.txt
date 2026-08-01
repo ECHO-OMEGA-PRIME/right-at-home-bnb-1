@@ -1,0 +1,33 @@
+﻿PASS No runtime, deployment, test, or maintenance source references the forbidden Firebase project
+PASS No runtime, deployment, test, or maintenance source references the obsolete API host
+PASS Canonical web Firebase client config names rightathome-prod
+PASS Web Firebase client configuration fails on project mismatch
+PASS Web auth checks existing Firebase app project identity
+PASS Web auth does not treat /properties/new as a public property detail
+PASS Legacy worker specializations normalize to worker
+PASS Middleware protects /properties/new
+PASS Middleware rejects production development tokens
+PASS Property route guard requires owner/admin on create route
+PASS Guest property page hides Add Property control
+PASS Sync identity follows authenticated user
+PASS Shared guest_user sync identity removed
+PASS Firebase Admin validates rightathome-prod service account
+PASS VRBO webhook uses centralized Firebase Admin authority
+PASS Health endpoint reports expected and configured Firebase project IDs safely
+PASS Request-dependent calendar, PayPal, and cron routes are explicitly dynamic
+PASS Mobile Firebase configuration is locked to rightathome-prod
+PASS Mobile auth validates existing Firebase app identity
+PASS Mobile push registration uses the configured API base
+PASS Backend photo storage requires rightathome-prod
+PASS Web environment template uses rightathome-prod
+PASS Mobile environment template uses rightathome-prod and current API domain
+PASS Backend environment template uses rightathome-prod
+PASS Legacy Railway environment is inert
+PASS Root environment template uses rightathome-prod
+PASS Environment templates do not contain forbidden Firebase project
+PASS Vercel sync tool requires explicit confirmation
+PASS Vercel sync tool is locked to rightathome-prod
+PASS Vercel sync tool no longer references obsolete O drive vault path
+PASS Deployment script requires explicit production confirmation
+PASS Deployment script disables legacy backend deployment
+P0 STATIC ASSERTIONS GREEN (32 checks)

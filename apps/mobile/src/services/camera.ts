@@ -137,8 +137,8 @@ export async function takePhoto(options?: {
       uri: asset.uri,
       width: asset.width,
       height: asset.height,
-      base64: asset.base64,
-      exif: asset.exif,
+      base64: asset.base64 ?? undefined,
+      exif: asset.exif ?? undefined,
       timestamp: new Date(),
     };
   } catch (error) {
@@ -180,7 +180,7 @@ export async function pickPhotoFromGallery(options?: {
       uri: asset.uri,
       width: asset.width,
       height: asset.height,
-      base64: asset.base64,
+      base64: asset.base64 ?? undefined,
       exif: asset.exif ?? undefined,
       timestamp: new Date(),
     }));
@@ -219,8 +219,11 @@ export async function uploadPhoto(
     }
     formData.append('timestamp', photo.timestamp.toISOString());
 
-    // Upload to API
-    const response = await fetch('https://api.rightathome.bnb/photos/upload', {
+    // Upload to the configured API authority.
+    const apiBase = process.env.EXPO_PUBLIC_API_URL?.replace(/\/+$/, '');
+    if (!apiBase) throw new Error('EXPO_PUBLIC_API_URL is not configured');
+
+    const response = await fetch(`${apiBase}/photos/upload`, {
       method: 'POST',
       headers: {
         'Content-Type': 'multipart/form-data',

@@ -294,14 +294,10 @@ class VoiceService:
             "Steven and the Right at Home team hope you have an amazing stay."
         ]
 
-        if door_code:
-            # Speak code digit by digit
-            code_spoken = " ".join(door_code)
-            parts.append(f"Your door code is {code_spoken}.")
-
-        if wifi_info:
-            parts.append(f"Your WiFi network is {wifi_info.get('name', 'RightAtHome')}.")
-            parts.append(f"The password is {wifi_info.get('password', 'Welcome2Midland')}.")
+        if door_code or wifi_info:
+            parts.append(
+                "Private door and Wi-Fi details are available only in your authenticated active-stay dashboard."
+            )
 
         parts.extend([
             "If you need anything at all, just send us a message through the app.",

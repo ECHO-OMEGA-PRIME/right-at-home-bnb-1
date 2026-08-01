@@ -1,0 +1,67 @@
+﻿{
+    "checked_utc":  "2026-07-24T06:05:17.3225355Z",
+    "root_ns":  [
+                    {
+                        "Name":  "rah-midland.com",
+                        "Type":  2,
+                        "NameHost":  "gail.ns.cloudflare.com",
+                        "IPAddress":  null,
+                        "PrimaryServer":  null,
+                        "SerialNumber":  null,
+                        "TTL":  86400
+                    },
+                    {
+                        "Name":  "rah-midland.com",
+                        "Type":  2,
+                        "NameHost":  "jeff.ns.cloudflare.com",
+                        "IPAddress":  null,
+                        "PrimaryServer":  null,
+                        "SerialNumber":  null,
+                        "TTL":  86400
+                    }
+                ],
+    "root_a":  [
+                   {
+                       "Name":  "rah-midland.com",
+                       "Type":  1,
+                       "NameHost":  null,
+                       "IPAddress":  "76.76.21.61",
+                       "PrimaryServer":  null,
+                       "SerialNumber":  null,
+                       "TTL":  78
+                   },
+                   {
+                       "Name":  "rah-midland.com",
+                       "Type":  1,
+                       "NameHost":  null,
+                       "IPAddress":  "66.33.60.130",
+                       "PrimaryServer":  null,
+                       "SerialNumber":  null,
+                       "TTL":  78
+                   }
+               ],
+    "www_cname":  {
+                      "Name":  "www.rah-midland.com",
+                      "Type":  5,
+                      "NameHost":  "cname.vercel-dns.com",
+                      "IPAddress":  null,
+                      "PrimaryServer":  null,
+                      "SerialNumber":  null,
+                      "TTL":  300
+                  },
+    "api_a":  {
+                  "error":  "api.rah-midland.com : DNS name does not exist"
+              },
+    "api_cname":  {
+                      "error":  "api.rah-midland.com : DNS name does not exist"
+                  },
+    "soa":  {
+                "Name":  "rah-midland.com",
+                "Type":  6,
+                "NameHost":  null,
+                "IPAddress":  null,
+                "PrimaryServer":  "gail.ns.cloudflare.com",
+                "SerialNumber":  2409230203,
+                "TTL":  1800
+            }
+}

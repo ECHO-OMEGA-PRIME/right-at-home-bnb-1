@@ -6,6 +6,7 @@
  */
 
 import { PrismaClient } from '@prisma/client';
+import { assertSafeToSeed } from './seed-guard';
 import { properties } from '../src/lib/property-knowledge';
 import { propertyImages } from '../src/lib/property-images';
 
@@ -13,6 +14,12 @@ const prisma = new PrismaClient();
 
 async function main() {
   console.log('🏠 Seeding Right at Home BnB database...');
+
+  // BEFORE the first write. This script uses property.create (not upsert), so
+  // running it against a populated database duplicates the whole portfolio.
+  // It previously had no guard at all.
+  await assertSafeToSeed(prisma);
+
   console.log(`   Properties to seed: ${properties.length}`);
 
   // Create admin user (Steven)

@@ -1,195 +1,79 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireOneOfRoles } from '@/lib/api-auth';
+import { getDashboardStats } from '@/lib/dashboard-stats';
+import { isUnrestricted, propertyScopeFor } from '@/lib/tenant-scope';
 
-// ── Mock data for a realistic Midland TX short-term rental operation ────────
+// Every figure here used to be fabricated: invented monthly revenue, three
+// made-up properties, five made-up bookings and a hardcoded task summary. The
+// owner's dashboard was showing numbers nobody could act on (queue #26855).
+// It now computes the same response shape from the real database.
+//
+// It also handed the WHOLE BUSINESS'S REVENUE to anyone with the `worker` role
+// (#26919). A role check answered "may this person call this route" and nothing
+// answered "what may they see through it" -- so a cleaner could read monthly
+// revenue, revenue by month, and portfolio-wide totals.
+//
+// Financial figures are now STRIPPED for restricted callers -- not scoped down
+// to their properties, removed. A cleaner has no business reading revenue for
+// the houses they clean either; least privilege means the field should not be
+// in the response at all.
 
-const properties = [
-  { id: 'PROP-001', name: 'Midland Executive Suite' },
-  { id: 'PROP-002', name: 'West Texas Retreat' },
-  { id: 'PROP-003', name: 'Oil Country Lodge' },
+/**
+ * What a RESTRICTED caller may see. An allowlist, deliberately.
+ *
+ * I first wrote this as a denylist of financial keys and immediately missed four
+ * of them -- avg_booking_value_cents, revenue_by_channel,
+ * total_channel_revenue_cents and property_performance -- while believing the
+ * leak was closed. A denylist fails OPEN: every field added to DashboardStats
+ * later is exposed by default, and nobody notices until it is in someone's
+ * hands. An allowlist fails CLOSED, which is the only safe direction here.
+ *
+ * Excluded on purpose, beyond the obvious revenue fields:
+ *   recent_bookings     -- carries guest PII
+ *   property_performance-- per-property revenue
+ *   occupancy_rate      -- business performance, not needed to clean a house
+ */
+const RESTRICTED_VISIBLE_KEYS = [
+  'period',
+  'generated_at',
+  'active_bookings',
+  'pending_tasks',
+  'task_summary',
+  'total_bookings_this_month',
+  'total_nights_this_month',
 ];
-
-const monthlyRevenue = [
-  { month: '2025-10', label: 'Oct 2025', revenue_cents: 682500, bookings: 9, nights: 42 },
-  { month: '2025-11', label: 'Nov 2025', revenue_cents: 715000, bookings: 8, nights: 39 },
-  { month: '2025-12', label: 'Dec 2025', revenue_cents: 893200, bookings: 12, nights: 55 },
-  { month: '2026-01', label: 'Jan 2026', revenue_cents: 1024500, bookings: 14, nights: 62 },
-  { month: '2026-02', label: 'Feb 2026', revenue_cents: 876300, bookings: 11, nights: 48 },
-  { month: '2026-03', label: 'Mar 2026', revenue_cents: 945800, bookings: 13, nights: 51 },
-];
-
-const recentBookings = [
-  {
-    id: 'BK-089', guest_name: 'James Patterson', property_id: 'PROP-001',
-    property_name: 'Midland Executive Suite', check_in: '2026-03-25',
-    check_out: '2026-03-29', nights: 4, total_cents: 82000, status: 'confirmed',
-    platform: 'vrbo', created_at: '2026-03-14T09:00:00Z',
-  },
-  {
-    id: 'BK-088', guest_name: 'Lisa Rodriguez', property_id: 'PROP-002',
-    property_name: 'West Texas Retreat', check_in: '2026-03-22',
-    check_out: '2026-04-05', nights: 14, total_cents: 238000, status: 'confirmed',
-    platform: 'direct', created_at: '2026-03-12T15:30:00Z',
-  },
-  {
-    id: 'BK-087', guest_name: 'Robert Haines', property_id: 'PROP-003',
-    property_name: 'Oil Country Lodge', check_in: '2026-03-20',
-    check_out: '2026-03-23', nights: 3, total_cents: 52500, status: 'checked_in',
-    platform: 'airbnb', created_at: '2026-03-10T11:00:00Z',
-  },
-  {
-    id: 'BK-086', guest_name: 'Karen Mitchell', property_id: 'PROP-001',
-    property_name: 'Midland Executive Suite', check_in: '2026-03-18',
-    check_out: '2026-03-20', nights: 2, total_cents: 41000, status: 'checked_out',
-    platform: 'vrbo', created_at: '2026-03-08T14:20:00Z',
-  },
-  {
-    id: 'BK-085', guest_name: 'Tommy Nguyen', property_id: 'PROP-002',
-    property_name: 'West Texas Retreat', check_in: '2026-03-15',
-    check_out: '2026-03-22', nights: 7, total_cents: 122500, status: 'checked_out',
-    platform: 'vrbo', created_at: '2026-03-05T10:00:00Z',
-  },
-];
-
-const channelRevenue: Record<string, number> = {
-  vrbo: 485200,
-  direct: 268000,
-  airbnb: 142600,
-  'booking.com': 50000,
-};
-
-const taskSummary = {
-  pending: 4,
-  in_progress: 2,
-  completed_today: 3,
-  overdue: 1,
-  upcoming_24h: 5,
-  by_type: {
-    cleaning: { pending: 2, in_progress: 1, completed: 2 },
-    maintenance: { pending: 1, in_progress: 1, completed: 0 },
-    inspection: { pending: 0, in_progress: 0, completed: 1 },
-    restock: { pending: 1, in_progress: 0, completed: 0 },
-  },
-};
-
-function getCurrentMonthData() {
-  const now = new Date();
-  const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  return monthlyRevenue.find((m) => m.month === currentMonthKey) ?? monthlyRevenue[monthlyRevenue.length - 1];
-}
-
-function calculateOccupancyRate(): number {
-  const currentMonth = getCurrentMonthData();
-  const daysInMonth = new Date(
-    new Date().getFullYear(),
-    new Date().getMonth() + 1,
-    0,
-  ).getDate();
-  const totalAvailableNights = properties.length * daysInMonth;
-  return totalAvailableNights > 0
-    ? +((currentMonth.nights / totalAvailableNights) * 100).toFixed(1)
-    : 0;
-}
-
-function calculateActiveBookings(): number {
-  const today = new Date().toISOString().split('T')[0];
-  return recentBookings.filter(
-    (b) =>
-      b.check_in <= today &&
-      b.check_out > today &&
-      ['confirmed', 'checked_in'].includes(b.status),
-  ).length;
-}
-
-function getPropertyPerformance() {
-  return properties.map((p) => {
-    const propBookings = recentBookings.filter((b) => b.property_id === p.id);
-    const revenueCents = propBookings.reduce((sum, b) => sum + b.total_cents, 0);
-    const nights = propBookings.reduce((sum, b) => sum + b.nights, 0);
-    return {
-      property_id: p.id,
-      property_name: p.name,
-      bookings_count: propBookings.length,
-      revenue_cents: revenueCents,
-      nights_booked: nights,
-      avg_nightly_rate_cents: nights > 0 ? Math.round(revenueCents / nights) : 0,
-    };
-  });
-}
 
 // ── GET /api/dashboard/stats ───────────────────────────────────────────────
 export async function GET(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['worker', 'owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
-    const params = request.nextUrl.searchParams;
-    const period = params.get('period') ?? 'current_month';
+    const period = request.nextUrl.searchParams.get('period') ?? 'current_month';
+    const stats = await getDashboardStats(period);
 
-    const currentMonth = getCurrentMonthData();
-    const previousMonth = monthlyRevenue.length >= 2
-      ? monthlyRevenue[monthlyRevenue.length - 2]
-      : null;
+    const scope = await propertyScopeFor(auth.user);
+    if (isUnrestricted(scope)) {
+      return NextResponse.json(stats);
+    }
 
-    const revenueChangePct = previousMonth && previousMonth.revenue_cents > 0
-      ? +(
-          ((currentMonth.revenue_cents - previousMonth.revenue_cents) /
-            previousMonth.revenue_cents) *
-          100
-        ).toFixed(1)
-      : 0;
-
-    const occupancyRate = calculateOccupancyRate();
-    const activeBookings = calculateActiveBookings();
-
-    const totalRevenueCents = Object.values(channelRevenue).reduce(
-      (sum, v) => sum + v,
-      0,
-    );
-
-    const avgBookingValueCents =
-      currentMonth.bookings > 0
-        ? Math.round(currentMonth.revenue_cents / currentMonth.bookings)
-        : 0;
-
-    const avgLengthOfStay =
-      currentMonth.bookings > 0
-        ? +(currentMonth.nights / currentMonth.bookings).toFixed(1)
-        : 0;
+    // Build up from nothing rather than deleting from everything. A key absent
+    // from the allowlist is absent from the response, including keys that do
+    // not exist yet.
+    const source = stats as unknown as Record<string, unknown>;
+    const visible: Record<string, unknown> = {};
+    for (const key of RESTRICTED_VISIBLE_KEYS) {
+      if (key in source) visible[key] = source[key];
+    }
 
     return NextResponse.json({
-      period,
-      generated_at: new Date().toISOString(),
-
-      // Top-line KPIs
-      revenue_this_month_cents: currentMonth.revenue_cents,
-      revenue_change_pct: revenueChangePct,
-      occupancy_rate: occupancyRate,
-      active_bookings: activeBookings,
-      pending_tasks: taskSummary.pending + taskSummary.overdue,
-      avg_booking_value_cents: avgBookingValueCents,
-      avg_length_of_stay_nights: avgLengthOfStay,
-
-      // Revenue breakdown
-      revenue_by_month: monthlyRevenue.map((m) => ({
-        month: m.month,
-        label: m.label,
-        revenue_cents: m.revenue_cents,
-        bookings: m.bookings,
-        nights: m.nights,
-      })),
-      revenue_by_channel: channelRevenue,
-      total_channel_revenue_cents: totalRevenueCents,
-
-      // Recent activity
-      recent_bookings: recentBookings,
-
-      // Task summary
-      task_summary: taskSummary,
-
-      // Property performance
-      property_performance: getPropertyPerformance(),
-
-      // Quick metrics
-      properties_count: properties.length,
-      total_nights_this_month: currentMonth.nights,
-      total_bookings_this_month: currentMonth.bookings,
+      ...visible,
+      scope: 'assigned_properties',
+      property_count_in_scope: scope.length,
+      // Said out loud, so a restricted caller cannot mistake a partial view for
+      // the whole picture.
+      note:
+        'Financial figures are omitted for this role, and counts cover only your ' +
+        'assigned properties.',
     });
   } catch (error: any) {
     return NextResponse.json(

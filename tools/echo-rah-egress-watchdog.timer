@@ -1,0 +1,16 @@
+# Timer for echo-rah-egress-watchdog.service — every 10 minutes.
+# Deploy: /etc/systemd/system/echo-rah-egress-watchdog.timer
+# Enable: systemctl daemon-reload && systemctl enable --now echo-rah-egress-watchdog.timer
+
+[Unit]
+Description=Run RAH egress IP watchdog every 10 minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=10min
+Persistent=true
+RandomizedDelaySec=30
+Unit=echo-rah-egress-watchdog.service
+
+[Install]
+WantedBy=timers.target

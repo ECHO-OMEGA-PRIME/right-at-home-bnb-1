@@ -199,13 +199,13 @@ export default function CleaningSchedule() {
         ]);
 
         if (jobsData && jobsData.length > 0) {
-          setCleaningJobs(jobsData);
+          setCleaningJobs(jobsData as unknown as CleaningJob[]);
         } else if (contextJobs && contextJobs.length > 0) {
           setCleaningJobs(contextJobs);
         }
 
         if (propertiesData && propertiesData.length > 0) {
-          setProperties(propertiesData);
+          setProperties(propertiesData as unknown as Property[]);
         } else if (contextProperties && contextProperties.length > 0) {
           setProperties(contextProperties);
         }
@@ -1392,15 +1392,30 @@ function AddCleaningModal({
 
     try {
       // Create cleaning job via database service
+      const scheduledAt = new Date(`${formData.date}T${formData.time}`);
+      if (Number.isNaN(scheduledAt.getTime())) {
+        throw new Error('Invalid cleaning schedule date or time');
+      }
       await databaseService.createCleaningJob({
         propertyId: formData.propertyId,
-        type: formData.type as any,
-        scheduledDate: formData.date,
-        scheduledTime: formData.time,
-        duration: formData.duration,
-        notes: formData.notes,
-        status: 'scheduled',
-        checklist: getDefaultChecklist(formData.type),
+        cleanerId: null,
+        bookingId: null,
+        scheduledAt,
+        startedAt: null,
+        completedAt: null,
+        jobType: formData.type.toUpperCase(),
+        status: 'SCHEDULED',
+        checkInLat: null,
+        checkInLng: null,
+        checkOutLat: null,
+        checkOutLng: null,
+        checklistProgress: JSON.stringify(getDefaultChecklist(formData.type)),
+        photos: null,
+        score: null,
+        scoreFeedback: null,
+        notes: formData.notes || null,
+        issues: null,
+        durationMins: formData.duration,
       });
 
       onClose();
@@ -1512,10 +1527,7 @@ function AddCleaningModal({
               value={formData.propertyId}
               onChange={(e) => setFormData({ ...formData, propertyId: e.target.value })}
               className="w-full px-4 py-3 rounded-xl focus:outline-none focus:ring-2"
-              style={{
-                ...inputStyle,
-                focusRingColor: ECHO_COLORS.darkMagenta,
-              }}
+              style={inputStyle}
             >
               <option value="">Select a property</option>
               {properties.map((p) => (

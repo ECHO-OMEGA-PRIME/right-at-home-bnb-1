@@ -134,7 +134,7 @@ export default function ChatWidget() {
     }
 
     if (q.includes('wifi') || q.includes('internet') || q.includes('password')) {
-      return "📶 **WiFi Details**\n\nNetwork: RightAtHome_Guest\nPassword: Welcome2024\n\nThe router is near the living room TV. Enjoy streaming!";
+      return "**Wi-Fi access is private.** Open your authenticated active-stay dashboard, or contact Steven if the details are unavailable.";
     }
 
     if (q.includes('checkout') || q.includes('check out') || q.includes('leaving')) {

@@ -1,0 +1,21 @@
+﻿{
+    "checked_utc":  "2026-07-24T01:17:30.2880369Z",
+    "head":  "3a6b8167b91fdd2186f0bdae053d6c7d8a8e92c5",
+    "last_subject":  "fix(auth): include property route guard",
+    "staged":  [
+
+               ],
+    "status":  [
+                   " M apps/web/vercel_env_output.txt",
+                   "?? .p0_commit_manifest.py",
+                   "?? .p0_core_validate.ps1",
+                   "?? .p0_finalize_provenance.py",
+                   "?? .p0_normalize_line_endings.py",
+                   "?? .p0_patch_static_hardening.py",
+                   "?? .p0_secret_scan.py",
+                   "?? docs/consolidation/"
+               ],
+    "remote":  [
+                   "3a6b8167b91fdd2186f0bdae053d6c7d8a8e92c5\trefs/heads/p0/rah-core-candidate-20260723"
+               ]
+}

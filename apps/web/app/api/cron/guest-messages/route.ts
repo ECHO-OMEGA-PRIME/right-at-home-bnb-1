@@ -10,6 +10,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { processDueMessages } from '@/lib/integrations/booking-automations';
 
+export const dynamic = 'force-dynamic';
+
 export const runtime = 'nodejs';
 export const maxDuration = 30;
 
@@ -18,7 +20,7 @@ export async function GET(request: NextRequest) {
     // Verify cron secret (Vercel sets this for cron jobs)
     const authHeader = request.headers.get('authorization');
     const cronSecret = process.env.CRON_SECRET;
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+    if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

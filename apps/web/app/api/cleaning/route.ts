@@ -7,22 +7,52 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requireOneOfRoles } from '@/lib/api-auth';
+import { propertyScopeFor, scopeAllows, scopedWhere } from '@/lib/tenant-scope';
 import {
   masterChecklist,
   getChecklistForProperty
-} from '@/lib/cleaning-system';
+} from '@/lib/cleaning-domain';
 
 // ============================================================================
 // GET - List cleaning jobs or get specific job
 // ============================================================================
 
+
+/**
+ * Parse a JSON column that may be malformed.
+ *
+ * checklistProgress / photos / issues are JSON STRINGS on CleaningJob rather
+ * than relations (see queue #26966). Every read site called JSON.parse bare, so
+ * a single malformed row 500'd the whole request -- including the LIST endpoint,
+ * where one bad row would take out every other job with it.
+ *
+ * Returns [] and logs, so one damaged row degrades to an empty list instead of
+ * an outage. It does NOT silently hide the problem: the row id is logged.
+ */
+function parseJsonColumn(raw: string | null, jobId: string, field: string): unknown[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    console.error('[cleaning] malformed JSON column', { jobId, field });
+    return [];
+  }
+}
+
 export async function GET(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['worker', 'owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const { searchParams } = new URL(request.url);
     const jobId = searchParams.get('id');
     const cleanerId = searchParams.get('cleanerId');
     const propertyId = searchParams.get('propertyId');
     const status = searchParams.get('status');
+
+    // Property-level isolation (#26919).
+    const scope = await propertyScopeFor(auth.user);
 
     // Get specific job
     if (jobId) {
@@ -35,15 +65,18 @@ export async function GET(request: NextRequest) {
         },
       });
 
-      if (!job) {
+      // Fetching by id bypassed every filter: a worker could read ANY cleaning
+      // job, at any property, just by knowing its id. 404 rather than 403 --
+      // a 403 confirms the job exists, which is itself a disclosure.
+      if (!job || !scopeAllows(scope, job.propertyId)) {
         return NextResponse.json({ error: 'Job not found' }, { status: 404 });
       }
 
       return NextResponse.json({
         ...job,
-        checklistProgress: job.checklistProgress ? JSON.parse(job.checklistProgress) : [],
-        photos: job.photos ? JSON.parse(job.photos) : [],
-        issues: job.issues ? JSON.parse(job.issues) : [],
+        checklistProgress: parseJsonColumn(job.checklistProgress, job.id, 'checklistProgress'),
+        photos: parseJsonColumn(job.photos, job.id, 'photos'),
+        issues: parseJsonColumn(job.issues, job.id, 'issues'),
       });
     }
 
@@ -54,7 +87,7 @@ export async function GET(request: NextRequest) {
     if (status) where.status = status;
 
     const jobs = await prisma.cleaningJob.findMany({
-      where,
+      where: scopedWhere(where, scope),
       include: {
         property: { select: { name: true, address: true } },
         cleaner: { select: { name: true, email: true } },
@@ -66,9 +99,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       reports: jobs.map((j) => ({
         ...j,
-        checklistProgress: j.checklistProgress ? JSON.parse(j.checklistProgress) : [],
-        photos: j.photos ? JSON.parse(j.photos) : [],
-        issues: j.issues ? JSON.parse(j.issues) : [],
+        checklistProgress: parseJsonColumn(j.checklistProgress, j.id, 'checklistProgress'),
+        photos: parseJsonColumn(j.photos, j.id, 'photos'),
+        issues: parseJsonColumn(j.issues, j.id, 'issues'),
       })),
       total: jobs.length,
     });
@@ -83,6 +116,8 @@ export async function GET(request: NextRequest) {
 // ============================================================================
 
 export async function POST(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['worker', 'owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const body = await request.json();
     const { action } = body;
@@ -156,11 +191,15 @@ export async function POST(request: NextRequest) {
         const { reportId, itemId, photoUrl, notes } = body;
 
         const job = await prisma.cleaningJob.findUnique({ where: { id: reportId } });
-        if (!job) {
+        if (!job || !scopeAllows(await propertyScopeFor(auth.user), job.propertyId)) {
+          // Same IDOR as the GET-by-id branch: acting on a job by id
+          // bypassed every filter. 404 rather than 403 -- a 403 confirms the
+          // job exists at a property this caller cannot see.
+
           return NextResponse.json({ error: 'Job not found' }, { status: 404 });
         }
 
-        const checklist = job.checklistProgress ? JSON.parse(job.checklistProgress) : [];
+        const checklist = parseJsonColumn(job.checklistProgress, job.id, 'checklistProgress') as any[];
         const item = checklist.find((i: any) => i.itemId === itemId);
         if (!item) {
           return NextResponse.json({ error: 'Checklist item not found' }, { status: 404 });
@@ -196,11 +235,15 @@ export async function POST(request: NextRequest) {
         const { reportId, issue } = body;
 
         const job = await prisma.cleaningJob.findUnique({ where: { id: reportId } });
-        if (!job) {
+        if (!job || !scopeAllows(await propertyScopeFor(auth.user), job.propertyId)) {
+          // Same IDOR as the GET-by-id branch: acting on a job by id
+          // bypassed every filter. 404 rather than 403 -- a 403 confirms the
+          // job exists at a property this caller cannot see.
+
           return NextResponse.json({ error: 'Job not found' }, { status: 404 });
         }
 
-        const issues = job.issues ? JSON.parse(job.issues) : [];
+        const issues = parseJsonColumn(job.issues, job.id, 'issues') as any[];
         const newIssue = {
           ...issue,
           id: `issue-${Date.now()}`,
@@ -221,11 +264,15 @@ export async function POST(request: NextRequest) {
         const { reportId, photoUrl, description, location } = body;
 
         const job = await prisma.cleaningJob.findUnique({ where: { id: reportId } });
-        if (!job) {
+        if (!job || !scopeAllows(await propertyScopeFor(auth.user), job.propertyId)) {
+          // Same IDOR as the GET-by-id branch: acting on a job by id
+          // bypassed every filter. 404 rather than 403 -- a 403 confirms the
+          // job exists at a property this caller cannot see.
+
           return NextResponse.json({ error: 'Job not found' }, { status: 404 });
         }
 
-        const photos = job.photos ? JSON.parse(job.photos) : [];
+        const photos = parseJsonColumn(job.photos, job.id, 'photos') as any[];
         const photo = {
           area: location || description || 'General',
           photoUrl,
@@ -245,11 +292,49 @@ export async function POST(request: NextRequest) {
         const { reportId, notes } = body;
 
         const job = await prisma.cleaningJob.findUnique({ where: { id: reportId } });
-        if (!job) {
+        if (!job || !scopeAllows(await propertyScopeFor(auth.user), job.propertyId)) {
+          // Same IDOR as the GET-by-id branch: acting on a job by id
+          // bypassed every filter. 404 rather than 403 -- a 403 confirms the
+          // job exists at a property this caller cannot see.
+
           return NextResponse.json({ error: 'Job not found' }, { status: 404 });
         }
 
-        const checklist = job.checklistProgress ? JSON.parse(job.checklistProgress) : [];
+        const checklist = parseJsonColumn(job.checklistProgress, job.id, 'checklistProgress') as any[];
+
+        // ── Completion gates (P2-1: "without allowing silent completion gaps")
+        //
+        // 1. A job that was never STARTED must not be completable. Previously a
+        //    checklist with no photo-required items passed the check below and
+        //    completed a job whose startedAt was null — a turnover marked done
+        //    that nobody ever began, with no duration and no evidence.
+        if (!job.startedAt) {
+          return NextResponse.json(
+            {
+              error: 'This turnover was never started, so it cannot be completed',
+              detail: 'POST action "start" first — completion records a duration measured from it.',
+            },
+            { status: 400 },
+          );
+        }
+
+        // 2. An EMPTY checklist must be refused explicitly. It used to reach the
+        //    score maths as 0/0, produce NaN, and fail at the database write as
+        //    an opaque 500 — failing closed by accident rather than by design.
+        //    An empty list is also exactly what parseJsonColumn returns for a
+        //    MALFORMED blob, so this is the difference between "no evidence" and
+        //    "evidence we could not read", both of which must block completion.
+        if (checklist.length === 0) {
+          return NextResponse.json(
+            {
+              error: 'No checklist progress recorded, so this turnover cannot be completed',
+              detail:
+                'Either no checklist was started, or the stored checklist could not be read. ' +
+                'Completion requires recorded evidence.',
+            },
+            { status: 400 },
+          );
+        }
 
         // Check required items
         const incompleteRequired = checklist.filter((item: any) => {
@@ -275,9 +360,15 @@ export async function POST(request: NextRequest) {
         // Calculate quality score
         const completedItems = checklist.filter((i: any) => i.completed).length;
         const totalItems = checklist.length;
-        const issues = job.issues ? JSON.parse(job.issues) : [];
+        const issues = parseJsonColumn(job.issues, job.id, 'issues') as any[];
         const issueDeduction = issues.filter((i: any) => i.severity === 'high' || i.severity === 'urgent').length * 10;
-        const score = Math.max(0, Math.round(((completedItems / totalItems) * 100) - issueDeduction));
+        // totalItems cannot be 0 here — the gate above refuses an empty
+        // checklist — but the guard stays so a future edit to that gate cannot
+        // silently reintroduce a NaN score on an Int column.
+        const score =
+          totalItems > 0
+            ? Math.max(0, Math.round(((completedItems / totalItems) * 100) - issueDeduction))
+            : 0;
 
         const updated = await prisma.cleaningJob.update({
           where: { id: reportId },
@@ -301,7 +392,7 @@ export async function POST(request: NextRequest) {
             completedItems,
             totalItems,
             issuesReported: issues.length,
-            photosUploaded: (job.photos ? JSON.parse(job.photos) : []).length +
+            photosUploaded: parseJsonColumn(job.photos, job.id, 'photos').length +
               checklist.filter((i: any) => i.photoUrl).length,
             timeSpentMinutes: durationMins,
             score,
@@ -337,6 +428,8 @@ export async function POST(request: NextRequest) {
 // ============================================================================
 
 export async function PUT(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['worker', 'owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const body = await request.json();
     const { reportId, updates } = body;
@@ -351,11 +444,23 @@ export async function PUT(request: NextRequest) {
     if (updates.cleanerId !== undefined) data.cleanerId = updates.cleanerId;
     if (updates.scheduledAt !== undefined) data.scheduledAt = new Date(updates.scheduledAt);
 
-    const job = await prisma.cleaningJob.update({
-      where: { id: reportId },
+    // PUT updated by primary key with NO ownership check at all: a worker could
+    // rewrite any job's status, assigned cleaner, schedule and notes at any
+    // property, silently. Scoped and made atomic in one step -- updateMany with
+    // the scope in the WHERE cannot be raced the way fetch-then-update can.
+    const scope = await propertyScopeFor(auth.user);
+    const result = await prisma.cleaningJob.updateMany({
+      where: scopedWhere({ id: reportId }, scope),
       data,
     });
 
+    if (result.count === 0) {
+      // 404, not 403 -- a 403 would confirm the job exists at a property this
+      // caller is not entitled to see.
+      return NextResponse.json({ error: 'Job not found' }, { status: 404 });
+    }
+
+    const job = await prisma.cleaningJob.findUnique({ where: { id: reportId } });
     return NextResponse.json({ success: true, report: job });
   } catch (error: any) {
     console.error('[Cleaning PUT]', error);
@@ -368,6 +473,8 @@ export async function PUT(request: NextRequest) {
 // ============================================================================
 
 export async function DELETE(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['worker', 'owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const { searchParams } = new URL(request.url);
     const jobId = searchParams.get('id');
@@ -377,7 +484,11 @@ export async function DELETE(request: NextRequest) {
     }
 
     const job = await prisma.cleaningJob.findUnique({ where: { id: jobId } });
-    if (!job) {
+    if (!job || !scopeAllows(await propertyScopeFor(auth.user), job.propertyId)) {
+      // Same IDOR as the GET-by-id branch: acting on a job by id
+      // bypassed every filter. 404 rather than 403 -- a 403 confirms the
+      // job exists at a property this caller cannot see.
+
       return NextResponse.json({ error: 'Job not found' }, { status: 404 });
     }
 

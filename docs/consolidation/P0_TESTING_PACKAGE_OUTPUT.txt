@@ -1,0 +1,382 @@
+﻿
+> @rightathome/testing@1.0.0 test C:\ECHO_OMEGA_PRIME\WEBSITES\right-at-home-bnb\packages\testing
+> vitest run --passWithNoTests
+
+
+[7m[1m[36m RUN [39m[22m[27m [36mv1.6.1[39m [90mC:/ECHO_OMEGA_PRIME/WEBSITES/right-at-home-bnb/packages/testing[39m
+
+[90mstdout[2m | integration/api.test.ts[22m[39m
+[Test Setup] Test environment initialized
+
+[90mstdout[2m | e2e/booking-flow.test.ts[2m > [22m[2mE2E: Complete Booking Flow[2m > [22m[2mComplete Flow: Start to Finish[2m > [22m[2mshould complete full booking journey[22m[39m
+E2E booking flow completed: book_1784847798124
+
+[90mstdout[2m | e2e/booking-flow.test.ts[22m[39m
+[Test Setup] Test environment initialized
+[Test Cleanup] Test environment cleaned up
+
+ [32mΓ£ô[39m e2e/booking-flow.test.ts[2m > [22mE2E: Complete Booking Flow[2m > [22mStep 1: Property Selection[2m > [22mshould display available properties
+ [32mΓ£ô[39m e2e/booking-flow.test.ts[2m > [22mE2E: Complete Booking Flow[2m > [22mStep 1: Property Selection[2m > [22mshould filter properties by guest count
+ [32mΓ£ô[39m e2e/booking-flow.test.ts[2m > [22mE2E: Complete Booking Flow[2m > [22mStep 1: Property Selection[2m > [22mshould select property and view details
+ [32mΓ£ô[39m e2e/booking-flow.test.ts[2m > [22mE2E: Complete Booking Flow[2m > [22mStep 2: Date Selection[2m > [22mshould validate date range selection
+ [32mΓ£ô[39m e2e/booking-flow.test.ts[2m > [22mE2E: Complete Booking Flow[2m > [22mStep 2: Date Selection[2m > [22mshould reject invalid date ranges
+ [32mΓ£ô[39m e2e/booking-flow.test.ts[2m > [22mE2E: Complete Booking Flow[2m > [22mStep 2: Date Selection[2m > [22mshould check property availability for selected dates
+ [32mΓ£ô[39m e2e/booking-flow.test.ts[2m > [22mE2E: Complete Booking Flow[2m > [22mStep 3: Guest Information[2m > [22mshould validate guest email
+ [32mΓ£ô[39m e2e/booking-flow.test.ts[2m > [22mE2E: Complete Booking Flow[2m > [22mStep 3: Guest Information[2m > [22mshould validate guest phone
+ [32mΓ£ô[39m e2e/booking-flow.test.ts[2m > [22mE2E: Complete Booking Flow[2m > [22mStep 3: Guest Information[2m > [22mshould create or retrieve guest record
+ [32mΓ£ô[39m e2e/booking-flow.test.ts[2m > [22mE2E: Complete Booking Flow[2m > [22mStep 4: Pricing Calculation[2m > [22mshould calculate correct booking total
+ [32mΓ£ô[39m e2e/booking-flow.test.ts[2m > [22mE2E: Complete Booking Flow[2m > [22mStep 4: Pricing Calculation[2m > [22mshould include all fee components
+ [32mΓ£ô[39m e2e/booking-flow.test.ts[2m > [22mE2E: Complete Booking Flow[2m > [22mStep 5: Booking Confirmation[2m > [22mshould create booking with all required data
+ [32mΓ£ô[39m e2e/booking-flow.test.ts[2m > [22mE2E: Complete Booking Flow[2m > [22mStep 5: Booking Confirmation[2m > [22mshould save booking to database
+ [32mΓ£ô[39m e2e/booking-flow.test.ts[2m > [22mE2E: Complete Booking Flow[2m > [22mStep 5: Booking Confirmation[2m > [22mshould sync booking to Firebase
+ [32mΓ£ô[39m e2e/booking-flow.test.ts[2m > [22mE2E: Complete Booking Flow[2m > [22mStep 6: Post-Booking Actions[2m > [22mshould create cleaning job for booking
+ [32mΓ£ô[39m e2e/booking-flow.test.ts[2m > [22mE2E: Complete Booking Flow[2m > [22mStep 6: Post-Booking Actions[2m > [22mshould update guest statistics
+ [32mΓ£ô[39m e2e/booking-flow.test.ts[2m > [22mE2E: Complete Booking Flow[2m > [22mComplete Flow: Start to Finish[2m > [22mshould complete full booking journey
+ [32mΓ£ô[39m e2e/booking-flow.test.ts[2m > [22mE2E: Complete Booking Flow[2m > [22mError Scenarios[2m > [22mshould handle booking for non-existent property
+ [32mΓ£ô[39m e2e/booking-flow.test.ts[2m > [22mE2E: Complete Booking Flow[2m > [22mError Scenarios[2m > [22mshould validate guest count against property max
+ [32mΓ£ô[39m e2e/booking-flow.test.ts[2m > [22mE2E: Complete Booking Flow[2m > [22mError Scenarios[2m > [22mshould handle invalid date selections
+ [32mΓ£ô[39m e2e/booking-flow.test.ts[2m > [22mE2E: Complete Booking Flow[2m > [22mBooking Modification[2m > [22mshould allow date changes before check-in
+ [32mΓ£ô[39m e2e/booking-flow.test.ts[2m > [22mE2E: Complete Booking Flow[2m > [22mBooking Modification[2m > [22mshould handle booking cancellation
+ [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mProperty API[2m > [22mshould list all properties
+ [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mProperty API[2m > [22mshould get property by ID
+ [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mProperty API[2m > [22mshould return null for non-existent property
+ [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mProperty API[2m > [22mshould create a new property
+ [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mProperty API[2m > [22mshould update property
+ [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mProperty API[2m > [22mshould delete property
+ [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mBooking API[2m > [22mshould list all bookings
+ [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mBooking API[2m > [22mshould get booking by ID
+ [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mBooking API[2m > [22mshould create a new booking
+ [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mBooking API[2m > [22mshould update booking status
+ [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mBooking API[2m > [22mshould cancel booking
+ [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mGuest API[2m > [22mshould list all guests
+ [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mGuest API[2m > [22mshould get guest by ID
+ [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mGuest API[2m > [22mshould search guests by name
+ [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mGuest API[2m > [22mshould search guests by email
+ [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mCleaning API[2m > [22mshould list all cleaning jobs
+ [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mCleaning API[2m > [22mshould get cleaning job by ID
+ [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mCleaning API[2m > [22mshould assign cleaner to job
+ [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mCleaning API[2m > [22mshould complete cleaning job
+ [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mHTTP Fetch Mock[2m > [22mshould mock GET request
+ [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mHTTP Fetch Mock[2m > [22mshould mock POST request
+ [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mHTTP Fetch Mock[2m > [22mshould return 404 for unset routes
+ [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mHTTP Fetch Mock[2m > [22mshould mock PUT request
+ [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mHTTP Fetch Mock[2m > [22mshould mock DELETE request
+ [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mResponse Helpers[2m > [22mshould create mock API response
+ [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mResponse Helpers[2m > [22mshould create mock error response
+ [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mResponse Helpers[2m > [22mshould create mock paginated response
+ [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mError Handling[2m > [22mshould handle network errors gracefully
+ [32mΓ£ô[39m e2e/guest-journey.test.ts[2m > [22mE2E: Guest Journey[2m > [22mGuest Discovery Phase[2m > [22mshould browse available properties
+ [32mΓ£ô[39m e2e/guest-journey.test.ts[2m > [22mE2E: Guest Journey[2m > [22mGuest Discovery Phase[2m > [22mshould filter properties by guest needs
+ [32mΓ£ô[39m e2e/guest-journey.test.ts[2m > [22mE2E: Guest Journey[2m > [22mGuest Discovery Phase[2m > [22mshould view property details and photos
+ [32mΓ£ô[39m e2e/guest-journey.test.ts[2m > [22mE2E: Guest Journey[2m > [22mGuest Registration[2m > [22mshould validate guest email
+ [32mΓ£ô[39m e2e/guest-journey.test.ts[2m > [22mE2E: Guest Journey[2m > [22mGuest Registration[2m > [22mshould validate guest phone
+ [32mΓ£ô[39m e2e/guest-journey.test.ts[2m > [22mE2E: Guest Journey[2m > [22mGuest Registration[2m > [22mshould create new guest account
+ [32mΓ£ô[39m e2e/guest-journey.test.ts[2m > [22mE2E: Guest Journey[2m > [22mGuest Registration[2m > [22mshould recognize returning guest
+ [32mΓ£ô[39m e2e/guest-journey.test.ts[2m > [22mE2E: Guest Journey[2m > [22mGuest Registration[2m > [22mshould update guest stats on return visit
+ [32mΓ£ô[39m e2e/guest-journey.test.ts[2m > [22mE2E: Guest Journey[2m > [22mBooking Experience[2m > [22mshould select dates and see pricing
+ [32mΓ£ô[39m e2e/guest-journey.test.ts[2m > [22mE2E: Guest Journey[2m > [22mBooking Experience[2m > [22mshould make a booking
+ [32mΓ£ô[39m e2e/guest-journey.test.ts[2m > [22mE2E: Guest Journey[2m > [22mBooking Experience[2m > [22mshould receive booking confirmation
+ [32mΓ£ô[39m e2e/guest-journey.test.ts[2m > [22mE2E: Guest Journey[2m > [22mPre-Arrival Experience[2m > [22mshould receive check-in instructions
+ [32mΓ£ô[39m e2e/guest-journey.test.ts[2m > [22mE2E: Guest Journey[2m > [22mPre-Arrival Experience[2m > [22mshould have access code generated before check-in
+ [32mΓ£ô[39m e2e/guest-journey.test.ts[2m > [22mE2E: Guest Journey[2m > [22mDuring Stay Experience[2m > [22mshould allow guest to contact host
+ [32mΓ£ô[39m e2e/guest-journey.test.ts[2m > [22mE2E: Guest Journey[2m > [22mDuring Stay Experience[2m > [22mshould track guest check-in
+ [32mΓ£ô[39m e2e/guest-journey.test.ts[2m > [22mE2E: Guest Journey[2m > [22mCheck-Out Experience[2m > [22mshould process guest check-out
+ [32mΓ£ô[39m e2e/guest-journey.test.ts[2m > [22mE2E: Guest Journey[2m > [22mCheck-Out Experience[2m > [22mshould trigger cleaning job on check-out
+ [32mΓ£ô[39m e2e/guest-journey.test.ts[2m > [22mE2E: Guest Journey[2m > [22mCheck-Out Experience[2m > [22mshould send post-checkout thank you
+ [32mΓ£ô[39m e2e/guest-journey.test.ts[2m > [22mE2E: Guest Journey[2m > [22mGuest Loyalty & VIP[2m > [22mshould track guest stay history
+ [32mΓ£ô[39m e2e/guest-journey.test.ts[2m > [22mE2E: Guest Journey[2m > [22mGuest Loyalty & VIP[2m > [22mshould identify VIP guests
+ [32mΓ£ô[39m e2e/guest-journey.test.ts[2m > [22mE2E: Guest Journey[2m > [22mGuest Loyalty & VIP[2m > [22mshould upgrade guest to VIP after threshold
+ [32mΓ£ô[39m e2e/guest-journey.test.ts[2m > [22mE2E: Guest Journey[2m > [22mComplete Guest Journey[2m > [22mshould complete full guest lifecycle
+ [32mΓ£ô[39m e2e/guest-journey.test.ts[2m > [22mE2E: Guest Journey[2m > [22mGuest Search & History[2m > [22mshould search guests by email
+ [32mΓ£ô[39m e2e/guest-journey.test.ts[2m > [22mE2E: Guest Journey[2m > [22mGuest Search & History[2m > [22mshould retrieve guest booking history
+[90mstdout[2m | e2e/guest-journey.test.ts[2m > [22m[2mE2E: Guest Journey[2m > [22m[2mComplete Guest Journey[2m > [22m[2mshould complete full guest lifecycle[22m[39m
+Guest journey completed: journey_1784847798142@test.com -> book_1784847798142
+
+[90mstdout[2m | e2e/guest-journey.test.ts[22m[39m
+[Test Setup] Test environment initialized
+[Test Cleanup] Test environment cleaned up
+
+ [32mΓ£ô[39m e2e/property-management.test.ts[2m > [22mE2E: Property Management[2m > [22mProperty Listing[2m > [22mshould list all Steven Palma properties
+ [32mΓ£ô[39m e2e/property-management.test.ts[2m > [22mE2E: Property Management[2m > [22mProperty Listing[2m > [22mshould have correct property count (14 properties)
+ [32mΓ£ô[39m e2e/property-management.test.ts[2m > [22mE2E: Property Management[2m > [22mProperty Listing[2m > [22mshould have all properties in Midland, TX
+ [32mΓ£ô[39m e2e/property-management.test.ts[2m > [22mE2E: Property Management[2m > [22mProperty Listing[2m > [22mshould display correct photo counts per property
+ [32mΓ£ô[39m e2e/property-management.test.ts[2m > [22mE2E: Property Management[2m > [22mProperty Creation[2m > [22mshould create a new property with required fields
+ [32mΓ£ô[39m e2e/property-management.test.ts[2m > [22mE2E: Property Management[2m > [22mProperty Creation[2m > [22mshould validate ZIP code on creation
+ [32mΓ£ô[39m e2e/property-management.test.ts[2m > [22mE2E: Property Management[2m > [22mProperty Creation[2m > [22mshould sync new property to Firebase
+ [32mΓ£ô[39m e2e/property-management.test.ts[2m > [22mE2E: Property Management[2m > [22mProperty Creation[2m > [22mshould generate unique property ID
+ [32mΓ£ô[39m e2e/property-management.test.ts[2m > [22mE2E: Property Management[2m > [22mProperty Update[2m > [22mshould update property pricing
+ [32mΓ£ô[39m e2e/property-management.test.ts[2m > [22mE2E: Property Management[2m > [22mProperty Update[2m > [22mshould update property amenities
+ [32mΓ£ô[39m e2e/property-management.test.ts[2m > [22mE2E: Property Management[2m > [22mProperty Update[2m > [22mshould update property status
+ [32mΓ£ô[39m e2e/property-management.test.ts[2m > [22mE2E: Property Management[2m > [22mProperty Update[2m > [22mshould sync property updates to Firebase
+ [32mΓ£ô[39m e2e/property-management.test.ts[2m > [22mE2E: Property Management[2m > [22mProperty Deletion[2m > [22mshould delete property from database
+ [32mΓ£ô[39m e2e/property-management.test.ts[2m > [22mE2E: Property Management[2m > [22mProperty Deletion[2m > [22mshould remove property from Firebase on delete
+ [32mΓ£ô[39m e2e/property-management.test.ts[2m > [22mE2E: Property Management[2m > [22mProperty Search & Filter[2m > [22mshould filter properties by bedroom count
+ [32mΓ£ô[39m e2e/property-management.test.ts[2m > [22mE2E: Property Management[2m > [22mProperty Search & Filter[2m > [22mshould filter properties by price range
+ [32mΓ£ô[39m e2e/property-management.test.ts[2m > [22mE2E: Property Management[2m > [22mProperty Search & Filter[2m > [22mshould filter properties by amenity
+ [32mΓ£ô[39m e2e/property-management.test.ts[2m > [22mE2E: Property Management[2m > [22mProperty Search & Filter[2m > [22mshould search properties by name
+ [32mΓ£ô[39m e2e/property-management.test.ts[2m > [22mE2E: Property Management[2m > [22mProperty Validation[2m > [22mshould validate required fields
+ [32mΓ£ô[39m e2e/property-management.test.ts[2m > [22mE2E: Property Management[2m > [22mProperty Validation[2m > [22mshould validate bedroom count is positive
+ [32mΓ£ô[39m e2e/property-management.test.ts[2m > [22mE2E: Property Management[2m > [22mProperty Validation[2m > [22mshould validate bathroom count is positive
+ [32mΓ£ô[39m e2e/property-management.test.ts[2m > [22mE2E: Property Management[2m > [22mProperty Validation[2m > [22mshould validate maxGuests is reasonable
+ [32mΓ£ô[39m e2e/property-management.test.ts[2m > [22mE2E: Property Management[2m > [22mProperty Validation[2m > [22mshould validate baseRate is positive
+ [32mΓ£ô[39m e2e/property-management.test.ts[2m > [22mE2E: Property Management[2m > [22mProperty-Booking Relationship[2m > [22mshould link bookings to properties
+ [32mΓ£ô[39m e2e/property-management.test.ts[2m > [22mE2E: Property Management[2m > [22mProperty-Booking Relationship[2m > [22mshould link cleaning jobs to properties
+ [32mΓ£ô[39m e2e/property-management.test.ts[2m > [22mE2E: Property Management[2m > [22mComplete Property CRUD Flow[2m > [22mshould complete full property lifecycle
+ [32mΓ£ô[39m e2e/property-management.test.ts[2m > [22mE2E: Property Management[2m > [22mProperty Photo Management[2m > [22mshould have expected photo counts per property
+ [32mΓ£ô[39m e2e/property-management.test.ts[2m > [22mE2E: Property Management[2m > [22mProperty Photo Management[2m > [22mshould total 730 photos across all properties
+ [32mΓ£ô[39m e2e/property-management.test.ts[2m > [22mE2E: Property Management[2m > [22mProperty Photo Management[2m > [22mshould store photo URLs in Firebase
+[90mstdout[2m | e2e/property-management.test.ts[2m > [22m[2mE2E: Property Management[2m > [22m[2mComplete Property CRUD Flow[2m > [22m[2mshould complete full property lifecycle[22m[39m
+Property CRUD lifecycle completed for: prop_1784847798142
+
+[90mstdout[2m | e2e/property-management.test.ts[22m[39m
+[Test Setup] Test environment initialized
+[Test Cleanup] Test environment cleaned up
+
+[90mstdout[2m | integration/api.test.ts[22m[39m
+[Test Cleanup] Test environment cleaned up
+
+ [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mError Handling[2m > [22mshould handle timeout errors
+ [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mError Handling[2m > [22mshould handle validation errors
+ [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mError Handling[2m > [22mshould handle authorization errors
+ [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mPagination[2m > [22mshould paginate property list
+ [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mPagination[2m > [22mshould calculate total pages correctly
+ [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mPagination[2m > [22mshould handle last page with fewer items
+ [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mContent Type Handling[2m > [22mshould handle JSON responses
+ [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mContent Type Handling[2m > [22mshould handle text responses
+ [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mDate Formatting[2m > [22mshould format date as YYYY-MM-DD
+ [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mDate Formatting[2m > [22mshould handle single digit months and days
+ [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mDate Formatting[2m > [22mshould format future dates correctly
+ [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mDate Formatting[2m > [22mshould format date ranges for booking display
+ [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mDate Formatting[2m > [22mshould handle year boundary in date range
+ [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mCurrency Formatting[2m > [22mshould format whole numbers
+ [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mCurrency Formatting[2m > [22mshould format decimal amounts
+ [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mCurrency Formatting[2m > [22mshould format zero
+ [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mCurrency Formatting[2m > [22mshould format property rates correctly
+ [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mCurrency Formatting[2m > [22mshould format booking totals correctly
+ [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mPhone Formatting[2m > [22mshould format 10-digit phone numbers
+ [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mPhone Formatting[2m > [22mshould handle phone with country code
+ [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mPhone Formatting[2m > [22mshould handle already formatted phones
+ [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mPhone Formatting[2m > [22mshould preserve invalid phone numbers
+ [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mPhone Formatting[2m > [22mshould format all Midland area codes consistently
+ [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mAddress Formatting[2m > [22mshould format full address
+ [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mAddress Formatting[2m > [22mshould format all property addresses
+ [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mGuest Count Formatting[2m > [22mshould format singular guest
+ [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mGuest Count Formatting[2m > [22mshould format plural guests
+ [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mGuest Count Formatting[2m > [22mshould format property max guests
+ [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mNight Count Formatting[2m > [22mshould format singular night
+ [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mNight Count Formatting[2m > [22mshould format plural nights
+ [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mNight Count Formatting[2m > [22mshould format booking nights
+ [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mAmenities Formatting[2m > [22mshould capitalize and space amenities
+ [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mAmenities Formatting[2m > [22mshould join with commas
+ [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mAmenities Formatting[2m > [22mshould handle property amenities
+ [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mBooking Status Formatting[2m > [22mshould format all statuses correctly
+ [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mBooking Status Formatting[2m > [22mshould handle unknown statuses
+ [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mRelative Time Formatting[2m > [22mshould format today
+ [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mRelative Time Formatting[2m > [22mshould format tomorrow
+ [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mRelative Time Formatting[2m > [22mshould format future days
+ [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mRelative Time Formatting[2m > [22mshould format past days
+ [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mProperty Name Formatting[2m > [22mshould have descriptive property names
+ [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mProperty Name Formatting[2m > [22mshould have unique property names
+ [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mURL Slug Generation[2m > [22mshould generate valid URL slugs from property names
+ [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mURL Slug Generation[2m > [22mshould handle special characters in names
+ [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mNumeric Formatting[2m > [22mshould format bedroom count
+ [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mNumeric Formatting[2m > [22mshould format bathroom count with decimal
+ [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mNumeric Formatting[2m > [22mshould format cleaning duration as hours/minutes
+[90mstdout[2m | unit/formatting.test.ts[22m[39m
+[Test Setup] Test environment initialized
+[Test Cleanup] Test environment cleaned up
+
+ [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mProperty Operations[2m > [22mshould fetch all properties
+ [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mProperty Operations[2m > [22mshould find property by ID
+ [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mProperty Operations[2m > [22mshould return null for non-existent property
+ [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mProperty Operations[2m > [22mshould create a new property
+ [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mProperty Operations[2m > [22mshould update property details
+ [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mProperty Operations[2m > [22mshould delete a property
+ [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mProperty Operations[2m > [22mshould count properties
+ [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mProperty Operations[2m > [22mshould find properties by city
+ [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mProperty Operations[2m > [22mshould find active properties
+ [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mBooking Operations[2m > [22mshould fetch all bookings
+ [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mBooking Operations[2m > [22mshould find booking by ID
+ [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mBooking Operations[2m > [22mshould create a new booking
+ [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mBooking Operations[2m > [22mshould update booking status
+ [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mBooking Operations[2m > [22mshould find bookings by property
+ [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mBooking Operations[2m > [22mshould find confirmed bookings
+ [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mGuest Operations[2m > [22mshould fetch all guests
+ [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mGuest Operations[2m > [22mshould find guest by email
+ [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mGuest Operations[2m > [22mshould create a new guest
+ [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mGuest Operations[2m > [22mshould upsert guest (create or update)
+ [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mGuest Operations[2m > [22mshould find VIP guests
+ [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mUser Operations[2m > [22mshould fetch all users
+ [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mUser Operations[2m > [22mshould find user by ID
+ [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mUser Operations[2m > [22mshould find user by email
+ [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mUser Operations[2m > [22mshould find cleaners
+ [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mCleaning Job Operations[2m > [22mshould fetch all cleaning jobs
+ [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mCleaning Job Operations[2m > [22mshould find cleaning job by ID
+ [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mCleaning Job Operations[2m > [22mshould update cleaning job status
+ [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mCleaning Job Operations[2m > [22mshould find jobs by cleaner
+ [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mCleaning Job Operations[2m > [22mshould find scheduled jobs
+ [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mTransaction Operations[2m > [22mshould execute transaction with multiple operations
+ [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mTransaction Operations[2m > [22mshould connect and disconnect
+ [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mData Integrity[2m > [22mshould maintain referential integrity between bookings and properties
+ [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mData Integrity[2m > [22mshould maintain referential integrity between cleaning jobs and properties
+ [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mData Integrity[2m > [22mshould have unique primary keys
+ [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mQuery Performance[2m > [22mshould handle batch operations efficiently
+ [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mQuery Performance[2m > [22mshould support pagination
+[90mstdout[2m | integration/database.test.ts[22m[39m
+[Test Setup] Test environment initialized
+[Test Cleanup] Test environment cleaned up
+
+ [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mFirebase Initialization[2m > [22mshould initialize with correct project ID
+ [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mFirebase Initialization[2m > [22mshould have app name
+ [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mFirestore Collection Operations[2m > [22mshould create collection reference
+ [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mFirestore Collection Operations[2m > [22mshould add document to collection
+ [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mFirestore Collection Operations[2m > [22mshould set document with specific ID
+ [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mFirestore Collection Operations[2m > [22mshould get document by ID
+ [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mFirestore Collection Operations[2m > [22mshould update existing document
+ [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mFirestore Collection Operations[2m > [22mshould delete document
+ [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mFirestore Collection Operations[2m > [22mshould handle non-existent document
+ [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mBatch Operations[2m > [22mshould create batch write
+ [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mBatch Operations[2m > [22mshould commit batch successfully
+ [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mTransaction Operations[2m > [22mshould run transaction
+ [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mReal-time Listeners[2m > [22mshould set up document listener
+ [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mReal-time Listeners[2m > [22mshould set up collection listener
+ [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mReal-time Listeners[2m > [22mshould receive initial snapshot
+ [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mQuery Operations[2m > [22mshould query with where clause
+ [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mQuery Operations[2m > [22mshould execute query
+ [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mProperty Sync[2m > [22mshould sync all properties to Firestore
+ [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mProperty Sync[2m > [22mshould retrieve synced properties
+ [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mBooking Sync[2m > [22mshould sync bookings to Firestore
+ [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mBooking Sync[2m > [22mshould update booking status
+ [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mGuest Sync[2m > [22mshould sync guests to Firestore
+ [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mGuest Sync[2m > [22mshould find guest by email
+ [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mOffline Queue[2m > [22mshould queue operations for offline sync
+ [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mOffline Queue[2m > [22mshould process queued operations
+ [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mSync Metadata[2m > [22mshould track last sync timestamp
+ [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mSync Metadata[2m > [22mshould track sync status per collection
+ [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mError Handling[2m > [22mshould handle update on non-existent document
+ [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mError Handling[2m > [22mshould handle invalid collection name
+ [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mData Validation[2m > [22mshould validate property data structure before sync
+ [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mData Validation[2m > [22mshould validate booking data structure before sync
+[90mstdout[2m | integration/sync.test.ts[22m[39m
+[Test Setup] Test environment initialized
+[Test Cleanup] Test environment cleaned up
+
+ [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mEmail Validation[2m > [22mshould accept valid email addresses
+ [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mEmail Validation[2m > [22mshould reject invalid email addresses
+ [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mEmail Validation[2m > [22mshould validate all test guest emails
+ [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mEmail Validation[2m > [22mshould validate all test user emails
+ [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mPhone Validation[2m > [22mshould accept valid US phone numbers
+ [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mPhone Validation[2m > [22mshould reject invalid phone numbers
+ [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mPhone Validation[2m > [22mshould validate all test user phones
+ [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mZIP Code Validation[2m > [22mshould accept valid 5-digit ZIP codes
+ [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mZIP Code Validation[2m > [22mshould accept valid ZIP+4 codes
+ [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mZIP Code Validation[2m > [22mshould reject invalid ZIP codes
+ [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mZIP Code Validation[2m > [22mshould validate all property ZIP codes
+ [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mDate Range Validation[2m > [22mshould accept valid date ranges
+ [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mDate Range Validation[2m > [22mshould reject invalid date ranges
+ [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mDate Range Validation[2m > [22mshould validate all test booking date ranges
+ [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mGuest Count Validation[2m > [22mshould validate guest counts within property limits
+ [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mGuest Count Validation[2m > [22mshould handle edge cases
+ [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mProperty Data Validation[2m > [22mshould have valid data for all properties
+ [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mProperty Data Validation[2m > [22mshould have unique property IDs
+ [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mProperty Data Validation[2m > [22mshould have unique property addresses
+ [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mProperty Data Validation[2m > [22mshould have amenities as arrays
+ [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mBooking Data Validation[2m > [22mshould have consistent booking totals
+ [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mBooking Data Validation[2m > [22mshould have valid booking statuses
+ [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mBooking Data Validation[2m > [22mshould have valid booking sources
+ [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mUser Data Validation[2m > [22mshould have valid roles for all users
+ [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mUser Data Validation[2m > [22mshould have unique user IDs
+ [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mUser Data Validation[2m > [22mshould have unique user emails
+ [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mGuest Data Validation[2m > [22mshould have non-negative lifetime values
+ [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mGuest Data Validation[2m > [22mshould have non-negative total stays
+ [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mGuest Data Validation[2m > [22mshould have VIP status as boolean
+ [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mSanitization Tests[2m > [22mshould handle whitespace in emails
+ [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mSanitization Tests[2m > [22mshould handle special characters in names
+ [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mSanitization Tests[2m > [22mshould handle international characters
+[90mstdout[2m | unit/validation.test.ts[22m[39m
+[Test Setup] Test environment initialized
+[Test Cleanup] Test environment cleaned up
+
+ [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mBooking Creation[2m > [22mshould create a valid booking with all required fields
+ [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mBooking Creation[2m > [22mshould create booking with custom property
+ [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mBooking Creation[2m > [22mshould create booking with future dates by default
+ [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mBooking Creation[2m > [22mshould generate unique booking IDs
+ [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mDate Validation[2m > [22mshould validate that checkIn is before checkOut
+ [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mDate Validation[2m > [22mshould reject checkIn after checkOut
+ [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mDate Validation[2m > [22mshould reject same-day booking (checkIn equals checkOut)
+ [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mDate Validation[2m > [22mshould validate date sequence for multiple bookings
+ [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mDate Validation[2m > [22mshould handle year boundary correctly
+ [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mDate Validation[2m > [22mshould handle leap year correctly
+ [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mGuest Count Validation[2m > [22mshould accept valid guest count within limit
+ [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mGuest Count Validation[2m > [22mshould reject guest count exceeding max
+ [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mGuest Count Validation[2m > [22mshould reject zero or negative guest count
+ [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mGuest Count Validation[2m > [22mshould validate guest count for each property
+ [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mBooking Status Transitions[2m > [22mshould have valid initial status
+ [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mBooking Status Transitions[2m > [22mshould allow transition from pending to confirmed
+ [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mBooking Status Transitions[2m > [22mshould allow transition from confirmed to checked_in
+ [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mBooking Status Transitions[2m > [22mshould allow cancellation from pending or confirmed
+ [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mBooking Status Transitions[2m > [22mshould not allow cancellation after check-in
+ [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mBooking Source Handling[2m > [22mshould accept all valid booking sources
+ [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mBooking Source Handling[2m > [22mshould default to direct source
+ [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mBooking Source Handling[2m > [22mshould track external ID for platform bookings
+ [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mBooking Overlap Detection[2m > [22mshould detect overlapping bookings for same property
+ [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mBooking Overlap Detection[2m > [22mshould allow back-to-back bookings
+ [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mBooking Overlap Detection[2m > [22mshould allow bookings on different properties at same time
+ [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mSpecial Requests Handling[2m > [22mshould store special requests
+ [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mSpecial Requests Handling[2m > [22mshould handle booking without special requests
+ [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mTest Bookings Fixture Validation[2m > [22mshould have valid test bookings
+ [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mTest Bookings Fixture Validation[2m > [22mshould have consistent pricing in test bookings
+ [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mTest Bookings Fixture Validation[2m > [22mshould have unique booking IDs
+[90mstdout[2m | unit/booking.test.ts[22m[39m
+[Test Setup] Test environment initialized
+[Test Cleanup] Test environment cleaned up
+
+ [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mcalculateNights[2m > [22mshould calculate nights correctly for a 3-day stay
+ [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mcalculateNights[2m > [22mshould calculate nights correctly for a week stay
+ [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mcalculateNights[2m > [22mshould calculate nights correctly for a month stay
+ [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mcalculateNights[2m > [22mshould handle single night stay
+ [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mcalculateNights[2m > [22mshould return 0 for same-day checkout
+ [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mcalculateSubtotal[2m > [22mshould calculate subtotal for standard stay
+ [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mcalculateSubtotal[2m > [22mshould calculate subtotal for single night
+ [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mcalculateSubtotal[2m > [22mshould calculate subtotal for week stay
+ [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mcalculateSubtotal[2m > [22mshould handle decimal rates
+ [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mcalculateSubtotal[2m > [22mshould handle zero nights
+ [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mcalculateServiceFee[2m > [22mshould calculate 10% service fee by default
+ [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mcalculateServiceFee[2m > [22mshould calculate custom service fee rate
+ [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mcalculateServiceFee[2m > [22mshould round to 2 decimal places
+ [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mcalculateServiceFee[2m > [22mshould handle zero subtotal
+ [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mcalculateServiceFee[2m > [22mshould calculate correct fee for Oasis Pool booking
+ [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mcalculateTaxes[2m > [22mshould calculate taxes on subtotal and cleaning fee
+ [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mcalculateTaxes[2m > [22mshould use default tax rate
+ [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mcalculateTaxes[2m > [22mshould handle zero cleaning fee
+ [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mcalculateTaxes[2m > [22mshould calculate taxes for Adobe Compound booking
+ [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mcalculateTotal[2m > [22mshould calculate complete booking total
+ [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mcalculateTotal[2m > [22mshould calculate total for Oasis Pool 3-night stay
+ [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mcalculateTotal[2m > [22mshould calculate total for Adobe Compound week stay
+ [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mcalculateTotal[2m > [22mshould allow custom fee rates
+ [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mProperty Pricing Validation[2m > [22mshould have valid nightly rates for all properties
+ [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mProperty Pricing Validation[2m > [22mshould have valid cleaning fees for all properties
+ [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mProperty Pricing Validation[2m > [22mshould have cleaning fees proportional to property size
+ [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mProperty Pricing Validation[2m > [22mshould price Adobe Compound (largest) higher than Uptown Place (smallest)
+ [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mBooking Total Integrity[2m > [22mshould create booking with correct calculated totals
+ [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mBooking Total Integrity[2m > [22mshould handle edge case of minimum stay
+ [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mBooking Total Integrity[2m > [22mshould handle long-term stay (30 nights)
+ [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mWeekend and Discount Pricing[2m > [22mshould handle weekend rate premium
+ [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mWeekend and Discount Pricing[2m > [22mshould calculate weekly discount correctly
+ [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mWeekend and Discount Pricing[2m > [22mshould calculate monthly discount correctly
+ [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mWeekend and Discount Pricing[2m > [22mshould stack discounts appropriately
+ [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mEdge Cases[2m > [22mshould handle very small amounts
+ [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mEdge Cases[2m > [22mshould handle large bookings
+ [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mEdge Cases[2m > [22mshould maintain precision with floating point
+[90mstdout[2m | unit/pricing.test.ts[22m[39m
+[Test Setup] Test environment initialized
+[Test Cleanup] Test environment cleaned up
+
+
+[2m Test Files [22m [1m[32m10 passed[39m[22m[90m (10)[39m
+[2m      Tests [22m [1m[32m316 passed[39m[22m[90m (316)[39m
+[2m   Start at [22m 18:03:16
+[2m   Duration [22m 3.94s[2m (transform 480ms, setup 267ms, collect 881ms, tests 524ms, environment 5.75s, prepare 3.00s)[22m
+
+[1m[7m[35m HTML [39m[27m[22m [35mReport is generated[39m
+[2m       You can run [22m[1mnpx vite preview --outDir test-results[22m[2m to see the test results.[22m

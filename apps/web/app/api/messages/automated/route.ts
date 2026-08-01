@@ -5,8 +5,10 @@
  * @author ECHO OMEGA PRIME
  */
 
+import crypto from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requireOneOfRoles } from '@/lib/api-auth';
 import { sendSMS } from '@/lib/twilio';
 import {
   AutomatedMessaging,
@@ -18,11 +20,29 @@ import {
   MessageStatus,
 } from '@/lib/automated-messages';
 
+
+function constantTimeEquals(a: string, b: string): boolean {
+  const left = Buffer.from(a);
+  const right = Buffer.from(b);
+  return left.length === right.length && crypto.timingSafeEqual(left, right);
+}
+
+async function authorizeStaffOrService(request: NextRequest): Promise<NextResponse | null> {
+  const expected = process.env.INTERNAL_API_SECRET || process.env.CRON_SECRET || '';
+  const supplied = request.headers.get('x-api-secret') || '';
+  if (expected && supplied && constantTimeEquals(supplied, expected)) return null;
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  return auth.error;
+}
+
 // ============================================================================
 // GET - List messages or get specific message
 // ============================================================================
 
 export async function GET(request: NextRequest) {
+  const denied = await authorizeStaffOrService(request);
+  if (denied) return denied;
+
   try {
     const { searchParams } = new URL(request.url);
     const bookingId = searchParams.get('bookingId');
@@ -78,6 +98,9 @@ export async function GET(request: NextRequest) {
 // ============================================================================
 
 export async function POST(request: NextRequest) {
+  const denied = await authorizeStaffOrService(request);
+  if (denied) return denied;
+
   try {
     const body = await request.json();
     const { action } = body;
@@ -105,6 +128,9 @@ export async function POST(request: NextRequest) {
 // ============================================================================
 
 export async function PUT(request: NextRequest) {
+  const denied = await authorizeStaffOrService(request);
+  if (denied) return denied;
+
   try {
     const body = await request.json();
     const { messageId, updates } = body;
@@ -136,6 +162,9 @@ export async function PUT(request: NextRequest) {
 // ============================================================================
 
 export async function DELETE(request: NextRequest) {
+  const denied = await authorizeStaffOrService(request);
+  if (denied) return denied;
+
   try {
     const { searchParams } = new URL(request.url);
     const messageId = searchParams.get('messageId');
@@ -190,7 +219,7 @@ async function handleScheduleMessages(body: any) {
     });
     if (dbBooking?.property) {
       access = {
-        doorCode: dbBooking.accessCode || '****',
+        doorCode: 'DELIVERED_SECURELY',
         wifiName: dbBooking.property.wifiNetwork || 'RightAtHome_Guest',
         wifiPassword: dbBooking.property.wifiPassword || '',
         address: dbBooking.property.address,
@@ -201,7 +230,7 @@ async function handleScheduleMessages(body: any) {
   }
   if (!access) {
     access = {
-      doorCode: booking.doorCode || '****',
+      doorCode: 'DELIVERED_SECURELY',
       wifiName: booking.wifiName || 'RightAtHome_Guest',
       wifiPassword: booking.wifiPassword || '',
       address: booking.propertyAddress || booking.propertyName,
@@ -226,9 +255,9 @@ async function handleScheduleMessages(body: any) {
     bookingId,
     guestInfo,
     bookingInfo,
-    access,
+    { ...access, doorCode: 'DELIVERED_SECURELY' },
     channel as MessageChannel
-  );
+  ).filter((message) => message.type !== 'checkin');
 
   // Ensure guest exists in DB
   let dbGuest = await prisma.guest.findFirst({
@@ -254,8 +283,8 @@ async function handleScheduleMessages(body: any) {
         bookingId,
         type: msg.type.toUpperCase(),
         channel: channel.toUpperCase(),
-        subject: msg.content?.subject || `${msg.type} message`,
-        body: msg.content?.body || msg.content?.smsBody || '',
+        subject: msg.subject || `${msg.type} message`,
+        body: msg.content,
         status: 'SCHEDULED',
         scheduledFor: msg.scheduledFor,
       },
@@ -305,7 +334,10 @@ async function handleSendNow(body: any) {
     } else if (message.channel === 'EMAIL' && message.guest.email) {
       const emailRes = await fetch(new URL('/api/email/send', process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-secret': process.env.INTERNAL_API_SECRET || process.env.CRON_SECRET || '',
+        },
         body: JSON.stringify({
           to: message.guest.email,
           subject: message.subject || `Right at Home BnB - ${message.type}`,
@@ -361,13 +393,24 @@ async function handlePreview(body: any) {
     );
   }
 
+  if (messageType === 'checkin') {
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Check-in access messages are delivered only by the secure access lifecycle.',
+        code: 'SECURE_ACCESS_LIFECYCLE_REQUIRED',
+      },
+      { status: 409 },
+    );
+  }
+
   let access: PropertyAccessInfo | null = null;
   if (propertyId) {
     access = AutomatedMessaging.getPropertyAccess(propertyId);
   }
   if (!access) {
     access = {
-      doorCode: booking.doorCode || '1234',
+      doorCode: 'DELIVERED_SECURELY',
       wifiName: booking.wifiName || 'RightAtHome_Guest',
       wifiPassword: booking.wifiPassword || '',
       address: booking.propertyAddress || '123 Main St, Midland, TX',
@@ -440,7 +483,10 @@ async function handleProcessQueue() {
       } else if (msg.channel === 'EMAIL' && msg.guest.email) {
         const emailRes = await fetch(new URL('/api/email/send', process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'), {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+          'Content-Type': 'application/json',
+          'x-api-secret': process.env.INTERNAL_API_SECRET || process.env.CRON_SECRET || '',
+        },
           body: JSON.stringify({
             to: msg.guest.email,
             subject: msg.subject || `Right at Home BnB - ${msg.type}`,

@@ -19,6 +19,9 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import { format, differenceInDays, isToday, isTomorrow } from 'date-fns';
 import { COLORS } from '../../theme/colors';
 
+type BookingStatus = 'pending' | 'confirmed' | 'checked_in' | 'checked_out' | 'cancelled';
+type BookingSource = 'direct' | 'airbnb' | 'vrbo' | 'booking.com';
+
 // Mock data
 const MOCK_BOOKING = {
   id: '1',
@@ -39,8 +42,8 @@ const MOCK_BOOKING = {
   checkIn: new Date(),
   checkOut: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
   guests: 4,
-  status: 'checked_in' as const,
-  source: 'airbnb' as const,
+  status: 'checked_in' as BookingStatus,
+  source: 'airbnb' as BookingSource,
   externalId: 'HM9K2JS8',
   pricing: {
     nightlyRate: 250,

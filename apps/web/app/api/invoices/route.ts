@@ -1,29 +1,83 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireOneOfRoles } from '@/lib/api-auth';
+import { prisma } from '@/lib/prisma';
+import { assertPeriodOpen, periodLockResponse } from '@/lib/period-lock';
 
-// ── Invoices store (empty - populated via API in production) ──────────────
-const invoices: any[] = [];
+// Real Invoice / InvoiceLine rows (queue #26855).
+//
+// The previous POST took a booking_id and then built a "mockBooking" out of
+// request-body fields -- it never looked the booking up, so an invoice could
+// bill any amount for any stay and nothing reconciled. Lines are now derived
+// from the actual Booking row; the client supplies only genuinely additional
+// charges.
 
 const TAX_RATE = 0.0825;
 
-function generateId(): string {
-  return `INV-${Date.now().toString(36).toUpperCase()}`;
+const dollarsToCents = (d: number | null | undefined) => Math.round((d ?? 0) * 100);
+const iso = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : null);
+
+function toContract(inv: any, guestName: string | null, guestEmail: string | null) {
+  return {
+    id: inv.id,
+    number: inv.number,
+    booking_id: inv.bookingId,
+    guest_id: inv.guestId,
+    guest_name: guestName,
+    guest_email: guestEmail,
+    property_name: inv.property?.name ?? null,
+    status: inv.status,
+    issued_date: iso(inv.issueDate),
+    due_date: iso(inv.dueDate),
+    paid_date: null,
+    lines: (inv.lines ?? []).map((l: any) => ({
+      description: l.description,
+      quantity: l.quantity,
+      unit_price_cents: l.unitCents,
+      total_cents: l.totalCents,
+    })),
+    subtotal_cents: inv.subtotalCents,
+    tax_cents: inv.taxCents,
+    total_cents: inv.totalCents,
+    paid_cents: inv.paidCents,
+    notes: inv.notes,
+    created_at: inv.createdAt.toISOString(),
+    updated_at: inv.updatedAt.toISOString(),
+  };
+}
+
+/** Guest is stored as a plain id on Invoice, not a relation, so resolve names in one query. */
+async function guestLookup(ids: (string | null)[]) {
+  const unique = [...new Set(ids.filter(Boolean))] as string[];
+  if (!unique.length) return new Map<string, { name: string; email: string }>();
+  const guests = await prisma.guest.findMany({
+    where: { id: { in: unique } },
+    select: { id: true, name: true, email: true },
+  });
+  return new Map(guests.map((g) => [g.id, { name: g.name, email: g.email }]));
 }
 
 // ── GET /api/invoices ────────────────────────────────────────────────────
 export async function GET(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const params = request.nextUrl.searchParams;
     const status = params.get('status');
     const guestId = params.get('guest_id');
 
-    let filtered = [...invoices];
-    if (status) filtered = filtered.filter((i) => i.status === status);
-    if (guestId) filtered = filtered.filter((i) => i.guest_id === guestId);
-
-    return NextResponse.json({
-      invoices: filtered,
-      total: filtered.length,
+    const rows = await prisma.invoice.findMany({
+      where: { ...(status ? { status } : {}), ...(guestId ? { guestId } : {}) },
+      include: { lines: true, property: { select: { name: true } } },
+      orderBy: { issueDate: 'desc' },
     });
+
+    const guests = await guestLookup(rows.map((r) => r.guestId));
+    const invoices = rows.map((r) => {
+      const g = r.guestId ? guests.get(r.guestId) : undefined;
+      return toContract(r, g?.name ?? null, g?.email ?? null);
+    });
+
+    return NextResponse.json({ invoices, total: invoices.length });
   } catch (error: any) {
     return NextResponse.json(
       { error: 'Failed to list invoices', detail: error.message },
@@ -32,97 +86,98 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// ── POST /api/invoices — Create from booking ─────────────────────────────
+// ── POST /api/invoices — create from a real booking ──────────────────────
 export async function POST(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const body = await request.json();
-
     if (!body.booking_id) {
       return NextResponse.json({ error: 'booking_id is required' }, { status: 400 });
     }
 
-    // Booking data from request body — in production query DB
-    const mockBooking = {
-      id: body.booking_id,
-      guest_id: body.guest_id || '',
-      guest_name: body.guest_name || '',
-      guest_email: body.guest_email || '',
-      property_name: body.property_name || '',
-      nights: body.nights || 0,
-      nightly_rate_cents: body.nightly_rate_cents || 0,
-      cleaning_fee_cents: body.cleaning_fee_cents || 0,
-      pet_fee_cents: body.pet_fee_cents || 0,
-    };
-
-    // Auto-generate line items from booking
-    const lines: any[] = [
-      {
-        description: `Nightly Rate (${mockBooking.nights} nights @ $${(mockBooking.nightly_rate_cents / 100).toFixed(2)})`,
-        quantity: mockBooking.nights,
-        unit_price_cents: mockBooking.nightly_rate_cents,
-        total_cents: mockBooking.nights * mockBooking.nightly_rate_cents,
-      },
-      {
-        description: 'Cleaning Fee',
-        quantity: 1,
-        unit_price_cents: mockBooking.cleaning_fee_cents,
-        total_cents: mockBooking.cleaning_fee_cents,
-      },
-    ];
-
-    if (mockBooking.pet_fee_cents > 0) {
-      lines.push({
-        description: 'Pet Fee',
-        quantity: 1,
-        unit_price_cents: mockBooking.pet_fee_cents,
-        total_cents: mockBooking.pet_fee_cents,
-      });
+    // The booking is the source of truth for what is being billed.
+    const booking = await prisma.booking.findUnique({
+      where: { id: body.booking_id },
+      include: { property: { select: { name: true } }, guest: { select: { id: true, name: true, email: true } } },
+    });
+    if (!booking) {
+      return NextResponse.json({ error: 'Booking not found' }, { status: 404 });
     }
 
-    // Add custom lines if provided
+    const lines: { description: string; quantity: number; unitCents: number; totalCents: number }[] = [];
+
+    const nightlyCents = dollarsToCents(booking.nightlyRate);
+    lines.push({
+      description: `${booking.property?.name ?? 'Stay'} — ${booking.totalNights} night(s)`,
+      quantity: booking.totalNights,
+      unitCents: nightlyCents,
+      totalCents: nightlyCents * booking.totalNights,
+    });
+
+    const cleaningCents = dollarsToCents(booking.cleaningFee);
+    if (cleaningCents > 0) {
+      lines.push({ description: 'Cleaning fee', quantity: 1, unitCents: cleaningCents, totalCents: cleaningCents });
+    }
+
+    // Only genuinely extra charges come from the request.
     if (Array.isArray(body.additional_lines)) {
       for (const al of body.additional_lines) {
+        if (!al?.description || typeof al.unit_price_cents !== 'number') continue;
+        const qty = al.quantity || 1;
         lines.push({
           description: al.description,
-          quantity: al.quantity || 1,
-          unit_price_cents: al.unit_price_cents,
-          total_cents: (al.quantity || 1) * al.unit_price_cents,
+          quantity: qty,
+          unitCents: al.unit_price_cents,
+          totalCents: qty * al.unit_price_cents,
         });
       }
     }
 
-    const subtotal_cents = lines.reduce((s, l) => s + l.total_cents, 0);
-    const tax_cents = Math.round(subtotal_cents * TAX_RATE);
-    const total_cents = subtotal_cents + tax_cents;
+    const subtotalCents = lines.reduce((s, l) => s + l.totalCents, 0);
+    const taxCents = Math.round(subtotalCents * TAX_RATE);
+    const totalCents = subtotalCents + taxCents;
 
-    const now = new Date().toISOString();
-    const dueDate = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const dueDate = body.due_date
+      ? new Date(`${body.due_date}T00:00:00.000Z`)
+      : new Date(Date.now() + 10 * 24 * 60 * 60 * 1000);
 
-    const invoice = {
-      id: generateId(),
-      booking_id: mockBooking.id,
-      guest_id: mockBooking.guest_id,
-      guest_name: mockBooking.guest_name,
-      guest_email: mockBooking.guest_email,
-      property_name: mockBooking.property_name,
-      status: 'draft',
-      issued_date: now.split('T')[0],
-      due_date: body.due_date || dueDate,
-      paid_date: null,
-      lines,
-      subtotal_cents,
-      tax_cents,
-      total_cents,
-      paid_cents: 0,
-      notes: body.notes || null,
-      created_at: now,
-      updated_at: now,
-    };
+    const issueDate = new Date();
 
-    invoices.push(invoice);
+    // Closed books stay closed (P5-1). An invoice is issued today, so this only
+    // bites when the CURRENT period has been locked — which is exactly when it
+    // should, because the filing for it has already been made.
+    await assertPeriodOpen(issueDate);
 
-    return NextResponse.json({ invoice }, { status: 201 });
+    const created = await prisma.invoice.create({
+      data: {
+        number: `INV-${Date.now().toString(36).toUpperCase()}`,
+        bookingId: booking.id,
+        propertyId: booking.propertyId,
+        guestId: booking.guestId,
+        status: 'draft',
+        issueDate,
+        dueDate,
+        subtotalCents,
+        taxCents,
+        totalCents,
+        notes: body.notes || null,
+        lines: { create: lines },
+      },
+      include: { lines: true, property: { select: { name: true } } },
+    });
+
+    return NextResponse.json(
+      { invoice: toContract(created, booking.guest?.name ?? null, booking.guest?.email ?? null) },
+      { status: 201 },
+    );
   } catch (error: any) {
+    // A locked accounting period is a REFUSAL, not a fault. Returning the
+    // generic 500 below would tell the caller the system broke when it did
+    // exactly what it was built to do, and the reason would be lost.
+    const locked = periodLockResponse(error);
+    if (locked) return NextResponse.json(locked.body, { status: locked.status });
+
     return NextResponse.json(
       { error: 'Failed to create invoice', detail: error.message },
       { status: 500 },

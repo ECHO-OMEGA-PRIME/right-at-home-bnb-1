@@ -1,181 +1,278 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { db, storage } from '@/lib/firebase-admin';
-import { FieldValue } from 'firebase-admin/firestore';
-import type { Storage } from 'firebase-admin/storage';
-
 /**
  * Save Property Images API
- * Downloads images from VRBO and saves them to Firebase Storage
- * Updates Firestore property document with new image URLs
  *
- * @author ECHO OMEGA PRIME
+ * Imports listing photos from a channel CDN into our own store: the bytes go to
+ * Postgres and are served from our own origin by
+ * `/api/properties/photos/[photoId]`, and the metadata goes to PropertyPhoto.
+ *
+ * This replaces an upload to Firebase Storage plus a write to a Firestore
+ * `properties` document. Three things were wrong with that, beyond the Google
+ * dependency:
+ *
+ *  1. IT NEVER PRODUCED A DISPLAYABLE IMAGE. The route returned
+ *     `https://storage.googleapis.com/...` URLs, but this site's own CSP allows
+ *     `img-src 'self' data: blob: images.unsplash.com lh3.googleusercontent.com
+ *     *.rah-midland.com`, and `next.config.js` images.domains does not list
+ *     storage.googleapis.com either. Every re-hosted image was blocked by the
+ *     browser. The "Firebase not configured" fallback returned raw VRBO CDN
+ *     URLs, which are equally not allowed -- so both paths were dead. Serving
+ *     from our own origin is what actually makes the feature work.
+ *
+ *  2. It wrote photos to a Firestore `properties` document -- a SECOND property
+ *     store, parallel to the Postgres `Property` those photos belong to and
+ *     which the rest of the app reads.
+ *
+ *  3. It fetched a caller-supplied URL with no restriction on host, scheme,
+ *     size or content type, then stored whatever came back. An owner/admin
+ *     could point it at an internal address and have the response persisted.
+ *
+ * The fetch is now restricted to https on an allowlist of listing-photo CDNs,
+ * capped in size, and required to actually be an image.
  */
+
+import { NextRequest, NextResponse } from 'next/server';
+import prisma from '@/lib/prisma';
+import { requireOneOfRoles } from '@/lib/api-auth';
+
+export const dynamic = 'force-dynamic';
 
 interface ImageInput {
   url: string;
-  alt: string;
-  isPrimary: boolean;
+  alt?: string;
+  isPrimary?: boolean;
 }
 
-async function downloadAndUpload(
-  storageInstance: Storage,
-  imageUrl: string,
-  propertyId: string,
-  index: number
-): Promise<string | null> {
+/** 15 MB. A listing photo is well under this; anything larger is not one. */
+const MAX_BYTES = 15 * 1024 * 1024;
+
+const ALLOWED_CONTENT_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/avif']);
+
+const EXTENSION_BY_TYPE: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/avif': 'avif',
+};
+
+/**
+ * Hosts we will pull listing photos from.
+ *
+ * An allowlist rather than a denylist of internal ranges: enumerating what is
+ * permitted is the only form that stays correct as infrastructure changes, and
+ * DNS rebinding makes address-based blocking unreliable anyway.
+ */
+const ALLOWED_IMAGE_HOSTS = [
+  'vrbo.com',
+  'homeaway.com',
+  'expediagroup.com',
+  'muscache.com', // Airbnb's photo CDN
+  'airbnb.com',
+];
+
+function hostIsAllowed(hostname: string): boolean {
+  const host = hostname.toLowerCase();
+  return ALLOWED_IMAGE_HOSTS.some((allowed) => host === allowed || host.endsWith(`.${allowed}`));
+}
+
+type FetchFailure = { ok: false; reason: string };
+type FetchSuccess = { ok: true; data: Buffer; contentType: string };
+
+async function fetchImage(rawUrl: string): Promise<FetchSuccess | FetchFailure> {
+  let parsed: URL;
   try {
-    // Download image
-    const response = await fetch(imageUrl, {
+    parsed = new URL(rawUrl);
+  } catch {
+    return { ok: false, reason: 'not a valid URL' };
+  }
+
+  if (parsed.protocol !== 'https:') {
+    return { ok: false, reason: 'only https sources are allowed' };
+  }
+  if (!hostIsAllowed(parsed.hostname)) {
+    return { ok: false, reason: `host ${parsed.hostname} is not an allowed image source` };
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(parsed.toString(), {
+      // Do not follow a redirect off the allowlist -- that would turn one
+      // permitted host into an open fetch of anything it chooses to point at.
+      redirect: 'error',
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
       },
     });
-
-    if (!response.ok) {
-      throw new Error(`Failed to download: ${response.status}`);
-    }
-
-    const arrayBuffer = await response.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-
-    // Determine content type
-    const contentType = response.headers.get('content-type') || 'image/jpeg';
-    const ext = contentType.includes('png') ? 'png' : 'jpg';
-
-    // Upload to Firebase Storage
-    const bucket = storageInstance.bucket();
-    const filePath = `properties/${propertyId}/images/${propertyId}_${String(index).padStart(2, '0')}.${ext}`;
-    const file = bucket.file(filePath);
-
-    await file.save(buffer, {
-      metadata: {
-        contentType,
-        metadata: {
-          source: 'vrbo',
-          uploadedAt: new Date().toISOString(),
-        },
-      },
-    });
-
-    // Make file public
-    await file.makePublic();
-
-    // Return public URL
-    return `https://storage.googleapis.com/${bucket.name}/${filePath}`;
   } catch (error) {
-    console.error(`Failed to upload image ${index}:`, error);
-    return null;
+    return { ok: false, reason: error instanceof Error ? error.message : 'fetch failed' };
   }
+
+  if (!response.ok) {
+    return { ok: false, reason: `source responded ${response.status}` };
+  }
+
+  const contentType = (response.headers.get('content-type') || '')
+    .split(';')[0]
+    .trim()
+    .toLowerCase();
+  if (!ALLOWED_CONTENT_TYPES.has(contentType)) {
+    return { ok: false, reason: `unsupported content type "${contentType || 'unknown'}"` };
+  }
+
+  // Check the declared length first, then the real one: a source can lie about
+  // or omit Content-Length, so the header is an early out, not the enforcement.
+  const declared = Number(response.headers.get('content-length') ?? NaN);
+  if (Number.isFinite(declared) && declared > MAX_BYTES) {
+    return { ok: false, reason: `image is ${declared} bytes, over the ${MAX_BYTES} limit` };
+  }
+
+  const data = Buffer.from(await response.arrayBuffer());
+  if (data.byteLength === 0) return { ok: false, reason: 'source returned an empty body' };
+  if (data.byteLength > MAX_BYTES) {
+    return { ok: false, reason: `image is ${data.byteLength} bytes, over the ${MAX_BYTES} limit` };
+  }
+
+  return { ok: true, data, contentType };
 }
 
 export async function POST(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
+
   try {
-    const { propertyId, images } = await request.json() as {
-      propertyId: string;
-      images: ImageInput[];
+    const { propertyId, images } = (await request.json()) as {
+      propertyId?: string;
+      images?: ImageInput[];
     };
 
-    if (!propertyId || !images || images.length === 0) {
+    if (!propertyId || !Array.isArray(images) || images.length === 0) {
+      return NextResponse.json({ error: 'Missing propertyId or images' }, { status: 400 });
+    }
+
+    const property = await prisma.property.findUnique({
+      where: { id: propertyId },
+      select: { id: true },
+    });
+    if (!property) {
+      return NextResponse.json({ error: 'Property not found' }, { status: 404 });
+    }
+
+    const existing = await prisma.propertyPhoto.findMany({
+      where: { propertyId },
+      select: { id: true, sourceUrl: true, sortOrder: true },
+      orderBy: { sortOrder: 'asc' },
+    });
+    const alreadyImported = new Set(
+      existing.map((p) => p.sourceUrl).filter((s): s is string => Boolean(s)),
+    );
+    let nextSortOrder = existing.reduce((max, p) => Math.max(max, p.sortOrder), -1) + 1;
+
+    const saved: Array<{ id: string; url: string; alt: string; isPrimary: boolean }> = [];
+    const skipped: Array<{ url: string; reason: string }> = [];
+
+    for (const image of images) {
+      if (!image?.url || typeof image.url !== 'string') {
+        skipped.push({ url: String(image?.url ?? ''), reason: 'missing url' });
+        continue;
+      }
+      if (alreadyImported.has(image.url)) {
+        skipped.push({ url: image.url, reason: 'already imported' });
+        continue;
+      }
+
+      const fetched = await fetchImage(image.url);
+      if (!fetched.ok) {
+        // Report per-image rather than failing the batch: one dead CDN link
+        // should not discard the images that did download.
+        console.warn('[save-property-images] skipped', { url: image.url, reason: fetched.reason });
+        skipped.push({ url: image.url, reason: fetched.reason });
+        continue;
+      }
+
+      const photo = await prisma.propertyPhoto.create({
+        data: {
+          propertyId,
+          // Replaced immediately below with our own origin path, which is what
+          // the CSP permits. The id is only known after the insert.
+          url: 'pending',
+          caption: image.alt || null,
+          isPrimary: Boolean(image.isPrimary),
+          sortOrder: nextSortOrder,
+          sourceUrl: image.url,
+          blob: {
+            create: {
+              data: fetched.data,
+              contentType: fetched.contentType,
+              byteSize: fetched.data.byteLength,
+            },
+          },
+        },
+        select: { id: true },
+      });
+
+      // The extension is cosmetic -- the serving route sends the stored content
+      // type -- but it keeps the URL recognisable to humans and crawlers.
+      const ext = EXTENSION_BY_TYPE[fetched.contentType] ?? 'jpg';
+      const url = `/api/properties/photos/${photo.id}.${ext}`;
+      await prisma.propertyPhoto.update({ where: { id: photo.id }, data: { url } });
+
+      saved.push({
+        id: photo.id,
+        url,
+        alt: image.alt || '',
+        isPrimary: Boolean(image.isPrimary),
+      });
+      nextSortOrder += 1;
+      alreadyImported.add(image.url);
+    }
+
+    if (saved.length === 0) {
       return NextResponse.json(
-        { error: 'Missing propertyId or images' },
-        { status: 400 }
+        { error: 'No images could be imported', propertyId, skipped },
+        { status: 422 },
       );
     }
 
-    // Check if Firebase Admin is available
-    if (!db || !storage) {
-      // Fallback: just return the URLs as-is without uploading
-      console.warn('Firebase Admin not configured, skipping upload');
-
-      const savedImages = images.map((img, index) => ({
-        id: `${propertyId}-${index}`,
-        url: img.url,
-        alt: img.alt,
-        isPrimary: img.isPrimary,
-        source: 'vrbo-direct',
-        savedAt: new Date().toISOString(),
+    // Exactly one primary. Resolved from stored state after the writes rather
+    // than from what this request happened to send, so a second import cannot
+    // leave a property with two cover images.
+    const primary =
+      (await prisma.propertyPhoto.findFirst({
+        where: { propertyId, isPrimary: true },
+        orderBy: { sortOrder: 'asc' },
+        select: { id: true, url: true },
+      })) ??
+      (await prisma.propertyPhoto.findFirst({
+        where: { propertyId },
+        orderBy: { sortOrder: 'asc' },
+        select: { id: true, url: true },
       }));
 
-      return NextResponse.json({
-        propertyId,
-        images: savedImages,
-        uploaded: false,
-        message: 'Images saved with direct VRBO URLs (Firebase upload not available)',
+    if (primary) {
+      await prisma.propertyPhoto.updateMany({
+        where: { propertyId, isPrimary: true, id: { not: primary.id } },
+        data: { isPrimary: false },
+      });
+      await prisma.propertyPhoto.update({
+        where: { id: primary.id },
+        data: { isPrimary: true },
       });
     }
 
-    // Download and upload each image
-    const uploadedImages: Array<{
-      id: string;
-      url: string;
-      alt: string;
-      isPrimary: boolean;
-      source: string;
-      savedAt: string;
-    }> = [];
-
-    for (let i = 0; i < images.length; i++) {
-      const img = images[i];
-      const firebaseUrl = await downloadAndUpload(storage, img.url, propertyId, i);
-
-      if (firebaseUrl) {
-        uploadedImages.push({
-          id: `${propertyId}-${i}`,
-          url: firebaseUrl,
-          alt: img.alt,
-          isPrimary: img.isPrimary,
-          source: 'vrbo',
-          savedAt: new Date().toISOString(),
-        });
-      }
-    }
-
-    if (uploadedImages.length === 0) {
-      return NextResponse.json(
-        { error: 'Failed to upload any images' },
-        { status: 500 }
-      );
-    }
-
-    // Update Firestore property document
-    const propertyRef = db.collection('properties').doc(propertyId);
-
-    // Get existing images
-    const propertyDoc = await propertyRef.get();
-    const existingImages = propertyDoc.exists
-      ? (propertyDoc.data()?.images || [])
-      : [];
-
-    // Merge with new images (avoiding duplicates)
-    const existingUrls = new Set(existingImages.map((img: any) => img.url));
-    const newImages = uploadedImages.filter(img => !existingUrls.has(img.url));
-    const allImages = [...existingImages, ...newImages];
-
-    // Find cover image
-    const primaryImage = allImages.find((img: any) => img.isPrimary);
-    const coverImage = primaryImage?.url || allImages[0]?.url;
-
-    await propertyRef.set(
-      {
-        images: allImages,
-        coverImage,
-        imagesUpdatedAt: FieldValue.serverTimestamp(),
-      },
-      { merge: true }
-    );
+    const totalImages = await prisma.propertyPhoto.count({ where: { propertyId } });
 
     return NextResponse.json({
       propertyId,
-      images: uploadedImages,
-      totalImages: allImages.length,
+      images: saved,
+      skipped,
+      totalImages,
       uploaded: true,
-      coverImage,
+      coverImage: primary?.url ?? null,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Save images error:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to save images' },
-      { status: 500 }
+      { error: error instanceof Error ? error.message : 'Failed to save images' },
+      { status: 500 },
     );
   }
 }

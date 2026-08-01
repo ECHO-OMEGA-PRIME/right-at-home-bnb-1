@@ -1,204 +1,382 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from 'next/server';
 
-// Routes that require authentication
 const PROTECTED_PREFIXES = [
-  "/admin",
-  "/dashboard",
-  "/bookings",
-  "/calendar",
-  "/cleaning",
-  "/concierge",
-  "/finance",
-  "/guests",
-  "/locks",
-  "/maintenance",
-  "/messages",
-  "/notifications",
-  "/settings",
-  "/smart-home",
-  "/steven",
+  '/admin',
+  '/dashboard',
+  '/owner',
+  '/worker',
+  '/guest/dashboard',
+  '/bookings',
+  '/calendar',
+  '/cleaning',
+  '/concierge',
+  '/finance',
+  '/guests',
+  '/locks',
+  '/maintenance',
+  '/messages',
+  '/notifications',
+  '/settings',
+  '/smart-home',
+  '/steven',
+  '/properties/new',
 ];
 
-// Routes that are always public (no auth check)
-const PUBLIC_ROUTES = [
-  "/",
-  "/properties",
-  "/login",
-  "/register",
-  "/dev-login",
-  "/privacy-policy",
-  "/terms-of-service",
-  "/booking/success",
-  "/booking/complete",
-];
+const PUBLIC_ROUTES = new Set([
+  '/',
+  '/properties',
+  '/login',
+  '/register',
+  '/privacy-policy',
+  '/terms-of-service',
+  '/booking/success',
+  '/booking/complete',
+  '/booking/cancelled',
+]);
 
-// API routes that are public (no auth)
-const PUBLIC_API_ROUTES = [
-  "/api/health",
-  "/api/properties",
-  "/api/weather",      // Public weather widget on homepage
-  "/api/webhooks/stripe",
-  "/api/webhooks/vrbo",
-  "/api/integrations/vrbo/webhook",
-  "/api/integrations/ical",
-  "/api/cron",
-  "/api/calls",        // Twilio webhooks (incoming, gather, status, ai-respond, transcribe)
-  "/api/concierge",    // AI concierge (public guest access)
-  "/api/bookings/checkout",  // PayPal direct booking checkout
-  "/api/bookings/capture",   // PayPal payment capture
-];
-
-// Admin-only routes — require owner/admin role
 const ADMIN_ONLY_PREFIXES = [
-  "/admin",
-  "/api/admin",
-  "/api/payroll",
-  "/api/accounting",
-  "/api/integrations/paypal",
-  "/api/expenses",
-  "/api/invoices",
-  "/api/taxes",
-  "/api/settings",
+  '/admin',
+  '/owner',
+  '/properties/new',
+  '/api/admin',
+  '/api/payroll',
+  '/api/accounting',
+  '/api/integrations/paypal',
+  '/api/expenses',
+  '/api/invoices',
+  '/api/taxes',
+  '/api/settings',
+  '/api/properties/new',
 ];
 
-const AUTH_COOKIE_NAME = "rah-auth-token";
+const PUBLIC_API_PREFIXES = [
+  // Public weather widget on the homepage. Brought over from main, where a flat
+  // PUBLIC_API_ROUTES list was introduced to fix a 401 on this endpoint; the
+  // rest of that list is deliberately NOT adopted, because it made
+  // `/api/properties` public by bare prefix and would therefore have exposed
+  // `/api/properties/new` -- an ADMIN_ONLY route -- since the public check runs
+  // before the admin check. `isPublicPropertiesRead` does that job safely: GET
+  // only, and never `/new`.
+  '/api/weather',
+  '/api/webhooks/stripe',
+  '/api/webhooks/vrbo',
+  '/api/integrations/vrbo/webhook',
+  '/api/integrations/ical',
+  '/api/cron',
+  '/api/calls',
+  '/api/concierge',
+  '/api/bookings/checkout',
+  '/api/bookings/capture',
+];
 
-type TokenRole = "guest" | "worker" | "admin" | "owner";
+// Defense in depth: these listings are visible for portfolio/history purposes,
+// but their direct-booking forms must not be reachable while inactive.
+const INACTIVE_PROPERTY_SLUGS = new Set([
+  'haynes-2802',
+  'vanguard-6613',
+  'oriole-6100',
+  'gleneagles-4533',
+]);
 
-/**
- * Extract role from auth token.
- * Dev tokens: "dev_role_workerType" or "dev-mode-dev_role_..."
- * Firebase tokens: opaque JWT — we can't decode role in middleware without
- * calling Firebase Admin (Edge doesn't support it), so we set a role cookie.
- */
-function extractRoleFromToken(token: string): TokenRole | null {
-  // Dev mode tokens
-  if (token.startsWith("dev_") || token.startsWith("dev-mode-")) {
-    const clean = token.replace("dev-mode-", "");
-    const parts = clean.split("_");
-    const role = parts[1] as TokenRole;
-    if (["guest", "worker", "admin", "owner"].includes(role)) {
-      return role;
-    }
-    return "guest";
-  }
-  // Firebase JWT — can't decode in Edge Runtime without firebase-admin
-  // Role enforcement for Firebase users happens at API route level
-  return null;
+const AUTH_COOKIE_NAME = 'rah-auth-token';
+
+// Kept in step with the same defaults in src/lib/api-auth.ts. If these ever
+// disagree, middleware and the route handlers disagree about which tokens are
+// real, and the edge rejects sessions the handlers would have accepted.
+const ECHO_AUTH_ISSUER = process.env.ECHO_AUTH_ISSUER?.trim() || 'https://auth.echo-op.com';
+const ECHO_AUTH_AUDIENCE = process.env.ECHO_AUTH_AUDIENCE?.trim() || 'echo-prime-ai';
+type TokenRole = 'guest' | 'worker' | 'admin' | 'owner';
+const VALID_ROLES = new Set<TokenRole>(['guest', 'worker', 'admin', 'owner']);
+
+function devLoginEnabled(): boolean {
+  return process.env.NODE_ENV === 'development' && process.env.ALLOW_DEV_LOGIN === 'true';
 }
 
-function isPublicRoute(pathname: string): boolean {
-  if (PUBLIC_ROUTES.includes(pathname)) return true;
-  if (pathname.startsWith("/properties/")) return true;
-  if (pathname.startsWith("/booking/success")) return true;
-  if (pathname.startsWith("/booking/complete")) return true;
+function isDevToken(token: string): boolean {
+  return token.startsWith('dev_') || token.startsWith('dev-mode-');
+}
+
+function extractRoleFromToken(token: string): TokenRole | null {
+  if (!devLoginEnabled() || !isDevToken(token)) return null;
+  const clean = token.replace(/^dev-mode-/, '');
+  const role = clean.split('_')[1] as TokenRole | undefined;
+  return role && VALID_ROLES.has(role) ? role : null;
+}
+
+/**
+ * Constant-time string compare.
+ *
+ * Edge runtime has no `crypto.timingSafeEqual`, so do it by hand. Length is
+ * allowed to leak (it always does via the compare loop); the value is not.
+ */
+function secretMatches(provided: string, expected: string): boolean {
+  if (!expected || provided.length !== expected.length) return false;
+  let diff = 0;
+  for (let i = 0; i < provided.length; i += 1) {
+    diff |= provided.charCodeAt(i) ^ expected.charCodeAt(i);
+  }
+  return diff === 0;
+}
+
+/**
+ * Structural validation of a Firebase ID token.
+ *
+ * Middleware runs on the Edge runtime and cannot load firebase-admin, so it
+ * cannot verify the RSA signature -- `verifyAuthToken` in the route handlers
+ * does that. What middleware CAN do is reject anything that is not even a
+ * plausible, unexpired token for our project, which is what stops an attacker
+ * simply setting `rah-auth-token=anything`.
+ *
+ * This is a gate, not the authorization decision. Route handlers still verify.
+ */
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
+  const parts = token.split('.');
+  if (parts.length !== 3) return null;
+  try {
+    const b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    return JSON.parse(atob(b64.padEnd(b64.length + ((4 - (b64.length % 4)) % 4), '=')));
+  } catch {
+    return null;
+  }
+}
+
+function isUnexpired(payload: Record<string, unknown>): boolean {
+  return typeof payload.exp === 'number' && payload.exp * 1000 > Date.now();
+}
+
+function hasSubject(payload: Record<string, unknown>): boolean {
+  return typeof payload.sub === 'string' && payload.sub.length > 0;
+}
+
+function looksLikeLiveIdToken(token: string): boolean {
+  const payload = decodeJwtPayload(token);
+  if (!payload) return false;
+  // Trim: env values on this project have been observed carrying a trailing
+  // newline (ALLOW_DEV_LOGIN is literally "true\n"). An untrimmed project id
+  // would fail the aud/iss compare for EVERY real token and lock out every
+  // user -- a self-inflicted outage from a stray byte.
+  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID?.trim();
+  if (!isUnexpired(payload)) return false;
+  if (projectId && payload.aud !== projectId) return false;
+  if (projectId && payload.iss !== `https://securetoken.google.com/${projectId}`) return false;
+  return hasSubject(payload);
+}
+
+/**
+ * The echo-auth family (LAW 2026-07-31: echo-auth is the ONE identity runtime).
+ *
+ * This has to exist for the frontend cutover to be possible at all. The Firebase
+ * check above asserts `iss === https://securetoken.google.com/<project>`, and an
+ * echo-auth token is issued by `https://auth.echo-op.com` -- so before this,
+ * middleware rejected every echo-auth token at the edge and cleared the cookie,
+ * no matter that `verifyAuthToken` in the route handlers accepts them happily.
+ *
+ * Note the aud values coincide today (`ECHO_AUTH_AUDIENCE` and the Firebase
+ * project id are both `echo-prime-ai`), which is exactly why the issuer must be
+ * checked per family rather than reusing one comparison for both -- otherwise
+ * this "works" by accident and breaks the day either value moves.
+ */
+function looksLikeEchoAuthToken(token: string): boolean {
+  const payload = decodeJwtPayload(token);
+  if (!payload) return false;
+  if (!isUnexpired(payload)) return false;
+  if (payload.iss !== ECHO_AUTH_ISSUER) return false;
+  if (payload.aud !== ECHO_AUTH_AUDIENCE) return false;
+  return hasSubject(payload);
+}
+
+/**
+ * Structural gate for the session cookie.
+ *
+ * Middleware runs on the Edge runtime and cannot verify an RSA signature --
+ * `verifyAuthToken` does that in the route handlers. What this stops is someone
+ * simply setting `rah-auth-token=anything`. Anything from an unrecognised issuer
+ * is refused, so the gate stays closed by default rather than by omission.
+ */
+function looksLikeAcceptableToken(token: string): boolean {
+  return looksLikeLiveIdToken(token) || looksLikeEchoAuthToken(token);
+}
+
+function clearAuthCookie(response: NextResponse): NextResponse {
+  response.cookies.delete(AUTH_COOKIE_NAME);
+  return response;
+}
+
+function rejectDevApiToken(): NextResponse {
+  return clearAuthCookie(
+    NextResponse.json(
+      { error: 'Development credentials are not accepted', code: 'UNAUTHORIZED' },
+      { status: 401 },
+    ),
+  );
+}
+
+function rejectDevPageToken(request: NextRequest): NextResponse {
+  const loginUrl = new URL('/login', request.url);
+  loginUrl.searchParams.set('error', 'invalid_session');
+  return clearAuthCookie(NextResponse.redirect(loginUrl));
+}
+
+function inactiveBookingSlug(pathname: string): string | null {
+  const match = pathname.match(/^\/properties\/([^/]+)\/book\/?$/);
+  if (!match) return null;
+  const slug = decodeURIComponent(match[1]);
+  return INACTIVE_PROPERTY_SLUGS.has(slug.toLowerCase()) ? slug : null;
+}
+
+function isPublicPage(pathname: string): boolean {
+  if (PUBLIC_ROUTES.has(pathname)) return true;
+  if (pathname.startsWith('/properties/') && pathname !== '/properties/new') return true;
   return false;
 }
 
-function isPublicApiRoute(pathname: string): boolean {
-  return PUBLIC_API_ROUTES.some(
-    (route) => pathname === route || pathname.startsWith(route + "/")
+function isPublicPropertiesRead(request: NextRequest): boolean {
+  if (request.method !== 'GET') return false;
+  const pathname = request.nextUrl.pathname;
+  if (pathname === '/api/properties') return true;
+  return /^\/api\/properties\/[^/]+$/.test(pathname) && pathname !== '/api/properties/new';
+}
+
+function isPublicApi(request: NextRequest): boolean {
+  const pathname = request.nextUrl.pathname;
+  if (pathname === '/api/health') return true;
+  if (isPublicPropertiesRead(request)) return true;
+  return PUBLIC_API_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   );
 }
 
-function isProtectedRoute(pathname: string): boolean {
+function isProtectedPage(pathname: string): boolean {
   return PROTECTED_PREFIXES.some(
-    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   );
 }
 
-function isAdminOnlyRoute(pathname: string): boolean {
+function isAdminOnly(pathname: string): boolean {
   return ADMIN_ONLY_PREFIXES.some(
-    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   );
+}
+
+function roleRedirect(request: NextRequest, role: TokenRole | null): NextResponse | null {
+  if (!role) return null;
+  const pathname = request.nextUrl.pathname;
+  if ((pathname === '/owner' || pathname.startsWith('/owner/')) && !['owner', 'admin'].includes(role)) {
+    return NextResponse.redirect(new URL(role === 'worker' ? '/worker' : '/guest/dashboard', request.url));
+  }
+  if ((pathname === '/worker' || pathname.startsWith('/worker/')) && role === 'guest') {
+    return NextResponse.redirect(new URL('/guest/dashboard', request.url));
+  }
+  return null;
 }
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const response = NextResponse.next();
 
-  // ── Dev-login: allow through (password-protected on the page itself) ──
-  if (pathname === "/dev-login" || pathname.startsWith("/dev-login/")) {
-    return response;
+  // The legacy client-side role impersonation route is permanently disabled.
+  if (pathname === '/dev-login' || pathname.startsWith('/dev-login/')) {
+    return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  // ── Public page routes — always allow ──
-  if (isPublicRoute(pathname)) {
-    return response;
+  const blockedBookingSlug = inactiveBookingSlug(pathname);
+  if (blockedBookingSlug) {
+    const propertyUrl = new URL(`/properties/${encodeURIComponent(blockedBookingSlug)}`, request.url);
+    propertyUrl.searchParams.set('booking', 'unavailable');
+    return NextResponse.redirect(propertyUrl);
   }
 
-  // ── API routes ──
-  if (pathname.startsWith("/api/")) {
-    // Public API routes (health, webhooks, public property listing)
-    if (isPublicApiRoute(pathname)) {
-      return response;
-    }
+  if (isPublicPage(pathname)) return NextResponse.next();
 
-    // Allow API routes with valid API secret header (programmatic access)
-    const apiSecret = request.headers.get("x-api-secret");
+  if (pathname.startsWith('/api/')) {
+    if (isPublicApi(request)) return NextResponse.next();
+
+    // SECURITY: this previously accepted ANY x-api-secret header value and
+    // returned next(), deferring validation to "the route handler" -- but most
+    // API routes have no session guard of their own, so
+    //     curl -H 'x-api-secret: anything' /api/bookings
+    // returned 200 with live guest PII. Verified against production on
+    // 2026-07-30. The header must be checked here, against the real secret.
+    const apiSecret = request.headers.get('x-api-secret');
     if (apiSecret) {
-      return response; // Route handler validates the secret
-    }
-
-    // All other API routes require auth cookie
-    const authToken = request.cookies.get(AUTH_COOKIE_NAME)?.value;
-    if (!authToken) {
+      if (secretMatches(apiSecret.trim(), (process.env.ADMIN_API_SECRET ?? '').trim())) {
+        return NextResponse.next();
+      }
       return NextResponse.json(
-        { error: "Authentication required", code: "UNAUTHORIZED" },
-        { status: 401 }
+        { error: 'Invalid API secret', code: 'UNAUTHORIZED' },
+        { status: 401 },
       );
     }
 
-    // Admin-only API routes — check role from dev token
-    if (isAdminOnlyRoute(pathname)) {
+    const authToken = request.cookies.get(AUTH_COOKIE_NAME)?.value;
+    if (!authToken) {
+      return NextResponse.json(
+        { error: 'Authentication required', code: 'UNAUTHORIZED' },
+        { status: 401 },
+      );
+    }
+    if (isDevToken(authToken) && !devLoginEnabled()) return rejectDevApiToken();
+
+    // SECURITY: presence of a cookie was previously treated as authentication.
+    // Any value passed -- `rah-auth-token=x` returned 200 with live guest PII on
+    // production (verified 2026-07-30) -- because the unguarded route handlers
+    // never looked at it. Reject anything that is not a structurally valid,
+    // unexpired token for this Firebase project. Signature verification still
+    // happens in the route handlers via verifyAuthToken.
+    if (!isDevToken(authToken) && !looksLikeAcceptableToken(authToken)) {
+      return clearAuthCookie(
+        NextResponse.json(
+          { error: 'Authentication required', code: 'UNAUTHORIZED' },
+          { status: 401 },
+        ),
+      );
+    }
+
+    if (isAdminOnly(pathname)) {
       const role = extractRoleFromToken(authToken);
-      // If we can determine the role (dev token) and it's not admin/owner, block
-      if (role && role !== "admin" && role !== "owner") {
+      if (role && !['admin', 'owner'].includes(role)) {
         return NextResponse.json(
-          { error: "Admin access required", code: "FORBIDDEN" },
-          { status: 403 }
+          { error: 'Owner access required', code: 'FORBIDDEN' },
+          { status: 403 },
         );
       }
     }
-
-    return response;
+    return NextResponse.next();
   }
 
-  // ── Protected page routes — check for auth cookie ──
-  if (isProtectedRoute(pathname)) {
+  if (isProtectedPage(pathname)) {
     const authToken = request.cookies.get(AUTH_COOKIE_NAME)?.value;
-
     if (!authToken) {
-      const loginUrl = new URL("/login", request.url);
-      loginUrl.searchParams.set("callbackUrl", pathname);
+      const loginUrl = new URL('/login', request.url);
+      loginUrl.searchParams.set('callbackUrl', pathname);
       return NextResponse.redirect(loginUrl);
     }
+    if (isDevToken(authToken) && !devLoginEnabled()) return rejectDevPageToken(request);
 
-    // Admin pages — check role
-    if (isAdminOnlyRoute(pathname)) {
-      const role = extractRoleFromToken(authToken);
-      if (role && role !== "admin" && role !== "owner") {
-        // Workers/guests trying to access admin — redirect to dashboard
-        return NextResponse.redirect(new URL("/dashboard", request.url));
-      }
+    const role = extractRoleFromToken(authToken);
+    const redirect = roleRedirect(request, role);
+    if (redirect) return redirect;
+
+    if (isAdminOnly(pathname) && role && !['admin', 'owner'].includes(role)) {
+      return NextResponse.redirect(new URL(role === 'worker' ? '/worker' : '/properties', request.url));
     }
-
-    return response;
+    return NextResponse.next();
   }
 
-  // ── All other routes — allow through ──
-  return response;
+  return NextResponse.next();
 }
+
+// Exposed for the regression tests in src/lib/__tests__/middleware-auth.test.ts.
+// These two predicates are what closed the 2026-07-30 production auth bypass,
+// so they are worth testing directly rather than only through a full request.
+export const __testing__ = {
+  secretMatches,
+  looksLikeLiveIdToken,
+  looksLikeEchoAuthToken,
+  looksLikeAcceptableToken,
+};
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except:
-     * - _next/static (static files)
-     * - _next/image (image optimization)
-     * - favicon.ico, sitemap.xml, robots.txt
-     * - Public assets (images, fonts, etc.)
-     */
-    "/((?!_next/static|_next/image|favicon\\.ico|sitemap\\.xml|robots\\.txt|.*\\.png$|.*\\.jpg$|.*\\.jpeg$|.*\\.gif$|.*\\.svg$|.*\\.ico$|.*\\.webp$|.*\\.woff2?$|.*\\.ttf$|.*\\.eot$).*)",
+    '/((?!_next/static|_next/image|favicon\\.ico|sitemap\\.xml|robots\\.txt|.*\\.png$|.*\\.jpg$|.*\\.jpeg$|.*\\.gif$|.*\\.svg$|.*\\.ico$|.*\\.webp$|.*\\.woff2?$|.*\\.ttf$|.*\\.eot$).*)',
   ],
 };

@@ -10,7 +10,7 @@ import {
   ActivityIndicator, Image, ScrollView, Animated, Dimensions, Platform
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
+import { CameraView, CameraType, useCameraPermissions } from 'expo-camera/next';
 import {
   takePhoto,
   pickPhotoFromGallery,

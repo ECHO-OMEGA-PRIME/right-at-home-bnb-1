@@ -1,0 +1,3 @@
+rightathome-desktop:test: ERROR: command finished with error: command (C:\ECHO_OMEGA_PRIME\WEBSITES\right-at-home-bnb\apps\desktop) C:\Users\bobmc\AppData\Roaming\npm\pnpm.cmd run test exited (1)
+rightathome-desktop#test: command (C:\ECHO_OMEGA_PRIME\WEBSITES\right-at-home-bnb\apps\desktop) C:\Users\bobmc\AppData\Roaming\npm\pnpm.cmd run test exited (1)
+ ERROR  run failed: command  exited (1)

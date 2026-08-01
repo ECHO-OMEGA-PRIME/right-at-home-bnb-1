@@ -15,6 +15,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { echoChat, isEchoLLMConfigured } from '@/lib/echo-llm';
+import { requireTwilioSignature } from '@/lib/twilio-webhook';
 
 const STEVEN_PHONE = process.env.STEVEN_PHONE || '+14325591904';
 // CF Workers AI was the primary AI provider; replaced by Echo SDK gate
@@ -291,6 +292,8 @@ function continueConversation(aiResponse: string, turnCount: number, maxTurns: n
 }
 
 export async function POST(request: NextRequest) {
+  const sigError = await requireTwilioSignature(request);
+  if (sigError) return sigError;
   try {
     const formData = await request.formData();
 

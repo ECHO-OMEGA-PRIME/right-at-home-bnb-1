@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { paypalFetch, PayPalInvoiceItem } from "@/lib/integrations/paypal-client";
+import { requireOneOfRoles } from '@/lib/api-auth';
 
 /**
  * GET /api/integrations/paypal/invoices
@@ -12,6 +13,8 @@ import { paypalFetch, PayPalInvoiceItem } from "@/lib/integrations/paypal-client
  *   limit  - page size (default 20, max 100)
  */
 export async function GET(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
@@ -87,6 +90,8 @@ export async function GET(request: NextRequest) {
  * }
  */
 export async function POST(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const body = await request.json();
     const {

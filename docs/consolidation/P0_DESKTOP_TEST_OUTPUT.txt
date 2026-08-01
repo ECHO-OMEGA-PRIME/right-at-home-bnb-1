@@ -1,0 +1,97 @@
+﻿
+> rightathome-desktop@1.0.0 test C:\ECHO_OMEGA_PRIME\WEBSITES\right-at-home-bnb\apps\desktop
+> vitest run --passWithNoTests
+
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+
+[7m[1m[36m RUN [39m[22m[27m [36mv1.6.1[39m [90mC:/ECHO_OMEGA_PRIME/WEBSITES/right-at-home-bnb/apps/desktop[39m
+
+(node:58204) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/ECHO_OMEGA_PRIME/WEBSITES/right-at-home-bnb/apps/desktop/postcss.config.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to C:\ECHO_OMEGA_PRIME\WEBSITES\right-at-home-bnb\apps\desktop\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[90mstdout[2m | src/test/services/logger.test.ts[2m > [22m[2mLogger Service[2m > [22m[2mLogging Methods[2m > [22m[2mshould log info messages[22m[39m
+[2026-07-23T23:30:05.358Z] [INFO] [TEST] Test message
+
+[90mstderr[2m | src/test/services/logger.test.ts[2m > [22m[2mLogger Service[2m > [22m[2mLogging Methods[2m > [22m[2mshould log warn messages[22m[39m
+[2026-07-23T23:30:05.368Z] [WARN] [TEST] Warning message
+System.Management.Automation.RemoteException
+[90mstderr[2m | src/test/services/logger.test.ts[2m > [22m[2mLogger Service[2m > [22m[2mLogging Methods[2m > [22m[2mshould log error messages[22m[39m
+[2026-07-23T23:30:05.384Z] [ERROR] [TEST] Error message
+System.Management.Automation.RemoteException
+[90mstdout[2m | src/test/services/logger.test.ts[2m > [22m[2mLogger Service[2m > [22m[2mLogging Methods[2m > [22m[2mshould log debug when level is set to debug[22m[39m
+[2026-07-23T23:30:05.398Z] [DEBUG] [TEST] Debug message
+
+[90mstdout[2m | src/test/services/logger.test.ts[2m > [22m[2mLogger Service[2m > [22m[2mSpecialized Logging[2m > [22m[2mshould log API calls[22m[39m
+[2026-07-23T23:30:05.401Z] [INFO] [API] GET /api/bookings { status: [33m200[39m, duration: [33m150[39m }
+
+[90mstdout[2m | src/test/services/logger.test.ts[2m > [22m[2mLogger Service[2m > [22m[2mSpecialized Logging[2m > [22m[2mshould log actions[22m[39m
+[2026-07-23T23:30:05.404Z] [INFO] [ACTION] booking_created { bookingId: [32m'123'[39m }
+
+[90mstdout[2m | src/test/services/logger.test.ts[2m > [22m[2mLogger Service[2m > [22m[2mSpecialized Logging[2m > [22m[2mshould log navigation[22m[39m
+[2026-07-23T23:30:05.408Z] [INFO] [NAVIGATION] /dashboard -> /bookings
+
+[90mstdout[2m | src/test/services/logger.test.ts[2m > [22m[2mLogger Service[2m > [22m[2mLog Retrieval[2m > [22m[2mshould get all logs[22m[39m
+[2026-07-23T23:30:05.410Z] [INFO] [TEST] Info message 1
+[2026-07-23T23:30:05.410Z] [INFO] [TEST] Info message 2
+
+[90mstderr[2m | src/test/services/logger.test.ts[2m > [22m[2mLogger Service[2m > [22m[2mLog Retrieval[2m > [22m[2mshould get all logs[22m[39m
+[2026-07-23T23:30:05.410Z] [WARN] [WARNING] Warning message
+[2026-07-23T23:30:05.410Z] [ERROR] [ERROR] Error message
+System.Management.Automation.RemoteException
+[90mstdout[2m | src/test/services/logger.test.ts[2m > [22m[2mLogger Service[2m > [22m[2mLog Retrieval[2m > [22m[2mshould filter logs by level[22m[39m
+[2026-07-23T23:30:05.415Z] [INFO] [TEST] Info message 1
+[2026-07-23T23:30:05.415Z] [INFO] [TEST] Info message 2
+
+[90mstderr[2m | src/test/services/logger.test.ts[2m > [22m[2mLogger Service[2m > [22m[2mLog Retrieval[2m > [22m[2mshould filter logs by level[22m[39m
+[2026-07-23T23:30:05.415Z] [WARN] [WARNING] Warning message
+[2026-07-23T23:30:05.415Z] [ERROR] [ERROR] Error message
+System.Management.Automation.RemoteException
+[90mstdout[2m | src/test/services/logger.test.ts[2m > [22m[2mLogger Service[2m > [22m[2mLog Retrieval[2m > [22m[2mshould filter logs by category[22m[39m
+[2026-07-23T23:30:05.418Z] [INFO] [TEST] Info message 1
+[2026-07-23T23:30:05.418Z] [INFO] [TEST] Info message 2
+
+[90mstderr[2m | src/test/services/logger.test.ts[2m > [22m[2mLogger Service[2m > [22m[2mLog Retrieval[2m > [22m[2mshould filter logs by category[22m[39m
+[2026-07-23T23:30:05.418Z] [WARN] [WARNING] Warning message
+[2026-07-23T23:30:05.418Z] [ERROR] [ERROR] Error message
+System.Management.Automation.RemoteException
+[90mstdout[2m | src/test/services/logger.test.ts[2m > [22m[2mLogger Service[2m > [22m[2mLog Retrieval[2m > [22m[2mshould limit returned logs[22m[39m
+[2026-07-23T23:30:05.420Z] [INFO] [TEST] Info message 1
+[2026-07-23T23:30:05.420Z] [INFO] [TEST] Info message 2
+
+[90mstderr[2m | src/test/services/logger.test.ts[2m > [22m[2mLogger Service[2m > [22m[2mLog Retrieval[2m > [22m[2mshould limit returned logs[22m[39m
+[2026-07-23T23:30:05.420Z] [WARN] [WARNING] Warning message
+[2026-07-23T23:30:05.421Z] [ERROR] [ERROR] Error message
+System.Management.Automation.RemoteException
+[90mstdout[2m | src/test/services/logger.test.ts[2m > [22m[2mLogger Service[2m > [22m[2mStatistics[2m > [22m[2mshould calculate log statistics[22m[39m
+[2026-07-23T23:30:05.424Z] [INFO] [TEST] Info 1
+[2026-07-23T23:30:05.424Z] [INFO] [TEST] Info 2
+
+[90mstderr[2m | src/test/services/logger.test.ts[2m > [22m[2mLogger Service[2m > [22m[2mStatistics[2m > [22m[2mshould calculate log statistics[22m[39m
+[2026-07-23T23:30:05.424Z] [WARN] [WARN] Warning
+[2026-07-23T23:30:05.424Z] [ERROR] [ERROR] Error
+System.Management.Automation.RemoteException
+[90mstdout[2m | src/test/services/logger.test.ts[2m > [22m[2mLogger Service[2m > [22m[2mStatistics[2m > [22m[2mshould count errors in last 24 hours[22m[39m
+[2026-07-23T23:30:05.426Z] [INFO] [TEST] Info 1
+[2026-07-23T23:30:05.426Z] [INFO] [TEST] Info 2
+
+[90mstderr[2m | src/test/services/logger.test.ts[2m > [22m[2mLogger Service[2m > [22m[2mStatistics[2m > [22m[2mshould count errors in last 24 hours[22m[39m
+[2026-07-23T23:30:05.427Z] [WARN] [WARN] Warning
+[2026-07-23T23:30:05.427Z] [ERROR] [ERROR] Error
+System.Management.Automation.RemoteException
+[90mstdout[2m | src/test/services/logger.test.ts[2m > [22m[2mLogger Service[2m > [22m[2mUser Session[2m > [22m[2mshould set user ID[22m[39m
+[2026-07-23T23:30:05.430Z] [INFO] [SESSION] User ID set { userId: [32m'user-123'[39m }
+
+ [32mΓ£ô[39m src/test/services/logger.test.ts [2m ([22m[2m17 tests[22m[2m)[22m[90m 225[2mms[22m[39m
+ [32mΓ£ô[39m src/test/services/audit.test.ts [2m ([22m[2m28 tests[22m[2m)[22m[33m 346[2mms[22m[39m
+ [32mΓ£ô[39m src/test/services/calendar.test.ts [2m ([22m[2m11 tests[22m[2m)[22m[33m 906[2mms[22m[39m
+ [32mΓ£ô[39m src/test/services/pricing.test.ts [2m ([22m[2m22 tests[22m[2m)[22m[33m 932[2mms[22m[39m
+ [32mΓ£ô[39m src/test/services/cleaning.test.ts [2m ([22m[2m16 tests[22m[2m)[22m[33m 959[2mms[22m[39m
+ [32mΓ£ô[39m src/test/services/invoicing.test.ts [2m ([22m[2m15 tests[22m[2m)[22m[33m 977[2mms[22m[39m
+ [32mΓ£ô[39m src/test/services/encryption.test.ts [2m ([22m[2m21 tests[22m[2m)[22m[33m 1572[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m7 passed[39m[22m[90m (7)[39m
+[2m      Tests [22m [1m[32m130 passed[39m[22m[90m (130)[39m
+[2m   Start at [22m 18:29:56
+[2m   Duration [22m 10.67s[2m (transform 1.87s, setup 9.69s, collect 822ms, tests 5.92s, environment 31.49s, prepare 18.27s)[22m
+

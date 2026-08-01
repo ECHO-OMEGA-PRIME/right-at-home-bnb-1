@@ -1,0 +1,519 @@
+﻿
+> rightathome-bnb@1.0.0 test C:\ECHO_OMEGA_PRIME\WEBSITES\right-at-home-bnb
+> turbo run test
+
+ΓÇó Packages in scope: @rightathome/ai-concierge, @rightathome/analytics, @rightathome/cloud-sync, @rightathome/messaging, @rightathome/pricing, @rightathome/security, @rightathome/services, @rightathome/shared, @rightathome/smart-locks, @rightathome/testing, @rightathome/types, @rightathome/utils, rightathome-desktop, rightathome-mobile, rightathome-web
+ΓÇó Running test in 15 packages
+ΓÇó Remote caching disabled
+@rightathome/testing:test: cache miss, executing 6d8328dfe5a56957
+rightathome-desktop:test: cache miss, executing 41e776aad0c0ac0d
+@rightathome/utils:test: cache hit, replaying logs 2bf2cd4e01a69c1f
+@rightathome/security:test: cache hit, replaying logs 083677bbf3080f66
+@rightathome/utils:test: 
+@rightathome/utils:test: > @rightathome/utils@1.0.0 test C:\ECHO_OMEGA_PRIME\WEBSITES\right-at-home-bnb\packages\utils
+@rightathome/utils:test: > vitest run --passWithNoTests
+@rightathome/utils:test: 
+@rightathome/utils:test: 
+@rightathome/utils:test: [7m[1m[36m RUN [39m[22m[27m [36mv1.6.1[39m [90mC:/ECHO_OMEGA_PRIME/WEBSITES/right-at-home-bnb/packages/utils[39m
+@rightathome/utils:test: 
+@rightathome/utils:test: [2minclude: [22m[33m**/*.{test,spec}.?(c|m)[jt]s?(x)[39m
+@rightathome/utils:test: No test files found, exiting with code 0
+@rightathome/utils:test: 
+@rightathome/utils:test: [2mexclude:  [22m[33m**/node_modules/**[2m, [22m**/dist/**[2m, [22m**/cypress/**[2m, [22m**/.{idea,git,cache,output,temp}/**[2m, [22m**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build,eslint,prettier}.config.*[39m
+@rightathome/utils:test: [2mwatch exclude:  [22m[33m**/node_modules/**[2m, [22m**/dist/**[39m
+@rightathome/security:test: 
+@rightathome/security:test: > @rightathome/security@1.0.0 test C:\ECHO_OMEGA_PRIME\WEBSITES\right-at-home-bnb\packages\security
+@rightathome/security:test: > vitest run --passWithNoTests
+@rightathome/security:test: 
+@rightathome/security:test: 
+@rightathome/security:test: [7m[1m[36m RUN [39m[22m[27m [36mv1.6.1[39m [90mC:/ECHO_OMEGA_PRIME/WEBSITES/right-at-home-bnb/packages/security[39m
+@rightathome/security:test: 
+@rightathome/security:test: [2minclude: [22m[33m**/*.{test,spec}.?(c|m)[jt]s?(x)[39m
+@rightathome/security:test: No test files found, exiting with code 0
+@rightathome/security:test: 
+@rightathome/security:test: [2mexclude:  [22m[33m**/node_modules/**[2m, [22m**/dist/**[2m, [22m**/cypress/**[2m, [22m**/.{idea,git,cache,output,temp}/**[2m, [22m**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build,eslint,prettier}.config.*[39m
+@rightathome/security:test: [2mwatch exclude:  [22m[33m**/node_modules/**[2m, [22m**/dist/**[39m
+rightathome-desktop:test: 
+rightathome-desktop:test: > rightathome-desktop@1.0.0 test C:\ECHO_OMEGA_PRIME\WEBSITES\right-at-home-bnb\apps\desktop
+rightathome-desktop:test: > vitest run --passWithNoTests
+rightathome-desktop:test: 
+@rightathome/testing:test: 
+@rightathome/testing:test: > @rightathome/testing@1.0.0 test C:\ECHO_OMEGA_PRIME\WEBSITES\right-at-home-bnb\packages\testing
+@rightathome/testing:test: > vitest run --passWithNoTests
+@rightathome/testing:test: 
+rightathome-desktop:test: [33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+rightathome-desktop:test: 
+rightathome-desktop:test: [7m[1m[36m RUN [39m[22m[27m [36mv1.6.1[39m [90mC:/ECHO_OMEGA_PRIME/WEBSITES/right-at-home-bnb/apps/desktop[39m
+rightathome-desktop:test: 
+@rightathome/testing:test: 
+@rightathome/testing:test: [7m[1m[36m RUN [39m[22m[27m [36mv1.6.1[39m [90mC:/ECHO_OMEGA_PRIME/WEBSITES/right-at-home-bnb/packages/testing[39m
+@rightathome/testing:test: 
+rightathome-desktop:test: (node:109420) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/ECHO_OMEGA_PRIME/WEBSITES/right-at-home-bnb/apps/desktop/postcss.config.js is not specified and it doesn't parse as CommonJS.
+rightathome-desktop:test: Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+rightathome-desktop:test: To eliminate this warning, add "type": "module" to C:\ECHO_OMEGA_PRIME\WEBSITES\right-at-home-bnb\apps\desktop\package.json.
+rightathome-desktop:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@rightathome/testing:test: [90mstdout[2m | integration/api.test.ts[22m[39m
+@rightathome/testing:test: [Test Setup] Test environment initialized
+@rightathome/testing:test: 
+@rightathome/testing:test: [90mstdout[2m | e2e/booking-flow.test.ts[2m > [22m[2mE2E: Complete Booking Flow[2m > [22m[2mComplete Flow: Start to Finish[2m > [22m[2mshould complete full booking journey[22m[39m
+@rightathome/testing:test: E2E booking flow completed: book_1784849441108
+@rightathome/testing:test: 
+@rightathome/testing:test: [90mstdout[2m | e2e/guest-journey.test.ts[2m > [22m[2mE2E: Guest Journey[2m > [22m[2mComplete Guest Journey[2m > [22m[2mshould complete full guest lifecycle[22m[39m
+@rightathome/testing:test: Guest journey completed: journey_1784849441115@test.com -> book_1784849441115
+@rightathome/testing:test: 
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/booking-flow.test.ts[2m > [22mE2E: Complete Booking Flow[2m > [22mStep 1: Property Selection[2m > [22mshould display available properties
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/booking-flow.test.ts[2m > [22mE2E: Complete Booking Flow[2m > [22mStep 1: Property Selection[2m > [22mshould filter properties by guest count
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/booking-flow.test.ts[2m > [22mE2E: Complete Booking Flow[2m > [22mStep 1: Property Selection[2m > [22mshould select property and view details
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/booking-flow.test.ts[2m > [22mE2E: Complete Booking Flow[2m > [22mStep 2: Date Selection[2m > [22mshould validate date range selection
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/booking-flow.test.ts[2m > [22mE2E: Complete Booking Flow[2m > [22mStep 2: Date Selection[2m > [22mshould reject invalid date ranges
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/booking-flow.test.ts[2m > [22mE2E: Complete Booking Flow[2m > [22mStep 2: Date Selection[2m > [22mshould check property availability for selected dates
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/booking-flow.test.ts[2m > [22mE2E: Complete Booking Flow[2m > [22mStep 3: Guest Information[2m > [22mshould validate guest email
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/booking-flow.test.ts[2m > [22mE2E: Complete Booking Flow[2m > [22mStep 3: Guest Information[2m > [22mshould validate guest phone
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/booking-flow.test.ts[2m > [22mE2E: Complete Booking Flow[2m > [22mStep 3: Guest Information[2m > [22mshould create or retrieve guest record
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/booking-flow.test.ts[2m > [22mE2E: Complete Booking Flow[2m > [22mStep 4: Pricing Calculation[2m > [22mshould calculate correct booking total
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/booking-flow.test.ts[2m > [22mE2E: Complete Booking Flow[2m > [22mStep 4: Pricing Calculation[2m > [22mshould include all fee components
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/booking-flow.test.ts[2m > [22mE2E: Complete Booking Flow[2m > [22mStep 5: Booking Confirmation[2m > [22mshould create booking with all required data
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/booking-flow.test.ts[2m > [22mE2E: Complete Booking Flow[2m > [22mStep 5: Booking Confirmation[2m > [22mshould save booking to database
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/booking-flow.test.ts[2m > [22mE2E: Complete Booking Flow[2m > [22mStep 5: Booking Confirmation[2m > [22mshould sync booking to Firebase
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/booking-flow.test.ts[2m > [22mE2E: Complete Booking Flow[2m > [22mStep 6: Post-Booking Actions[2m > [22mshould create cleaning job for booking
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/booking-flow.test.ts[2m > [22mE2E: Complete Booking Flow[2m > [22mStep 6: Post-Booking Actions[2m > [22mshould update guest statistics
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/booking-flow.test.ts[2m > [22mE2E: Complete Booking Flow[2m > [22mComplete Flow: Start to Finish[2m > [22mshould complete full booking journey
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/booking-flow.test.ts[2m > [22mE2E: Complete Booking Flow[2m > [22mError Scenarios[2m > [22mshould handle booking for non-existent property
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/booking-flow.test.ts[2m > [22mE2E: Complete Booking Flow[2m > [22mError Scenarios[2m > [22mshould validate guest count against property max
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/booking-flow.test.ts[2m > [22mE2E: Complete Booking Flow[2m > [22mError Scenarios[2m > [22mshould handle invalid date selections
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/booking-flow.test.ts[2m > [22mE2E: Complete Booking Flow[2m > [22mBooking Modification[2m > [22mshould allow date changes before check-in
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/booking-flow.test.ts[2m > [22mE2E: Complete Booking Flow[2m > [22mBooking Modification[2m > [22mshould handle booking cancellation
+@rightathome/testing:test: [90mstdout[2m | e2e/booking-flow.test.ts[22m[39m
+@rightathome/testing:test: [Test Setup] Test environment initialized
+@rightathome/testing:test: [Test Cleanup] Test environment cleaned up
+@rightathome/testing:test: 
+@rightathome/testing:test:  [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mProperty API[2m > [22mshould list all properties
+@rightathome/testing:test:  [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mProperty API[2m > [22mshould get property by ID
+@rightathome/testing:test:  [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mProperty API[2m > [22mshould return null for non-existent property
+@rightathome/testing:test:  [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mProperty API[2m > [22mshould create a new property
+@rightathome/testing:test:  [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mProperty API[2m > [22mshould update property
+@rightathome/testing:test:  [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mProperty API[2m > [22mshould delete property
+@rightathome/testing:test:  [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mBooking API[2m > [22mshould list all bookings
+@rightathome/testing:test:  [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mBooking API[2m > [22mshould get booking by ID
+@rightathome/testing:test:  [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mBooking API[2m > [22mshould create a new booking
+@rightathome/testing:test:  [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mBooking API[2m > [22mshould update booking status
+@rightathome/testing:test:  [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mBooking API[2m > [22mshould cancel booking
+@rightathome/testing:test:  [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mGuest API[2m > [22mshould list all guests
+@rightathome/testing:test:  [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mGuest API[2m > [22mshould get guest by ID
+@rightathome/testing:test:  [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mGuest API[2m > [22mshould search guests by name
+@rightathome/testing:test:  [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mGuest API[2m > [22mshould search guests by email
+@rightathome/testing:test:  [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mCleaning API[2m > [22mshould list all cleaning jobs
+@rightathome/testing:test:  [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mCleaning API[2m > [22mshould get cleaning job by ID
+@rightathome/testing:test:  [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mCleaning API[2m > [22mshould assign cleaner to job
+@rightathome/testing:test:  [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mCleaning API[2m > [22mshould complete cleaning job
+@rightathome/testing:test:  [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mHTTP Fetch Mock[2m > [22mshould mock GET request
+@rightathome/testing:test:  [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mHTTP Fetch Mock[2m > [22mshould mock POST request
+@rightathome/testing:test:  [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mHTTP Fetch Mock[2m > [22mshould return 404 for unset routes
+@rightathome/testing:test:  [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mHTTP Fetch Mock[2m > [22mshould mock PUT request
+@rightathome/testing:test:  [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mHTTP Fetch Mock[2m > [22mshould mock DELETE request
+@rightathome/testing:test:  [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mResponse Helpers[2m > [22mshould create mock API response
+@rightathome/testing:test:  [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mResponse Helpers[2m > [22mshould create mock error response
+@rightathome/testing:test:  [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mResponse Helpers[2m > [22mshould create mock paginated response
+@rightathome/testing:test:  [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mError Handling[2m > [22mshould handle network errors gracefully
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/guest-journey.test.ts[2m > [22mE2E: Guest Journey[2m > [22mGuest Discovery Phase[2m > [22mshould browse available properties
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/guest-journey.test.ts[2m > [22mE2E: Guest Journey[2m > [22mGuest Discovery Phase[2m > [22mshould filter properties by guest needs
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/guest-journey.test.ts[2m > [22mE2E: Guest Journey[2m > [22mGuest Discovery Phase[2m > [22mshould view property details and photos
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/guest-journey.test.ts[2m > [22mE2E: Guest Journey[2m > [22mGuest Registration[2m > [22mshould validate guest email
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/guest-journey.test.ts[2m > [22mE2E: Guest Journey[2m > [22mGuest Registration[2m > [22mshould validate guest phone
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/guest-journey.test.ts[2m > [22mE2E: Guest Journey[2m > [22mGuest Registration[2m > [22mshould create new guest account
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/guest-journey.test.ts[2m > [22mE2E: Guest Journey[2m > [22mGuest Registration[2m > [22mshould recognize returning guest
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/guest-journey.test.ts[2m > [22mE2E: Guest Journey[2m > [22mGuest Registration[2m > [22mshould update guest stats on return visit
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/guest-journey.test.ts[2m > [22mE2E: Guest Journey[2m > [22mBooking Experience[2m > [22mshould select dates and see pricing
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/guest-journey.test.ts[2m > [22mE2E: Guest Journey[2m > [22mBooking Experience[2m > [22mshould make a booking
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/guest-journey.test.ts[2m > [22mE2E: Guest Journey[2m > [22mBooking Experience[2m > [22mshould receive booking confirmation
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/guest-journey.test.ts[2m > [22mE2E: Guest Journey[2m > [22mPre-Arrival Experience[2m > [22mshould receive check-in instructions
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/guest-journey.test.ts[2m > [22mE2E: Guest Journey[2m > [22mPre-Arrival Experience[2m > [22mshould have access code generated before check-in
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/guest-journey.test.ts[2m > [22mE2E: Guest Journey[2m > [22mDuring Stay Experience[2m > [22mshould allow guest to contact host
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/guest-journey.test.ts[2m > [22mE2E: Guest Journey[2m > [22mDuring Stay Experience[2m > [22mshould track guest check-in
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/guest-journey.test.ts[2m > [22mE2E: Guest Journey[2m > [22mCheck-Out Experience[2m > [22mshould process guest check-out
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/guest-journey.test.ts[2m > [22mE2E: Guest Journey[2m > [22mCheck-Out Experience[2m > [22mshould trigger cleaning job on check-out
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/guest-journey.test.ts[2m > [22mE2E: Guest Journey[2m > [22mCheck-Out Experience[2m > [22mshould send post-checkout thank you
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/guest-journey.test.ts[2m > [22mE2E: Guest Journey[2m > [22mGuest Loyalty & VIP[2m > [22mshould track guest stay history
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/guest-journey.test.ts[2m > [22mE2E: Guest Journey[2m > [22mGuest Loyalty & VIP[2m > [22mshould identify VIP guests
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/guest-journey.test.ts[2m > [22mE2E: Guest Journey[2m > [22mGuest Loyalty & VIP[2m > [22mshould upgrade guest to VIP after threshold
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/guest-journey.test.ts[2m > [22mE2E: Guest Journey[2m > [22mComplete Guest Journey[2m > [22mshould complete full guest lifecycle
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/guest-journey.test.ts[2m > [22mE2E: Guest Journey[2m > [22mGuest Search & History[2m > [22mshould search guests by email
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/guest-journey.test.ts[2m > [22mE2E: Guest Journey[2m > [22mGuest Search & History[2m > [22mshould retrieve guest booking history
+@rightathome/testing:test: [90mstdout[2m | e2e/guest-journey.test.ts[22m[39m
+@rightathome/testing:test: [Test Setup] Test environment initialized
+@rightathome/testing:test: [Test Cleanup] Test environment cleaned up
+@rightathome/testing:test: 
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/property-management.test.ts[2m > [22mE2E: Property Management[2m > [22mProperty Listing[2m > [22mshould list all Steven Palma properties
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/property-management.test.ts[2m > [22mE2E: Property Management[2m > [22mProperty Listing[2m > [22mshould have correct property count (14 properties)
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/property-management.test.ts[2m > [22mE2E: Property Management[2m > [22mProperty Listing[2m > [22mshould have all properties in Midland, TX
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/property-management.test.ts[2m > [22mE2E: Property Management[2m > [22mProperty Listing[2m > [22mshould display correct photo counts per property
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/property-management.test.ts[2m > [22mE2E: Property Management[2m > [22mProperty Creation[2m > [22mshould create a new property with required fields
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/property-management.test.ts[2m > [22mE2E: Property Management[2m > [22mProperty Creation[2m > [22mshould validate ZIP code on creation
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/property-management.test.ts[2m > [22mE2E: Property Management[2m > [22mProperty Creation[2m > [22mshould sync new property to Firebase
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/property-management.test.ts[2m > [22mE2E: Property Management[2m > [22mProperty Creation[2m > [22mshould generate unique property ID
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/property-management.test.ts[2m > [22mE2E: Property Management[2m > [22mProperty Update[2m > [22mshould update property pricing
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/property-management.test.ts[2m > [22mE2E: Property Management[2m > [22mProperty Update[2m > [22mshould update property amenities
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/property-management.test.ts[2m > [22mE2E: Property Management[2m > [22mProperty Update[2m > [22mshould update property status
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/property-management.test.ts[2m > [22mE2E: Property Management[2m > [22mProperty Update[2m > [22mshould sync property updates to Firebase
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/property-management.test.ts[2m > [22mE2E: Property Management[2m > [22mProperty Deletion[2m > [22mshould delete property from database
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/property-management.test.ts[2m > [22mE2E: Property Management[2m > [22mProperty Deletion[2m > [22mshould remove property from Firebase on delete
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/property-management.test.ts[2m > [22mE2E: Property Management[2m > [22mProperty Search & Filter[2m > [22mshould filter properties by bedroom count
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/property-management.test.ts[2m > [22mE2E: Property Management[2m > [22mProperty Search & Filter[2m > [22mshould filter properties by price range
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/property-management.test.ts[2m > [22mE2E: Property Management[2m > [22mProperty Search & Filter[2m > [22mshould filter properties by amenity
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/property-management.test.ts[2m > [22mE2E: Property Management[2m > [22mProperty Search & Filter[2m > [22mshould search properties by name
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/property-management.test.ts[2m > [22mE2E: Property Management[2m > [22mProperty Validation[2m > [22mshould validate required fields
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/property-management.test.ts[2m > [22mE2E: Property Management[2m > [22mProperty Validation[2m > [22mshould validate bedroom count is positive
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/property-management.test.ts[2m > [22mE2E: Property Management[2m > [22mProperty Validation[2m > [22mshould validate bathroom count is positive
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/property-management.test.ts[2m > [22mE2E: Property Management[2m > [22mProperty Validation[2m > [22mshould validate maxGuests is reasonable
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/property-management.test.ts[2m > [22mE2E: Property Management[2m > [22mProperty Validation[2m > [22mshould validate baseRate is positive
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/property-management.test.ts[2m > [22mE2E: Property Management[2m > [22mProperty-Booking Relationship[2m > [22mshould link bookings to properties
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/property-management.test.ts[2m > [22mE2E: Property Management[2m > [22mProperty-Booking Relationship[2m > [22mshould link cleaning jobs to properties
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/property-management.test.ts[2m > [22mE2E: Property Management[2m > [22mComplete Property CRUD Flow[2m > [22mshould complete full property lifecycle
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/property-management.test.ts[2m > [22mE2E: Property Management[2m > [22mProperty Photo Management[2m > [22mshould have expected photo counts per property
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/property-management.test.ts[2m > [22mE2E: Property Management[2m > [22mProperty Photo Management[2m > [22mshould total 730 photos across all properties
+@rightathome/testing:test:  [32mΓ£ô[39m e2e/property-management.test.ts[2m > [22mE2E: Property Management[2m > [22mProperty Photo Management[2m > [22mshould store photo URLs in Firebase
+@rightathome/testing:test: [90mstdout[2m | e2e/property-management.test.ts[2m > [22m[2mE2E: Property Management[2m > [22m[2mComplete Property CRUD Flow[2m > [22m[2mshould complete full property lifecycle[22m[39m
+@rightathome/testing:test: Property CRUD lifecycle completed for: prop_1784849441141
+@rightathome/testing:test: 
+@rightathome/testing:test: [90mstdout[2m | e2e/property-management.test.ts[22m[39m
+@rightathome/testing:test: [Test Setup] Test environment initialized
+@rightathome/testing:test: [Test Cleanup] Test environment cleaned up
+@rightathome/testing:test: 
+@rightathome/testing:test: [90mstdout[2m | integration/api.test.ts[22m[39m
+@rightathome/testing:test: [Test Cleanup] Test environment cleaned up
+@rightathome/testing:test: 
+@rightathome/testing:test:  [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mError Handling[2m > [22mshould handle timeout errors
+@rightathome/testing:test:  [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mError Handling[2m > [22mshould handle validation errors
+@rightathome/testing:test:  [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mError Handling[2m > [22mshould handle authorization errors
+@rightathome/testing:test:  [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mPagination[2m > [22mshould paginate property list
+@rightathome/testing:test:  [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mPagination[2m > [22mshould calculate total pages correctly
+@rightathome/testing:test:  [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mPagination[2m > [22mshould handle last page with fewer items
+@rightathome/testing:test:  [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mContent Type Handling[2m > [22mshould handle JSON responses
+@rightathome/testing:test:  [32mΓ£ô[39m integration/api.test.ts[2m > [22mAPI Integration[2m > [22mContent Type Handling[2m > [22mshould handle text responses
+@rightathome/testing:test:  [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mDate Formatting[2m > [22mshould format date as YYYY-MM-DD
+@rightathome/testing:test:  [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mDate Formatting[2m > [22mshould handle single digit months and days
+@rightathome/testing:test:  [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mDate Formatting[2m > [22mshould format future dates correctly
+@rightathome/testing:test:  [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mDate Formatting[2m > [22mshould format date ranges for booking display
+@rightathome/testing:test:  [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mDate Formatting[2m > [22mshould handle year boundary in date range
+@rightathome/testing:test:  [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mCurrency Formatting[2m > [22mshould format whole numbers
+@rightathome/testing:test:  [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mCurrency Formatting[2m > [22mshould format decimal amounts
+@rightathome/testing:test:  [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mCurrency Formatting[2m > [22mshould format zero
+@rightathome/testing:test:  [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mCurrency Formatting[2m > [22mshould format property rates correctly
+@rightathome/testing:test:  [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mCurrency Formatting[2m > [22mshould format booking totals correctly
+@rightathome/testing:test:  [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mPhone Formatting[2m > [22mshould format 10-digit phone numbers
+@rightathome/testing:test:  [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mPhone Formatting[2m > [22mshould handle phone with country code
+@rightathome/testing:test:  [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mPhone Formatting[2m > [22mshould handle already formatted phones
+@rightathome/testing:test:  [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mPhone Formatting[2m > [22mshould preserve invalid phone numbers
+@rightathome/testing:test:  [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mPhone Formatting[2m > [22mshould format all Midland area codes consistently
+@rightathome/testing:test:  [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mAddress Formatting[2m > [22mshould format full address
+@rightathome/testing:test:  [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mAddress Formatting[2m > [22mshould format all property addresses
+@rightathome/testing:test:  [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mGuest Count Formatting[2m > [22mshould format singular guest
+@rightathome/testing:test:  [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mGuest Count Formatting[2m > [22mshould format plural guests
+@rightathome/testing:test:  [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mGuest Count Formatting[2m > [22mshould format property max guests
+@rightathome/testing:test:  [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mNight Count Formatting[2m > [22mshould format singular night
+@rightathome/testing:test:  [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mNight Count Formatting[2m > [22mshould format plural nights
+@rightathome/testing:test:  [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mNight Count Formatting[2m > [22mshould format booking nights
+@rightathome/testing:test:  [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mAmenities Formatting[2m > [22mshould capitalize and space amenities
+@rightathome/testing:test:  [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mAmenities Formatting[2m > [22mshould join with commas
+@rightathome/testing:test:  [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mAmenities Formatting[2m > [22mshould handle property amenities
+@rightathome/testing:test:  [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mBooking Status Formatting[2m > [22mshould format all statuses correctly
+@rightathome/testing:test:  [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mBooking Status Formatting[2m > [22mshould handle unknown statuses
+@rightathome/testing:test:  [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mRelative Time Formatting[2m > [22mshould format today
+@rightathome/testing:test:  [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mRelative Time Formatting[2m > [22mshould format tomorrow
+@rightathome/testing:test:  [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mRelative Time Formatting[2m > [22mshould format future days
+@rightathome/testing:test:  [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mRelative Time Formatting[2m > [22mshould format past days
+@rightathome/testing:test:  [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mProperty Name Formatting[2m > [22mshould have descriptive property names
+@rightathome/testing:test:  [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mProperty Name Formatting[2m > [22mshould have unique property names
+@rightathome/testing:test:  [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mURL Slug Generation[2m > [22mshould generate valid URL slugs from property names
+@rightathome/testing:test:  [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mURL Slug Generation[2m > [22mshould handle special characters in names
+@rightathome/testing:test:  [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mNumeric Formatting[2m > [22mshould format bedroom count
+@rightathome/testing:test:  [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mNumeric Formatting[2m > [22mshould format bathroom count with decimal
+@rightathome/testing:test:  [32mΓ£ô[39m unit/formatting.test.ts[2m > [22mData Formatting[2m > [22mNumeric Formatting[2m > [22mshould format cleaning duration as hours/minutes
+@rightathome/testing:test: [90mstdout[2m | unit/formatting.test.ts[22m[39m
+@rightathome/testing:test: [Test Setup] Test environment initialized
+@rightathome/testing:test: [Test Cleanup] Test environment cleaned up
+@rightathome/testing:test: 
+rightathome-desktop:test:  [32mΓ£ô[39m src/test/services/audit.test.ts [2m ([22m[2m28 tests[22m[2m)[22m[33m 328[2mms[22m[39m
+@rightathome/testing:test: [90mstdout[2m | unit/validation.test.ts[22m[39m
+@rightathome/testing:test: [Test Setup] Test environment initialized
+@rightathome/testing:test: [Test Cleanup] Test environment cleaned up
+@rightathome/testing:test: 
+@rightathome/testing:test:  [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mEmail Validation[2m > [22mshould accept valid email addresses
+@rightathome/testing:test:  [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mEmail Validation[2m > [22mshould reject invalid email addresses
+@rightathome/testing:test:  [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mEmail Validation[2m > [22mshould validate all test guest emails
+@rightathome/testing:test:  [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mEmail Validation[2m > [22mshould validate all test user emails
+@rightathome/testing:test:  [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mPhone Validation[2m > [22mshould accept valid US phone numbers
+@rightathome/testing:test:  [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mPhone Validation[2m > [22mshould reject invalid phone numbers
+@rightathome/testing:test:  [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mPhone Validation[2m > [22mshould validate all test user phones
+@rightathome/testing:test:  [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mZIP Code Validation[2m > [22mshould accept valid 5-digit ZIP codes
+@rightathome/testing:test:  [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mZIP Code Validation[2m > [22mshould accept valid ZIP+4 codes
+@rightathome/testing:test:  [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mZIP Code Validation[2m > [22mshould reject invalid ZIP codes
+@rightathome/testing:test:  [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mZIP Code Validation[2m > [22mshould validate all property ZIP codes
+@rightathome/testing:test:  [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mDate Range Validation[2m > [22mshould accept valid date ranges
+@rightathome/testing:test:  [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mDate Range Validation[2m > [22mshould reject invalid date ranges
+@rightathome/testing:test:  [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mDate Range Validation[2m > [22mshould validate all test booking date ranges
+@rightathome/testing:test:  [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mGuest Count Validation[2m > [22mshould validate guest counts within property limits
+@rightathome/testing:test:  [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mGuest Count Validation[2m > [22mshould handle edge cases
+@rightathome/testing:test:  [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mProperty Data Validation[2m > [22mshould have valid data for all properties
+@rightathome/testing:test:  [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mProperty Data Validation[2m > [22mshould have unique property IDs
+@rightathome/testing:test:  [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mProperty Data Validation[2m > [22mshould have unique property addresses
+@rightathome/testing:test:  [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mProperty Data Validation[2m > [22mshould have amenities as arrays
+@rightathome/testing:test:  [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mBooking Data Validation[2m > [22mshould have consistent booking totals
+@rightathome/testing:test:  [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mBooking Data Validation[2m > [22mshould have valid booking statuses
+@rightathome/testing:test:  [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mBooking Data Validation[2m > [22mshould have valid booking sources
+@rightathome/testing:test:  [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mUser Data Validation[2m > [22mshould have valid roles for all users
+@rightathome/testing:test:  [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mUser Data Validation[2m > [22mshould have unique user IDs
+@rightathome/testing:test:  [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mUser Data Validation[2m > [22mshould have unique user emails
+@rightathome/testing:test:  [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mGuest Data Validation[2m > [22mshould have non-negative lifetime values
+@rightathome/testing:test:  [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mGuest Data Validation[2m > [22mshould have non-negative total stays
+@rightathome/testing:test:  [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mGuest Data Validation[2m > [22mshould have VIP status as boolean
+@rightathome/testing:test:  [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mSanitization Tests[2m > [22mshould handle whitespace in emails
+@rightathome/testing:test:  [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mSanitization Tests[2m > [22mshould handle special characters in names
+@rightathome/testing:test:  [32mΓ£ô[39m unit/validation.test.ts[2m > [22mInput Validation[2m > [22mSanitization Tests[2m > [22mshould handle international characters
+rightathome-desktop:test: [90mstdout[2m | src/test/services/logger.test.ts[2m > [22m[2mLogger Service[2m > [22m[2mLogging Methods[2m > [22m[2mshould log info messages[22m[39m
+rightathome-desktop:test: [2026-07-23T23:30:42.852Z] [INFO] [TEST] Test message
+rightathome-desktop:test: 
+@rightathome/testing:test:  [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mFirebase Initialization[2m > [22mshould initialize with correct project ID
+@rightathome/testing:test:  [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mFirebase Initialization[2m > [22mshould have app name
+@rightathome/testing:test:  [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mFirestore Collection Operations[2m > [22mshould create collection reference
+@rightathome/testing:test:  [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mFirestore Collection Operations[2m > [22mshould add document to collection
+@rightathome/testing:test:  [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mFirestore Collection Operations[2m > [22mshould set document with specific ID
+@rightathome/testing:test:  [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mFirestore Collection Operations[2m > [22mshould get document by ID
+@rightathome/testing:test:  [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mFirestore Collection Operations[2m > [22mshould update existing document
+@rightathome/testing:test:  [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mFirestore Collection Operations[2m > [22mshould delete document
+@rightathome/testing:test:  [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mFirestore Collection Operations[2m > [22mshould handle non-existent document
+@rightathome/testing:test:  [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mBatch Operations[2m > [22mshould create batch write
+@rightathome/testing:test:  [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mBatch Operations[2m > [22mshould commit batch successfully
+@rightathome/testing:test:  [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mTransaction Operations[2m > [22mshould run transaction
+@rightathome/testing:test:  [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mReal-time Listeners[2m > [22mshould set up document listener
+@rightathome/testing:test:  [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mReal-time Listeners[2m > [22mshould set up collection listener
+@rightathome/testing:test:  [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mReal-time Listeners[2m > [22mshould receive initial snapshot
+@rightathome/testing:test:  [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mQuery Operations[2m > [22mshould query with where clause
+@rightathome/testing:test:  [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mQuery Operations[2m > [22mshould execute query
+@rightathome/testing:test:  [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mProperty Sync[2m > [22mshould sync all properties to Firestore
+@rightathome/testing:test:  [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mProperty Sync[2m > [22mshould retrieve synced properties
+@rightathome/testing:test:  [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mBooking Sync[2m > [22mshould sync bookings to Firestore
+@rightathome/testing:test:  [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mBooking Sync[2m > [22mshould update booking status
+@rightathome/testing:test:  [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mGuest Sync[2m > [22mshould sync guests to Firestore
+@rightathome/testing:test:  [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mGuest Sync[2m > [22mshould find guest by email
+@rightathome/testing:test:  [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mOffline Queue[2m > [22mshould queue operations for offline sync
+@rightathome/testing:test:  [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mOffline Queue[2m > [22mshould process queued operations
+@rightathome/testing:test:  [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mSync Metadata[2m > [22mshould track last sync timestamp
+@rightathome/testing:test:  [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mSync Metadata[2m > [22mshould track sync status per collection
+@rightathome/testing:test:  [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mError Handling[2m > [22mshould handle update on non-existent document
+@rightathome/testing:test:  [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mError Handling[2m > [22mshould handle invalid collection name
+@rightathome/testing:test:  [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mData Validation[2m > [22mshould validate property data structure before sync
+@rightathome/testing:test:  [32mΓ£ô[39m integration/sync.test.ts[2m > [22mCloudSync Integration[2m > [22mData Validation[2m > [22mshould validate booking data structure before sync
+@rightathome/testing:test: [90mstdout[2m | integration/sync.test.ts[22m[39m
+@rightathome/testing:test: [Test Setup] Test environment initialized
+@rightathome/testing:test: [Test Cleanup] Test environment cleaned up
+@rightathome/testing:test: 
+rightathome-desktop:test: [90mstderr[2m | src/test/services/logger.test.ts[2m > [22m[2mLogger Service[2m > [22m[2mLogging Methods[2m > [22m[2mshould log warn messages[22m[39m
+rightathome-desktop:test: [2026-07-23T23:30:42.866Z] [WARN] [TEST] Warning message
+rightathome-desktop:test: 
+rightathome-desktop:test: [90mstderr[2m | src/test/services/logger.test.ts[2m > [22m[2mLogger Service[2m > [22m[2mLogging Methods[2m > [22m[2mshould log error messages[22m[39m
+rightathome-desktop:test: [2026-07-23T23:30:42.869Z] [ERROR] [TEST] Error message
+rightathome-desktop:test: 
+rightathome-desktop:test: [90mstdout[2m | src/test/services/logger.test.ts[2m > [22m[2mLogger Service[2m > [22m[2mLogging Methods[2m > [22m[2mshould log debug when level is set to debug[22m[39m
+rightathome-desktop:test: [2026-07-23T23:30:42.875Z] [DEBUG] [TEST] Debug message
+rightathome-desktop:test: 
+rightathome-desktop:test: [90mstdout[2m | src/test/services/logger.test.ts[2m > [22m[2mLogger Service[2m > [22m[2mSpecialized Logging[2m > [22m[2mshould log API calls[22m[39m
+rightathome-desktop:test: [2026-07-23T23:30:42.882Z] [INFO] [API] GET /api/bookings { status: [33m200[39m, duration: [33m150[39m }
+rightathome-desktop:test: 
+rightathome-desktop:test: [90mstdout[2m | src/test/services/logger.test.ts[2m > [22m[2mLogger Service[2m > [22m[2mSpecialized Logging[2m > [22m[2mshould log actions[22m[39m
+rightathome-desktop:test: [2026-07-23T23:30:42.886Z] [INFO] [ACTION] booking_created { bookingId: [32m'123'[39m }
+rightathome-desktop:test: 
+rightathome-desktop:test: [90mstdout[2m | src/test/services/logger.test.ts[2m > [22m[2mLogger Service[2m > [22m[2mSpecialized Logging[2m > [22m[2mshould log navigation[22m[39m
+rightathome-desktop:test: [2026-07-23T23:30:42.888Z] [INFO] [NAVIGATION] /dashboard -> /bookings
+rightathome-desktop:test: 
+rightathome-desktop:test: [90mstdout[2m | src/test/services/logger.test.ts[2m > [22m[2mLogger Service[2m > [22m[2mLog Retrieval[2m > [22m[2mshould get all logs[22m[39m
+rightathome-desktop:test: [2026-07-23T23:30:42.892Z] [INFO] [TEST] Info message 1
+rightathome-desktop:test: [2026-07-23T23:30:42.893Z] [INFO] [TEST] Info message 2
+rightathome-desktop:test: [90mstderr[2m | src/test/services/logger.test.ts[2m > [22m[2mLogger Service[2m > [22m[2mLog Retrieval[2m > [22m[2mshould get all logs[22m[39m
+rightathome-desktop:test: 
+rightathome-desktop:test: [2026-07-23T23:30:42.893Z] [WARN] [WARNING] Warning message
+rightathome-desktop:test: [2026-07-23T23:30:42.893Z] [ERROR] [ERROR] Error message
+rightathome-desktop:test: 
+rightathome-desktop:test: [90mstdout[2m | src/test/services/logger.test.ts[2m > [22m[2mLogger Service[2m > [22m[2mLog Retrieval[2m > [22m[2mshould filter logs by level[22m[39m
+rightathome-desktop:test: [2026-07-23T23:30:42.899Z] [INFO] [TEST] Info message 1
+rightathome-desktop:test: [2026-07-23T23:30:42.899Z] [INFO] [TEST] Info message 2
+rightathome-desktop:test: 
+rightathome-desktop:test: [90mstderr[2m | src/test/services/logger.test.ts[2m > [22m[2mLogger Service[2m > [22m[2mLog Retrieval[2m > [22m[2mshould filter logs by level[22m[39m
+rightathome-desktop:test: [2026-07-23T23:30:42.899Z] [WARN] [WARNING] Warning message
+rightathome-desktop:test: [2026-07-23T23:30:42.899Z] [ERROR] [ERROR] Error message
+rightathome-desktop:test: 
+rightathome-desktop:test: [90mstdout[2m | src/test/services/logger.test.ts[2m > [22m[2mLogger Service[2m > [22m[2mLog Retrieval[2m > [22m[2mshould filter logs by category[22m[39m
+rightathome-desktop:test: [2026-07-23T23:30:42.902Z] [INFO] [TEST] Info message 1
+rightathome-desktop:test: [2026-07-23T23:30:42.902Z] [INFO] [TEST] Info message 2
+rightathome-desktop:test: [90mstderr[2m | src/test/services/logger.test.ts[2m > [22m[2mLogger Service[2m > [22m[2mLog Retrieval[2m > [22m[2mshould filter logs by category[22m[39m
+rightathome-desktop:test: 
+rightathome-desktop:test: [2026-07-23T23:30:42.902Z] [WARN] [WARNING] Warning message
+rightathome-desktop:test: [2026-07-23T23:30:42.903Z] [ERROR] [ERROR] Error message
+rightathome-desktop:test: 
+rightathome-desktop:test: [90mstdout[2m | src/test/services/logger.test.ts[2m > [22m[2mLogger Service[2m > [22m[2mLog Retrieval[2m > [22m[2mshould limit returned logs[22m[39m
+rightathome-desktop:test: [2026-07-23T23:30:42.905Z] [INFO] [TEST] Info message 1
+rightathome-desktop:test: [2026-07-23T23:30:42.905Z] [INFO] [TEST] Info message 2
+rightathome-desktop:test: 
+rightathome-desktop:test: [90mstderr[2m | src/test/services/logger.test.ts[2m > [22m[2mLogger Service[2m > [22m[2mLog Retrieval[2m > [22m[2mshould limit returned logs[22m[39m
+rightathome-desktop:test: [2026-07-23T23:30:42.905Z] [WARN] [WARNING] Warning message
+rightathome-desktop:test: [2026-07-23T23:30:42.905Z] [ERROR] [ERROR] Error message
+rightathome-desktop:test: 
+rightathome-desktop:test: [90mstdout[2m | src/test/services/logger.test.ts[2m > [22m[2mLogger Service[2m > [22m[2mStatistics[2m > [22m[2mshould calculate log statistics[22m[39m
+rightathome-desktop:test: [2026-07-23T23:30:42.908Z] [INFO] [TEST] Info 1
+rightathome-desktop:test: [90mstderr[2m | src/test/services/logger.test.ts[2m > [22m[2mLogger Service[2m > [22m[2mStatistics[2m > [22m[2mshould calculate log statistics[22m[39m
+rightathome-desktop:test: [2026-07-23T23:30:42.908Z] [INFO] [TEST] Info 2
+rightathome-desktop:test: 
+rightathome-desktop:test: [2026-07-23T23:30:42.908Z] [WARN] [WARN] Warning
+rightathome-desktop:test: [2026-07-23T23:30:42.908Z] [ERROR] [ERROR] Error
+rightathome-desktop:test: 
+rightathome-desktop:test: [90mstdout[2m | src/test/services/logger.test.ts[2m > [22m[2mLogger Service[2m > [22m[2mStatistics[2m > [22m[2mshould count errors in last 24 hours[22m[39m
+rightathome-desktop:test: [90mstderr[2m | src/test/services/logger.test.ts[2m > [22m[2mLogger Service[2m > [22m[2mStatistics[2m > [22m[2mshould count errors in last 24 hours[22m[39m
+rightathome-desktop:test: [2026-07-23T23:30:42.915Z] [INFO] [TEST] Info 1
+rightathome-desktop:test: [2026-07-23T23:30:42.915Z] [WARN] [WARN] Warning
+rightathome-desktop:test: [2026-07-23T23:30:42.915Z] [INFO] [TEST] Info 2
+rightathome-desktop:test: [2026-07-23T23:30:42.915Z] [ERROR] [ERROR] Error
+rightathome-desktop:test: 
+rightathome-desktop:test: 
+rightathome-desktop:test: [90mstdout[2m | src/test/services/logger.test.ts[2m > [22m[2mLogger Service[2m > [22m[2mUser Session[2m > [22m[2mshould set user ID[22m[39m
+rightathome-desktop:test: [2026-07-23T23:30:42.918Z] [INFO] [SESSION] User ID set { userId: [32m'user-123'[39m }
+rightathome-desktop:test: 
+rightathome-desktop:test:  [32mΓ£ô[39m src/test/services/logger.test.ts [2m ([22m[2m17 tests[22m[2m)[22m[90m 144[2mms[22m[39m
+rightathome-desktop:test:  [32mΓ£ô[39m src/test/services/invoicing.test.ts [2m ([22m[2m15 tests[22m[2m)[22m[33m 673[2mms[22m[39m
+rightathome-desktop:test:  [32mΓ£ô[39m src/test/services/cleaning.test.ts [2m ([22m[2m16 tests[22m[2m)[22m[33m 674[2mms[22m[39m
+@rightathome/testing:test:  [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mProperty Operations[2m > [22mshould fetch all properties
+@rightathome/testing:test:  [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mProperty Operations[2m > [22mshould find property by ID
+@rightathome/testing:test:  [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mProperty Operations[2m > [22mshould return null for non-existent property
+@rightathome/testing:test:  [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mProperty Operations[2m > [22mshould create a new property
+@rightathome/testing:test:  [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mProperty Operations[2m > [22mshould update property details
+@rightathome/testing:test:  [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mProperty Operations[2m > [22mshould delete a property
+@rightathome/testing:test:  [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mProperty Operations[2m > [22mshould count properties
+@rightathome/testing:test:  [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mProperty Operations[2m > [22mshould find properties by city
+@rightathome/testing:test:  [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mProperty Operations[2m > [22mshould find active properties
+@rightathome/testing:test:  [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mBooking Operations[2m > [22mshould fetch all bookings
+@rightathome/testing:test:  [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mBooking Operations[2m > [22mshould find booking by ID
+@rightathome/testing:test:  [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mBooking Operations[2m > [22mshould create a new booking
+@rightathome/testing:test:  [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mBooking Operations[2m > [22mshould update booking status
+@rightathome/testing:test:  [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mBooking Operations[2m > [22mshould find bookings by property
+@rightathome/testing:test:  [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mBooking Operations[2m > [22mshould find confirmed bookings
+@rightathome/testing:test:  [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mGuest Operations[2m > [22mshould fetch all guests
+@rightathome/testing:test:  [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mGuest Operations[2m > [22mshould find guest by email
+@rightathome/testing:test:  [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mGuest Operations[2m > [22mshould create a new guest
+@rightathome/testing:test:  [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mGuest Operations[2m > [22mshould upsert guest (create or update)
+@rightathome/testing:test:  [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mGuest Operations[2m > [22mshould find VIP guests
+@rightathome/testing:test:  [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mUser Operations[2m > [22mshould fetch all users
+@rightathome/testing:test:  [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mUser Operations[2m > [22mshould find user by ID
+@rightathome/testing:test:  [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mUser Operations[2m > [22mshould find user by email
+@rightathome/testing:test:  [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mUser Operations[2m > [22mshould find cleaners
+@rightathome/testing:test:  [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mCleaning Job Operations[2m > [22mshould fetch all cleaning jobs
+@rightathome/testing:test:  [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mCleaning Job Operations[2m > [22mshould find cleaning job by ID
+@rightathome/testing:test:  [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mCleaning Job Operations[2m > [22mshould update cleaning job status
+@rightathome/testing:test:  [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mCleaning Job Operations[2m > [22mshould find jobs by cleaner
+@rightathome/testing:test:  [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mCleaning Job Operations[2m > [22mshould find scheduled jobs
+@rightathome/testing:test:  [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mTransaction Operations[2m > [22mshould execute transaction with multiple operations
+@rightathome/testing:test:  [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mTransaction Operations[2m > [22mshould connect and disconnect
+@rightathome/testing:test:  [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mData Integrity[2m > [22mshould maintain referential integrity between bookings and properties
+@rightathome/testing:test:  [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mData Integrity[2m > [22mshould maintain referential integrity between cleaning jobs and properties
+@rightathome/testing:test:  [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mData Integrity[2m > [22mshould have unique primary keys
+@rightathome/testing:test:  [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mQuery Performance[2m > [22mshould handle batch operations efficiently
+@rightathome/testing:test:  [32mΓ£ô[39m integration/database.test.ts[2m > [22mDatabase Integration[2m > [22mQuery Performance[2m > [22mshould support pagination
+@rightathome/testing:test: [90mstdout[2m | integration/database.test.ts[22m[39m
+@rightathome/testing:test: [Test Setup] Test environment initialized
+@rightathome/testing:test: [Test Cleanup] Test environment cleaned up
+@rightathome/testing:test: 
+rightathome-desktop:test:  [32mΓ£ô[39m src/test/services/pricing.test.ts [2m ([22m[2m22 tests[22m[2m)[22m[33m 647[2mms[22m[39m
+rightathome-desktop:test:  [32mΓ£ô[39m src/test/services/calendar.test.ts [2m ([22m[2m11 tests[22m[2m)[22m[33m 688[2mms[22m[39m
+rightathome-desktop:test:  [32mΓ£ô[39m src/test/services/encryption.test.ts [2m ([22m[2m21 tests[22m[2m)[22m[33m 1519[2mms[22m[39m
+rightathome-desktop:test: 
+rightathome-desktop:test: [2m Test Files [22m [1m[32m7 passed[39m[22m[90m (7)[39m
+rightathome-desktop:test: [2m      Tests [22m [1m[32m130 passed[39m[22m[90m (130)[39m
+rightathome-desktop:test: [2m   Start at [22m 18:30:38
+rightathome-desktop:test: [2m   Duration [22m 5.51s[2m (transform 861ms, setup 2.66s, collect 782ms, tests 4.67s, environment 13.89s, prepare 8.57s)[22m
+rightathome-desktop:test: 
+@rightathome/testing:test:  [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mBooking Creation[2m > [22mshould create a valid booking with all required fields
+@rightathome/testing:test:  [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mBooking Creation[2m > [22mshould create booking with custom property
+@rightathome/testing:test:  [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mBooking Creation[2m > [22mshould create booking with future dates by default
+@rightathome/testing:test:  [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mBooking Creation[2m > [22mshould generate unique booking IDs
+@rightathome/testing:test:  [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mDate Validation[2m > [22mshould validate that checkIn is before checkOut
+@rightathome/testing:test:  [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mDate Validation[2m > [22mshould reject checkIn after checkOut
+@rightathome/testing:test:  [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mDate Validation[2m > [22mshould reject same-day booking (checkIn equals checkOut)
+@rightathome/testing:test:  [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mDate Validation[2m > [22mshould validate date sequence for multiple bookings
+@rightathome/testing:test:  [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mDate Validation[2m > [22mshould handle year boundary correctly
+@rightathome/testing:test:  [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mDate Validation[2m > [22mshould handle leap year correctly
+@rightathome/testing:test:  [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mGuest Count Validation[2m > [22mshould accept valid guest count within limit
+@rightathome/testing:test:  [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mGuest Count Validation[2m > [22mshould reject guest count exceeding max
+@rightathome/testing:test:  [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mGuest Count Validation[2m > [22mshould reject zero or negative guest count
+@rightathome/testing:test:  [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mGuest Count Validation[2m > [22mshould validate guest count for each property
+@rightathome/testing:test:  [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mBooking Status Transitions[2m > [22mshould have valid initial status
+@rightathome/testing:test:  [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mBooking Status Transitions[2m > [22mshould allow transition from pending to confirmed
+@rightathome/testing:test:  [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mBooking Status Transitions[2m > [22mshould allow transition from confirmed to checked_in
+@rightathome/testing:test:  [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mBooking Status Transitions[2m > [22mshould allow cancellation from pending or confirmed
+@rightathome/testing:test:  [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mBooking Status Transitions[2m > [22mshould not allow cancellation after check-in
+@rightathome/testing:test:  [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mBooking Source Handling[2m > [22mshould accept all valid booking sources
+@rightathome/testing:test:  [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mBooking Source Handling[2m > [22mshould default to direct source
+@rightathome/testing:test:  [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mBooking Source Handling[2m > [22mshould track external ID for platform bookings
+@rightathome/testing:test:  [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mBooking Overlap Detection[2m > [22mshould detect overlapping bookings for same property
+@rightathome/testing:test:  [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mBooking Overlap Detection[2m > [22mshould allow back-to-back bookings
+@rightathome/testing:test:  [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mBooking Overlap Detection[2m > [22mshould allow bookings on different properties at same time
+@rightathome/testing:test:  [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mSpecial Requests Handling[2m > [22mshould store special requests
+@rightathome/testing:test:  [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mSpecial Requests Handling[2m > [22mshould handle booking without special requests
+@rightathome/testing:test:  [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mTest Bookings Fixture Validation[2m > [22mshould have valid test bookings
+@rightathome/testing:test:  [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mTest Bookings Fixture Validation[2m > [22mshould have consistent pricing in test bookings
+@rightathome/testing:test:  [32mΓ£ô[39m unit/booking.test.ts[2m > [22mBooking Logic[2m > [22mTest Bookings Fixture Validation[2m > [22mshould have unique booking IDs
+@rightathome/testing:test: [90mstdout[2m | unit/booking.test.ts[22m[39m
+@rightathome/testing:test: [Test Setup] Test environment initialized
+@rightathome/testing:test: [Test Cleanup] Test environment cleaned up
+@rightathome/testing:test: 
+@rightathome/testing:test:  [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mcalculateNights[2m > [22mshould calculate nights correctly for a 3-day stay
+@rightathome/testing:test:  [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mcalculateNights[2m > [22mshould calculate nights correctly for a week stay
+@rightathome/testing:test:  [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mcalculateNights[2m > [22mshould calculate nights correctly for a month stay
+@rightathome/testing:test:  [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mcalculateNights[2m > [22mshould handle single night stay
+@rightathome/testing:test:  [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mcalculateNights[2m > [22mshould return 0 for same-day checkout
+@rightathome/testing:test:  [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mcalculateSubtotal[2m > [22mshould calculate subtotal for standard stay
+@rightathome/testing:test:  [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mcalculateSubtotal[2m > [22mshould calculate subtotal for single night
+@rightathome/testing:test:  [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mcalculateSubtotal[2m > [22mshould calculate subtotal for week stay
+@rightathome/testing:test:  [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mcalculateSubtotal[2m > [22mshould handle decimal rates
+@rightathome/testing:test:  [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mcalculateSubtotal[2m > [22mshould handle zero nights
+@rightathome/testing:test:  [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mcalculateServiceFee[2m > [22mshould calculate 10% service fee by default
+@rightathome/testing:test:  [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mcalculateServiceFee[2m > [22mshould calculate custom service fee rate
+@rightathome/testing:test:  [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mcalculateServiceFee[2m > [22mshould round to 2 decimal places
+@rightathome/testing:test:  [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mcalculateServiceFee[2m > [22mshould handle zero subtotal
+@rightathome/testing:test:  [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mcalculateServiceFee[2m > [22mshould calculate correct fee for Oasis Pool booking
+@rightathome/testing:test:  [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mcalculateTaxes[2m > [22mshould calculate taxes on subtotal and cleaning fee
+@rightathome/testing:test:  [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mcalculateTaxes[2m > [22mshould use default tax rate
+@rightathome/testing:test:  [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mcalculateTaxes[2m > [22mshould handle zero cleaning fee
+@rightathome/testing:test:  [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mcalculateTaxes[2m > [22mshould calculate taxes for Adobe Compound booking
+@rightathome/testing:test:  [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mcalculateTotal[2m > [22mshould calculate complete booking total
+@rightathome/testing:test:  [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mcalculateTotal[2m > [22mshould calculate total for Oasis Pool 3-night stay
+@rightathome/testing:test:  [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mcalculateTotal[2m > [22mshould calculate total for Adobe Compound week stay
+@rightathome/testing:test:  [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mcalculateTotal[2m > [22mshould allow custom fee rates
+@rightathome/testing:test:  [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mProperty Pricing Validation[2m > [22mshould have valid nightly rates for all properties
+@rightathome/testing:test:  [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mProperty Pricing Validation[2m > [22mshould have valid cleaning fees for all properties
+@rightathome/testing:test:  [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mProperty Pricing Validation[2m > [22mshould have cleaning fees proportional to property size
+@rightathome/testing:test:  [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mProperty Pricing Validation[2m > [22mshould price Adobe Compound (largest) higher than Uptown Place (smallest)
+@rightathome/testing:test:  [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mBooking Total Integrity[2m > [22mshould create booking with correct calculated totals
+@rightathome/testing:test:  [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mBooking Total Integrity[2m > [22mshould handle edge case of minimum stay
+@rightathome/testing:test:  [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mBooking Total Integrity[2m > [22mshould handle long-term stay (30 nights)
+@rightathome/testing:test:  [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mWeekend and Discount Pricing[2m > [22mshould handle weekend rate premium
+@rightathome/testing:test:  [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mWeekend and Discount Pricing[2m > [22mshould calculate weekly discount correctly
+@rightathome/testing:test:  [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mWeekend and Discount Pricing[2m > [22mshould calculate monthly discount correctly
+@rightathome/testing:test:  [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mWeekend and Discount Pricing[2m > [22mshould stack discounts appropriately
+@rightathome/testing:test:  [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mEdge Cases[2m > [22mshould handle very small amounts
+@rightathome/testing:test:  [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mEdge Cases[2m > [22mshould handle large bookings
+@rightathome/testing:test:  [32mΓ£ô[39m unit/pricing.test.ts[2m > [22mPricing Calculations[2m > [22mEdge Cases[2m > [22mshould maintain precision with floating point
+@rightathome/testing:test: [90mstdout[2m | unit/pricing.test.ts[22m[39m
+@rightathome/testing:test: [Test Setup] Test environment initialized
+@rightathome/testing:test: [Test Cleanup] Test environment cleaned up
+@rightathome/testing:test: 
+@rightathome/testing:test: 
+@rightathome/testing:test: [2m Test Files [22m [1m[32m10 passed[39m[22m[90m (10)[39m
+@rightathome/testing:test: [2m      Tests [22m [1m[32m316 passed[39m[22m[90m (316)[39m
+@rightathome/testing:test: [2m   Start at [22m 18:30:38
+@rightathome/testing:test: [2m   Duration [22m 5.39s[2m (transform 641ms, setup 307ms, collect 1.18s, tests 588ms, environment 9.31s, prepare 3.52s)[22m
+@rightathome/testing:test: 
+@rightathome/testing:test: [1m[7m[35m HTML [39m[27m[22m [35mReport is generated[39m
+@rightathome/testing:test: [2m       You can run [22m[1mnpx vite preview --outDir test-results[22m[2m to see the test results.[22m
+
+ Tasks:    4 successful, 4 total
+Cached:    2 cached, 4 total
+  Time:    10.863s 
+

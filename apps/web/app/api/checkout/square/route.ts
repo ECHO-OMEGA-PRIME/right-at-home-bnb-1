@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { randomUUID } from 'crypto';
+import { requireOneOfRoles } from '@/lib/api-auth';
 
 // Square API Configuration
 const SQUARE_API_BASE = 'https://connect.squareup.com/v2';
@@ -49,6 +50,8 @@ async function squareRequest(endpoint: string, method: string, body?: any) {
 
 // POST - Process Square payment
 export async function POST(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     // Check if Square is configured
     if (!SQUARE_ACCESS_TOKEN || !SQUARE_LOCATION_ID) {
@@ -133,6 +136,8 @@ export async function POST(request: NextRequest) {
 
 // GET - Retrieve payment details or application info
 export async function GET(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const { searchParams } = new URL(request.url);
     const paymentId = searchParams.get('payment_id');

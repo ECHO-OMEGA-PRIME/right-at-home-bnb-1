@@ -9,6 +9,7 @@ import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { View, Text, ActivityIndicator } from 'react-native';
@@ -40,6 +41,7 @@ import { COLORS } from './src/theme/colors';
 
 // Cross-Platform Sync
 import { SyncProvider } from './src/context/SyncContext';
+import { getSavedAuthUser, type AuthUser } from './src/services/auth';
 
 // Types
 export type UserRole = 'cleaner' | 'owner' | 'admin';
@@ -65,6 +67,20 @@ const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const JobStack = createNativeStackNavigator();
 const queryClient = new QueryClient();
+
+type GPSCheckInRouteProps = NativeStackScreenProps<RootStackParamList, 'GPSCheckIn'>;
+type PhotoCaptureRouteProps = NativeStackScreenProps<RootStackParamList, 'PhotoCapture'>;
+type ChecklistRouteProps = NativeStackScreenProps<RootStackParamList, 'Checklist'>;
+
+const GPSCheckInRoute = (props: GPSCheckInRouteProps) => (
+  <GPSCheckInScreen {...(props as any)} />
+);
+const PhotoCaptureRoute = (props: PhotoCaptureRouteProps) => (
+  <PhotoCaptureScreen {...(props as any)} />
+);
+const ChecklistRoute = (props: ChecklistRouteProps) => (
+  <ChecklistScreen {...(props as any)} />
+);
 
 // Tab Icon Component
 const TabIcon = ({ name, focused }: { name: string; focused: boolean }) => (
@@ -237,9 +253,9 @@ function RootNavigator() {
 
   const checkAuth = async () => {
     try {
-      const token = await AsyncStorage.getItem('@rightathome_auth_token');
+      const savedUser = await getSavedAuthUser();
       const role = await AsyncStorage.getItem('@rightathome_user_role') as UserRole | null;
-      setIsAuthenticated(!!token);
+      setIsAuthenticated(Boolean(savedUser));
       setUserRole(role);
     } catch (error) {
       console.error('Auth check failed:', error);
@@ -247,6 +263,12 @@ function RootNavigator() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleLoginSuccess = async (_user: AuthUser) => {
+    const role = await AsyncStorage.getItem('@rightathome_user_role') as UserRole | null;
+    setIsAuthenticated(true);
+    setUserRole(role);
   };
 
   if (isLoading) {
@@ -261,7 +283,14 @@ function RootNavigator() {
       }}
     >
       {!isAuthenticated ? (
-        <Stack.Screen name="Login" component={LoginScreen} />
+        <Stack.Screen name="Login">
+          {({ navigation }) => (
+            <LoginScreen
+              navigation={navigation}
+              onLoginSuccess={handleLoginSuccess}
+            />
+          )}
+        </Stack.Screen>
       ) : null}
 
       {/* Role Selection (shown after login if no role selected) */}
@@ -286,7 +315,7 @@ function RootNavigator() {
       />
       <Stack.Screen
         name="GPSCheckIn"
-        component={GPSCheckInScreen}
+        component={GPSCheckInRoute}
         options={{
           headerShown: false,
           presentation: 'fullScreenModal',
@@ -294,7 +323,7 @@ function RootNavigator() {
       />
       <Stack.Screen
         name="PhotoCapture"
-        component={PhotoCaptureScreen}
+        component={PhotoCaptureRoute}
         options={{
           headerShown: false,
           presentation: 'fullScreenModal',
@@ -302,7 +331,7 @@ function RootNavigator() {
       />
       <Stack.Screen
         name="Checklist"
-        component={ChecklistScreen}
+        component={ChecklistRoute}
         options={{ headerShown: false }}
       />
       <Stack.Screen

@@ -1,50 +1,97 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireOneOfRoles } from '@/lib/api-auth';
+import { prisma } from '@/lib/prisma';
+import { assertPeriodOpen, periodLockResponse } from '@/lib/period-lock';
+import { postJournalEntry, reverseJournalEntry, UnknownAccountError } from '@/lib/ledger';
+import { auditPiiAccess } from '@/lib/payroll';
 
-const payrollRuns: any[] = [
-  {
-    id: 'PR-001',
-    pay_period_start: '2026-03-01',
-    pay_period_end: '2026-03-15',
-    pay_date: '2026-03-18',
-    status: 'processed',
-    total_gross_cents: 106000,
-    total_net_cents: 82890,
-    total_employer_tax_cents: 8109,
-    total_cost_cents: 114109,
-    employee_count: 3,
-    items: [
-      {
-        employee_id: 'EMP-001', employee_name: 'Maria Garcia', role: 'cleaner',
-        gross_cents: 54000, net_cents: 43200, employer_taxes: { total_cents: 4131 },
-      },
-      {
-        employee_id: 'EMP-002', employee_name: 'James Wilson', role: 'maintenance',
-        gross_cents: 88000, net_cents: 67690, employer_taxes: { total_cents: 6734 },
-      },
-      {
-        employee_id: 'EMP-003', employee_name: 'Lisa Chen', role: 'manager',
-        gross_cents: 520000, net_cents: 385000, employer_taxes: { total_cents: 39780 },
-      },
-    ],
-    journal_entry_id: null,
-    created_at: '2026-03-16T08:00:00Z',
-    updated_at: '2026-03-18T09:00:00Z',
-  },
-];
+// Real PayrollBatch rows (queue #26855). This route previously read from a
+// module-level array holding one invented run, and -- more seriously -- BUILT a
+// payroll journal entry on approval and then threw it away. Approving payroll
+// produced no accounting record at all.
+//
+// Now approval posts a real balanced entry through @/lib/ledger, and the entry
+// id is stored on the batch so a second approve cannot double-post.
+//
+// Cancelling a run that already posted REVERSES the entry rather than deleting
+// it: history stays intact, which is the point of a ledger.
 
 type RouteContext = { params: Promise<{ id: string }> };
 
+const iso = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : null);
+
+const INCLUDE = {
+  entries: {
+    include: {
+      worker: {
+        select: {
+          workerType: true,
+          defaultPayType: true,
+          hourlyRateCents: true,
+          user: { select: { name: true } },
+        },
+      },
+    },
+  },
+} as const;
+
+function batchToContract(b: any) {
+  const items = (b.entries ?? []).map((e: any) => ({
+    employee_id: e.workerId,
+    employee_name: e.worker?.user?.name ?? 'Unknown',
+    role: (e.worker?.workerType ?? '').toLowerCase(),
+    pay_type: (e.worker?.defaultPayType ?? '').toLowerCase(),
+    hours_worked: e.hours,
+    rate_cents: e.worker?.hourlyRateCents ?? 0,
+    gross_cents: e.amountCents,
+    deductions: {
+      federal_withholding_cents: e.federalCents,
+      social_security_cents: e.socialSecurityCents,
+      medicare_cents: e.medicareCents,
+      state_withholding_cents: e.stateCents,
+      total_cents:
+        e.federalCents + e.socialSecurityCents + e.medicareCents + e.stateCents,
+    },
+    net_cents: e.netCents,
+    employer_taxes: {
+      social_security_cents: e.employerSsCents,
+      medicare_cents: e.employerMedicareCents,
+      futa_cents: e.futaCents,
+      suta_cents: e.sutaCents,
+      total_cents:
+        e.employerSsCents + e.employerMedicareCents + e.futaCents + e.sutaCents,
+    },
+  }));
+
+  return {
+    id: b.id,
+    pay_period_start: iso(b.periodStart),
+    pay_period_end: iso(b.weekEnding),
+    pay_date: iso(b.payDate),
+    status: (b.status || '').toLowerCase(),
+    total_gross_cents: b.totalGrossCents,
+    total_net_cents: b.totalNetCents,
+    total_employer_tax_cents: b.totalEmployerTaxCents,
+    total_cost_cents: b.totalGrossCents + b.totalEmployerTaxCents,
+    employee_count: items.length,
+    items,
+    journal_entry_id: b.journalEntryId ?? null,
+    created_at: b.createdAt.toISOString(),
+    updated_at: b.updatedAt.toISOString(),
+  };
+}
+
 // ── GET /api/payroll/runs/[id] ───────────────────────────────────────────
 export async function GET(request: NextRequest, context: RouteContext) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const { id } = await context.params;
-    const run = payrollRuns.find((r) => r.id === id);
-
+    const run = await prisma.payrollBatch.findUnique({ where: { id }, include: INCLUDE });
     if (!run) {
       return NextResponse.json({ error: 'Payroll run not found' }, { status: 404 });
     }
-
-    return NextResponse.json({ payroll_run: run });
+    return NextResponse.json({ payroll_run: batchToContract(run) });
   } catch (error: any) {
     return NextResponse.json(
       { error: 'Failed to get payroll run', detail: error.message },
@@ -55,18 +102,24 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
 // ── PATCH /api/payroll/runs/[id] ─────────────────────────────────────────
 export async function PATCH(request: NextRequest, context: RouteContext) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const { id } = await context.params;
-    const idx = payrollRuns.findIndex((r) => r.id === id);
-
-    if (idx === -1) {
+    const run = await prisma.payrollBatch.findUnique({ where: { id }, include: INCLUDE });
+    if (!run) {
       return NextResponse.json({ error: 'Payroll run not found' }, { status: 404 });
     }
 
-    const body = await request.json();
-    const run = { ...payrollRuns[idx] };
-    const validStatuses = ['draft', 'approved', 'processed', 'cancelled'];
+    // Closed books stay closed (P5-1). Approving or cancelling posts through
+    // the ledger, which carries its own lock check — but the other status
+    // changes update this batch without posting anything, and a payroll run
+    // dated inside a closed period is part of that period's cost whatever its
+    // status becomes.
+    await assertPeriodOpen(run.periodStart, run.weekEnding, run.payDate);
 
+    const body = await request.json();
+    const validStatuses = ['draft', 'approved', 'processed', 'cancelled'];
     if (!body.status || !validStatuses.includes(body.status)) {
       return NextResponse.json(
         { error: `status required and must be one of: ${validStatuses.join(', ')}` },
@@ -74,93 +127,107 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       );
     }
 
-    // Prevent invalid transitions
-    if (run.status === 'processed' && body.status !== 'cancelled') {
+    const current = (run.status || '').toLowerCase();
+
+    // Transition rules unchanged.
+    if (current === 'processed' && body.status !== 'cancelled') {
       return NextResponse.json(
         { error: 'Processed payroll runs can only be cancelled' },
         { status: 400 },
       );
     }
-    if (run.status === 'cancelled') {
+    if (current === 'cancelled') {
       return NextResponse.json(
         { error: 'Cancelled payroll runs cannot be modified' },
         { status: 400 },
       );
     }
 
-    let journalEntry = null;
+    let journalEntry: any = null;
+    let journalEntryId: string | null = run.journalEntryId ?? null;
 
-    // When approved or processed, create the payroll journal entry
     if (body.status === 'approved' || body.status === 'processed') {
-      const jeId = `JE-PR-${Date.now().toString(36).toUpperCase()}`;
+      if (journalEntryId) {
+        // Already posted on a previous approve. Re-posting would double the
+        // payroll expense, so return the existing entry instead.
+        journalEntry = await prisma.journalEntry.findUnique({
+          where: { id: journalEntryId },
+          include: { lines: true },
+        });
+      } else {
+        // Debit wage expense (gross) + employer tax expense.
+        // Credit checking (net actually paid out) + payroll tax payable
+        // (employee withholdings we hold, plus the employer share we owe).
+        const totalGross = run.totalGrossCents;
+        const totalNet = run.totalNetCents;
+        const totalEmployerTax = run.totalEmployerTaxCents;
+        const taxLiabilities = totalGross - totalNet + totalEmployerTax;
 
-      // Build journal entry:
-      // Debit: Wage Expense (gross), Employer Payroll Tax Expense (employer taxes)
-      // Credit: Checking (net pay), Federal Tax Payable, SS Payable, Medicare Payable, FUTA/SUTA Payable
-      const totalGross = run.total_gross_cents;
-      const totalNet = run.total_net_cents;
-      const totalEmployerTax = run.total_employer_tax_cents;
-      const totalDeductions = totalGross - totalNet; // employee withholdings
-      const totalCheck = totalNet; // what goes out of checking
-      const taxLiabilities = totalDeductions + totalEmployerTax; // what we owe tax authorities
-
-      journalEntry = {
-        id: jeId,
-        date: run.pay_date,
-        reference_type: 'payroll',
-        reference_id: run.id,
-        description: `Payroll ${run.pay_period_start} to ${run.pay_period_end}`,
-        lines: [
-          {
-            account_code: '5000',
-            account_name: 'Wage Expense',
-            debit_cents: totalGross,
-            credit_cents: 0,
-          },
-          {
-            account_code: '5010',
-            account_name: 'Employer Payroll Tax Expense',
-            debit_cents: totalEmployerTax,
-            credit_cents: 0,
-          },
-          {
-            account_code: '1000',
-            account_name: 'Operating Checking',
-            debit_cents: 0,
-            credit_cents: totalCheck,
-          },
-          {
-            account_code: '2200',
-            account_name: 'Payroll Tax Payable',
-            debit_cents: 0,
-            credit_cents: taxLiabilities,
-          },
-        ],
-        created_at: new Date().toISOString(),
-      };
-
-      // Verify balanced
-      const debits = journalEntry.lines.reduce((s: number, l: any) => s + l.debit_cents, 0);
-      const credits = journalEntry.lines.reduce((s: number, l: any) => s + l.credit_cents, 0);
-      if (debits !== credits) {
-        return NextResponse.json(
-          { error: 'Internal error: payroll journal entry is unbalanced', debits, credits },
-          { status: 500 },
-        );
+        try {
+          journalEntry = await postJournalEntry({
+            entryDate: run.payDate ?? run.weekEnding,
+            memo: `Payroll ${iso(run.periodStart) ?? '?'} to ${iso(run.weekEnding)}`,
+            reference: `payroll:${run.id}`,
+            createdById: auth.user?.uid ?? null,
+            lines: [
+              { accountCode: '5000', debitCents: totalGross, memo: 'Wage expense' },
+              { accountCode: '5010', debitCents: totalEmployerTax, memo: 'Employer payroll tax' },
+              { accountCode: '1000', creditCents: totalNet, memo: 'Net pay out of checking' },
+              { accountCode: '2200', creditCents: taxLiabilities, memo: 'Payroll tax payable' },
+            ],
+          });
+        } catch (e) {
+          if (e instanceof UnknownAccountError) {
+            // Better to refuse than to post payroll into invented accounts.
+            return NextResponse.json(
+              {
+                error:
+                  'Chart of accounts is missing the payroll accounts required to post this run',
+                detail: e.message,
+              },
+              { status: 409 },
+            );
+          }
+          throw e;
+        }
+        journalEntryId = journalEntry.id;
       }
-
-      run.journal_entry_id = jeId;
     }
 
-    run.status = body.status;
-    run.updated_at = new Date().toISOString();
-    payrollRuns[idx] = run;
+    // Cancelling a run that already hit the ledger must reverse it, not erase it.
+    if (body.status === 'cancelled' && journalEntryId) {
+      journalEntry = await reverseJournalEntry(
+        journalEntryId,
+        `Reversal of cancelled payroll run ${run.id}`,
+      );
+      journalEntryId = null;
+    }
+
+    const updated = await prisma.payrollBatch.update({
+      where: { id },
+      data: {
+        status: String(body.status).toUpperCase(),
+        journalEntryId,
+        approvedAt:
+          body.status === 'approved' && !run.approvedAt ? new Date() : run.approvedAt,
+        paidAt: body.status === 'processed' && !run.paidAt ? new Date() : run.paidAt,
+      },
+      include: INCLUDE,
+    });
+
+    await auditPiiAccess(auth.user?.uid ?? null, `payroll.run.${body.status}`, run.id);
 
     return NextResponse.json({
-      payroll_run: run,
+      payroll_run: batchToContract(updated),
       journal_entry: journalEntry,
     });
   } catch (error: any) {
+    // A locked accounting period is a REFUSAL, not a fault. Returning the
+    // generic 500 below would tell the caller the system broke when it did
+    // exactly what it was built to do, and the reason would be lost.
+    const locked = periodLockResponse(error);
+    if (locked) return NextResponse.json(locked.body, { status: locked.status });
+
     return NextResponse.json(
       { error: 'Failed to update payroll run', detail: error.message },
       { status: 500 },

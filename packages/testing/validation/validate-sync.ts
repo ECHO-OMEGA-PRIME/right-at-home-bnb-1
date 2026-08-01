@@ -28,6 +28,9 @@ const firebaseConfig = {
   authDomain: 'echo-prime-ai.firebaseapp.com',
   projectId: 'echo-prime-ai',
   storageBucket: 'echo-prime-ai.appspot.com',
+  // messagingSenderId already matched echo-prime-ai (249995513427, confirmed
+  // live from the rah-midland.com bundle) even before this fix -- the other
+  // three fields were simply stale.
   messagingSenderId: '249995513427',
   appId: process.env.FIREBASE_APP_ID || process.env.NEXT_PUBLIC_FIREBASE_APP_ID || ''
 };

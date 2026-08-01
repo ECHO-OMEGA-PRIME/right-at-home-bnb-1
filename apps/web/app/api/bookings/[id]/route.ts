@@ -1,94 +1,133 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireOneOfRoles } from '@/lib/api-auth';
+import { prisma } from '@/lib/prisma';
 
-// ── Bookings store (empty - in production this is DB) ────────────────────
-const bookings: any[] = [];
+// Backed by the real Booking table (761 rows).
+//
+// This route's store was literally `const bookings: any[] = []`, so it returned
+// 404 for every real booking that exists -- worse than fabricated, simply
+// non-functional (queue #26855).
+//
+// NOTE ON REFUNDS: the Booking model has no payment-tracking field. The old
+// contract assumed `paid_cents`. Refunds are therefore computed against
+// totalPrice (what the stay is worth) and the response says so via
+// `basis: 'total_price'`, rather than inventing an amount-paid that no system
+// records.
 
-// Cancellation refund policy: >7 days = 100%, 3-7 days = 50%, <3 days = 0%
-function calculateRefundCents(booking: any): number {
-  const now = new Date();
-  const checkIn = new Date(booking.check_in);
-  const daysUntil = Math.ceil((checkIn.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-
-  if (daysUntil > 7) return booking.paid_cents;
-  if (daysUntil >= 3) return Math.round(booking.paid_cents * 0.5);
-  return 0;
-}
+const dollarsToCents = (d: number | null | undefined) => Math.round((d ?? 0) * 100);
+const iso = (d: Date) => d.toISOString().slice(0, 10);
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-// ── GET /api/bookings/[id] ───────────────────────────────────────────────
+const VALID_TRANSITIONS: Record<string, string[]> = {
+  pending: ['confirmed', 'cancelled'],
+  confirmed: ['checked_in', 'cancelled'],
+  checked_in: ['checked_out', 'completed'],
+  checked_out: ['completed'],
+  completed: [],
+  cancelled: [],
+};
+
+function toContract(b: any) {
+  return {
+    id: b.id,
+    property_id: b.propertyId,
+    property_name: b.property?.name ?? null,
+    guest_id: b.guestId,
+    guest_name: b.guest?.name ?? null,
+    check_in: iso(b.checkIn),
+    check_out: iso(b.checkOut),
+    nights: b.totalNights,
+    guest_count: b.guestCount,
+    platform: (b.platform || 'direct').toLowerCase(),
+    status: (b.status || '').toLowerCase(),
+    nightly_rate_cents: dollarsToCents(b.nightlyRate),
+    subtotal_cents: dollarsToCents(b.subtotal),
+    cleaning_fee_cents: dollarsToCents(b.cleaningFee),
+    taxes_cents: dollarsToCents(b.taxes),
+    total_cents: dollarsToCents(b.totalPrice),
+    lock_code: b.accessCode,
+    special_requests: b.specialReqs,
+    confirm_code: b.confirmCode,
+    created_at: b.createdAt.toISOString(),
+    updated_at: b.updatedAt.toISOString(),
+  };
+}
+
+const withRelations = {
+  property: { select: { name: true } },
+  guest: { select: { name: true } },
+} as const;
+
+// ── GET /api/bookings/[id] ─────────────────────────────────────────────────
 export async function GET(request: NextRequest, context: RouteContext) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const { id } = await context.params;
-    const booking = bookings.find((b) => b.id === id);
-
-    if (!booking) {
-      return NextResponse.json({ error: 'Booking not found' }, { status: 404 });
-    }
-
-    return NextResponse.json({ booking });
+    const booking = await prisma.booking.findUnique({ where: { id }, include: withRelations });
+    if (!booking) return NextResponse.json({ error: 'Booking not found' }, { status: 404 });
+    return NextResponse.json({ booking: toContract(booking) });
   } catch (error: any) {
     return NextResponse.json(
-      { error: 'Failed to fetch booking', detail: error.message },
+      { error: 'Failed to load booking', detail: error.message },
       { status: 500 },
     );
   }
 }
 
-// ── PUT /api/bookings/[id] ───────────────────────────────────────────────
+// ── PUT /api/bookings/[id] ─────────────────────────────────────────────────
 export async function PUT(request: NextRequest, context: RouteContext) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const { id } = await context.params;
-    const idx = bookings.findIndex((b) => b.id === id);
-
-    if (idx === -1) {
-      return NextResponse.json({ error: 'Booking not found' }, { status: 404 });
-    }
+    const existing = await prisma.booking.findUnique({ where: { id } });
+    if (!existing) return NextResponse.json({ error: 'Booking not found' }, { status: 404 });
 
     const body = await request.json();
-    const booking = bookings[idx];
-
-    // Status transitions
-    const validTransitions: Record<string, string[]> = {
-      pending: ['confirmed', 'cancelled'],
-      confirmed: ['checked_in', 'cancelled'],
-      checked_in: ['completed'],
-      completed: [],
-      cancelled: [],
-    };
+    const data: Record<string, unknown> = {};
+    const currentStatus = (existing.status || '').toLowerCase();
 
     if (body.status) {
-      const allowed = validTransitions[booking.status] || [];
+      const allowed = VALID_TRANSITIONS[currentStatus] ?? [];
       if (!allowed.includes(body.status)) {
         return NextResponse.json(
           {
-            error: `Cannot transition from '${booking.status}' to '${body.status}'. Allowed: ${allowed.join(', ') || 'none'}`,
+            error: `Cannot transition from '${currentStatus}' to '${body.status}'. Allowed: ${
+              allowed.join(', ') || 'none'
+            }`,
           },
           { status: 400 },
         );
       }
-      booking.status = body.status;
+      // Stored upper-case to match the 761 existing rows.
+      data.status = String(body.status).toUpperCase();
     }
 
-    // Update allowed fields
-    if (body.check_in !== undefined) booking.check_in = body.check_in;
-    if (body.check_out !== undefined) booking.check_out = body.check_out;
-    if (body.guest_count !== undefined) booking.guest_count = body.guest_count;
-    if (body.special_requests !== undefined) booking.special_requests = body.special_requests;
-    if (body.lock_code !== undefined) booking.lock_code = body.lock_code;
-    if (body.paid_cents !== undefined) booking.paid_cents = body.paid_cents;
+    if (body.check_in !== undefined) data.checkIn = new Date(`${body.check_in}T00:00:00.000Z`);
+    if (body.check_out !== undefined) data.checkOut = new Date(`${body.check_out}T00:00:00.000Z`);
+    if (body.guest_count !== undefined) data.guestCount = body.guest_count;
+    if (body.special_requests !== undefined) data.specialReqs = body.special_requests;
+    if (body.lock_code !== undefined) data.accessCode = body.lock_code;
 
-    // Recalculate nights if dates changed
-    if (body.check_in || body.check_out) {
-      const ci = new Date(booking.check_in);
-      const co = new Date(booking.check_out);
-      booking.nights = Math.ceil((co.getTime() - ci.getTime()) / (1000 * 60 * 60 * 24));
+    // Recompute nights when either date moved, so totalNights cannot drift out
+    // of step with the dates it describes.
+    if (body.check_in !== undefined || body.check_out !== undefined) {
+      const ci = (data.checkIn as Date) ?? existing.checkIn;
+      const co = (data.checkOut as Date) ?? existing.checkOut;
+      if (!(ci < co)) {
+        return NextResponse.json({ error: 'check_out must be after check_in' }, { status: 400 });
+      }
+      data.totalNights = Math.ceil((co.getTime() - ci.getTime()) / (1000 * 60 * 60 * 24));
     }
 
-    booking.updated_at = new Date().toISOString();
-    bookings[idx] = booking;
-
-    return NextResponse.json({ booking });
+    const updated = await prisma.booking.update({
+      where: { id },
+      data,
+      include: withRelations,
+    });
+    return NextResponse.json({ booking: toContract(updated) });
   } catch (error: any) {
     return NextResponse.json(
       { error: 'Failed to update booking', detail: error.message },
@@ -97,35 +136,47 @@ export async function PUT(request: NextRequest, context: RouteContext) {
   }
 }
 
-// ── DELETE /api/bookings/[id] — Cancel booking ───────────────────────────
+// ── DELETE /api/bookings/[id] — cancel, never hard-delete ──────────────────
 export async function DELETE(request: NextRequest, context: RouteContext) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const { id } = await context.params;
-    const idx = bookings.findIndex((b) => b.id === id);
+    const existing = await prisma.booking.findUnique({ where: { id } });
+    if (!existing) return NextResponse.json({ error: 'Booking not found' }, { status: 404 });
 
-    if (idx === -1) {
-      return NextResponse.json({ error: 'Booking not found' }, { status: 404 });
-    }
-
-    const booking = bookings[idx];
-
-    if (['completed', 'cancelled'].includes(booking.status)) {
+    const currentStatus = (existing.status || '').toLowerCase();
+    if (['completed', 'cancelled'].includes(currentStatus)) {
       return NextResponse.json(
-        { error: `Cannot cancel a booking with status '${booking.status}'` },
+        { error: `Cannot cancel a booking with status '${currentStatus}'` },
         { status: 400 },
       );
     }
 
-    const refund_cents = calculateRefundCents(booking);
-    booking.status = 'cancelled';
-    booking.updated_at = new Date().toISOString();
-    bookings[idx] = booking;
+    const totalCents = dollarsToCents(existing.totalPrice);
+    const daysUntil = Math.ceil(
+      (existing.checkIn.getTime() - Date.now()) / (1000 * 60 * 60 * 24),
+    );
+    const refundCents =
+      daysUntil > 7 ? totalCents : daysUntil >= 3 ? Math.round(totalCents * 0.5) : 0;
+
+    // Cancellation is a status change, not a delete: the row is financial and
+    // operational history.
+    const updated = await prisma.booking.update({
+      where: { id },
+      data: { status: 'CANCELLED' },
+      include: withRelations,
+    });
 
     return NextResponse.json({
-      booking,
+      booking: toContract(updated),
       cancellation: {
-        refund_cents,
-        refund_percentage: booking.paid_cents > 0 ? Math.round((refund_cents / booking.paid_cents) * 100) : 0,
+        refund_cents: refundCents,
+        refund_percentage: totalCents > 0 ? Math.round((refundCents / totalCents) * 100) : 0,
+        // The model records no amount-paid, so the refund is expressed against
+        // the booking total rather than against a payment nobody tracked.
+        basis: 'total_price',
+        days_until_check_in: daysUntil,
         policy: 'Full refund >7 days, 50% 3-7 days, 0% <3 days before check-in',
       },
     });

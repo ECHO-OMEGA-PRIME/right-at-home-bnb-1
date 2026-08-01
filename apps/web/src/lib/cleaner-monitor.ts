@@ -9,8 +9,16 @@
  * - Send alerts and notifications
  */
 
-import { db } from './firebase-admin';
-import { Timestamp } from 'firebase-admin/firestore';
+import {
+  ALERT_LOOKUP_UNKNOWN,
+  createAlert,
+  escalateAlert as escalateStoredAlert,
+  findOpenAlert,
+  listOpenAlerts,
+  markNotified,
+  resolveAlert,
+  type StoredAlert,
+} from './operational-alerts';
 import { makeCall, sendSMS, CallType } from './twilio';
 import { getBusinessContext, CleanerSchedule } from './business-context';
 
@@ -113,6 +121,20 @@ async function processLateCleaner(
 
   // Check if we've already alerted for this cleaner today
   const existingAlert = await getExistingAlert(cleaner.id);
+
+  // We could not read the alert store, so we cannot tell whether Steven has
+  // already been called about this. Record it and stop: a missed call is
+  // recoverable on the next run once the store is readable, whereas a repeated
+  // call cannot be un-made and lands on a real phone.
+  if (existingAlert === ALERT_LOOKUP_UNKNOWN) {
+    const msg =
+      `Alert store unreadable for ${cleaner.cleanerName} at ${cleaner.propertyName} ` +
+      `(${hoursLate}h late). Skipped calling Steven because a previous alert cannot be ruled out.`;
+    result.errors.push(msg);
+    console.error(`[CleanerMonitor] ${msg}`);
+    return;
+  }
+
   if (existingAlert && !existingAlert.resolved) {
     console.log(`[CleanerMonitor] Alert already exists for ${cleaner.cleanerName}`);
 
@@ -142,25 +164,58 @@ async function processLateCleaner(
 /**
  * Check for existing unresolved alert for this cleaner schedule
  */
-async function getExistingAlert(scheduleId: string): Promise<CleanerAlert | null> {
-  if (!db) return null;
+/**
+ * Look up an unresolved alert for this schedule.
+ *
+ * Returns the alert, `null` for "confirmed none", or the UNKNOWN sentinel when
+ * the store could not be read.
+ *
+ * That third case is the whole point. This used to return null both when there
+ * was genuinely no prior alert AND when Firestore was unreachable or
+ * quota-limited — and the caller treats null as "not alerted yet, go call
+ * Steven". The alert it then creates cannot be persisted either (createAlert
+ * no-ops without `db`), so the next run finds nothing again. That is a call to
+ * a real phone every 15 minutes, per late cleaner, for as long as the outage
+ * lasts, with no record that any of it happened.
+ *
+ * De-duplication that fails open is not de-duplication.
+ */
+export { ALERT_LOOKUP_UNKNOWN };
+type AlertLookup = CleanerAlert | null | typeof ALERT_LOOKUP_UNKNOWN;
 
-  try {
-    const snapshot = await db.collection('cleaner_alerts')
-      .where('cleanerScheduleId', '==', scheduleId)
-      .where('resolved', '==', false)
-      .orderBy('createdAt', 'desc')
-      .limit(1)
-      .get();
+/** The alert store keys de-duplication on this; one namespace per monitor. */
+function dedupeKeyFor(scheduleId: string): string {
+  return `cleaner-schedule:${scheduleId}`;
+}
 
-    if (snapshot.empty) return null;
+function toCleanerAlert(stored: StoredAlert): CleanerAlert {
+  const meta = stored.metadata as Partial<CleanerAlert>;
+  return {
+    id: stored.id,
+    cleanerId: String(meta.cleanerId ?? ''),
+    cleanerName: String(meta.cleanerName ?? ''),
+    cleanerPhone: String(meta.cleanerPhone ?? ''),
+    propertyId: stored.propertyId ?? String(meta.propertyId ?? ''),
+    propertyName: String(meta.propertyName ?? ''),
+    scheduledTime: String(meta.scheduledTime ?? ''),
+    hoursLate: Number(meta.hoursLate ?? 0),
+    alertType: (meta.alertType as CleanerAlert['alertType']) ?? 'late',
+    callMade: Boolean(meta.callMade),
+    callSid: meta.callSid,
+    smsSent: Boolean(meta.smsSent),
+    createdAt: stored.createdAt.toISOString(),
+    resolved: stored.status === 'RESOLVED',
+    resolvedAt: stored.resolvedAt?.toISOString(),
+  };
+}
 
-    const doc = snapshot.docs[0];
-    return { id: doc.id, ...doc.data() } as CleanerAlert;
-  } catch (e) {
-    console.error('[CleanerMonitor] Error checking existing alert:', e);
-    return null;
-  }
+async function getExistingAlert(scheduleId: string): Promise<AlertLookup> {
+  // findOpenAlert returns null ONLY for a successful query that matched
+  // nothing, and the UNKNOWN sentinel for any failure. That distinction is the
+  // whole contract -- see the comment above.
+  const found = await findOpenAlert(dedupeKeyFor(scheduleId));
+  if (found === ALERT_LOOKUP_UNKNOWN) return ALERT_LOOKUP_UNKNOWN;
+  return found ? toCleanerAlert(found) : null;
 }
 
 /**
@@ -185,19 +240,35 @@ async function createCleanerAlert(
     resolved: false
   };
 
-  if (!db) return alert;
+  // Deliberately NOT wrapped in a try/catch that swallows the failure. The
+  // Firestore version returned this unsaved object when the write failed, so
+  // the caller phoned somebody about an alert that existed nowhere -- and the
+  // next run, finding nothing, phoned again. A failed write must stop the
+  // sweep for this cleaner, and processLateCleaner records it as an error.
+  const stored = await createAlert({
+    alertType: 'LATE_CLEANER',
+    severity: alertType === 'no_show' ? 'CRITICAL' : alertType === 'very_late' ? 'HIGH' : 'NORMAL',
+    title: `${cleaner.cleanerName} is ${alertType.replace('_', ' ')} at ${cleaner.propertyName}`,
+    message:
+      `${cleaner.cleanerName} was scheduled at ${cleaner.scheduledTime} for ` +
+      `${cleaner.propertyName} and is ${alert.hoursLate} hour(s) late.`,
+    dedupeKey: dedupeKeyFor(cleaner.id),
+    propertyId: cleaner.propertyId || null,
+    metadata: {
+      cleanerId: alert.cleanerId,
+      cleanerName: alert.cleanerName,
+      cleanerPhone: alert.cleanerPhone,
+      propertyName: alert.propertyName,
+      scheduledTime: alert.scheduledTime,
+      hoursLate: alert.hoursLate,
+      alertType,
+      callMade: false,
+      smsSent: false,
+    },
+  });
 
-  try {
-    const docRef = await db.collection('cleaner_alerts').add({
-      ...alert,
-      cleanerScheduleId: cleaner.id
-    });
-    alert.id = docRef.id;
-    console.log(`[CleanerMonitor] Created alert ${docRef.id} for ${cleaner.cleanerName}`);
-  } catch (e) {
-    console.error('[CleanerMonitor] Error creating alert:', e);
-  }
-
+  alert.id = stored.id;
+  console.log(`[CleanerMonitor] Created alert ${stored.id} for ${cleaner.cleanerName}`);
   return alert;
 }
 
@@ -211,15 +282,9 @@ async function escalateAlert(
 ): Promise<void> {
   console.log(`[CleanerMonitor] Escalating alert for ${alert.cleanerName} (${hoursLate} hours late)`);
 
-  if (!db) return;
-
   try {
     if (alert.id) {
-      await db.collection('cleaner_alerts').doc(alert.id).update({
-        alertType: 'very_late',
-        hoursLate,
-        escalatedAt: new Date().toISOString()
-      });
+      await escalateStoredAlert(alert.id, 'HIGH', { alertType: 'very_late', hoursLate });
     }
 
     // Make another call since it's now very late
@@ -274,11 +339,11 @@ async function callStevenAboutLateCleaner(
       result.callsMade++;
 
       // Update alert with call info
-      if (alert.id && db) {
-        await db.collection('cleaner_alerts').doc(alert.id).update({
+      if (alert.id) {
+        await markNotified(alert.id, {
           callMade: true,
           callSid: callResult.callSid,
-          callTime: new Date().toISOString()
+          callTime: new Date().toISOString(),
         });
       }
 
@@ -367,43 +432,23 @@ export async function resolveCleanerAlert(
   resolvedBy: string,
   notes?: string
 ): Promise<boolean> {
-  if (!db) return false;
-
-  try {
-    await db.collection('cleaner_alerts').doc(alertId).update({
-      resolved: true,
-      resolvedAt: new Date().toISOString(),
-      resolvedBy,
-      notes
-    });
-    console.log(`[CleanerMonitor] Alert ${alertId} resolved by ${resolvedBy}`);
-    return true;
-  } catch (e) {
-    console.error('[CleanerMonitor] Error resolving alert:', e);
-    return false;
-  }
+  const resolved = await resolveAlert(alertId, resolvedBy, notes);
+  if (resolved) console.log(`[CleanerMonitor] Alert ${alertId} resolved by ${resolvedBy}`);
+  return resolved;
 }
 
 /**
- * Get all active (unresolved) cleaner alerts
+ * Get all active (unresolved) cleaner alerts.
+ *
+ * A store failure now THROWS instead of returning []. An empty list rendered
+ * during an outage says "no cleaners are late", which is the most dangerous
+ * sentence an operations alert screen can produce -- it is indistinguishable
+ * from a genuinely quiet morning. The caller decides how to surface it; this
+ * function refuses to invent good news.
  */
 export async function getActiveCleanerAlerts(): Promise<CleanerAlert[]> {
-  if (!db) return [];
-
-  try {
-    const snapshot = await db.collection('cleaner_alerts')
-      .where('resolved', '==', false)
-      .orderBy('createdAt', 'desc')
-      .get();
-
-    return snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    })) as CleanerAlert[];
-  } catch (e) {
-    console.error('[CleanerMonitor] Error getting active alerts:', e);
-    return [];
-  }
+  const stored = await listOpenAlerts('LATE_CLEANER');
+  return stored.map(toCleanerAlert);
 }
 
 /**

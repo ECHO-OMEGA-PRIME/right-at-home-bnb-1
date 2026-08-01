@@ -17,6 +17,10 @@ interface AppInfo {
   version: string;
   name: string;
   platform: string;
+  arch?: string;
+  electron?: string;
+  chrome?: string;
+  node?: string;
 }
 
 interface AppContextType extends AppState {
@@ -38,6 +42,12 @@ const defaultSettings: UserSettings = {
   timezone: 'America/Chicago',
   dateFormat: 'MM/dd/yyyy',
   apiUrl: 'https://api.rah-midland.com',
+  autoSync: true,
+  syncInterval: '5',
+  syncOnStartup: true,
+  autoBackup: true,
+  requirePassword: false,
+  autoLock: true,
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);

@@ -1,2 +1,5 @@
 .vercel
 .env*.local
+
+# local DB env extracted from .env.local for prisma CLI (SECRETS - never commit)
+.dbenv

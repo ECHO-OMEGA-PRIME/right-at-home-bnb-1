@@ -1,70 +1,63 @@
 'use client';
 
-import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
+import { setAuthCookie } from '@/lib/auth-cookie';
+import { FirebaseApp, getApps, initializeApp } from 'firebase/app';
 import {
-  getAuth,
-  signInWithPopup,
-  signInWithEmailAndPassword,
+  Auth,
   GoogleAuthProvider,
   OAuthProvider,
-  signOut as firebaseSignOut,
-  onAuthStateChanged,
   User,
-  Auth,
+  getAuth,
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  signInWithPopup,
+  signOut as firebaseSignOut,
 } from 'firebase/auth';
-import { getFirestore, doc, setDoc, getDoc, serverTimestamp, Firestore } from 'firebase/firestore';
+import {
+  getFirebaseClientConfig,
+  getFirebaseClientConfigurationStatus,
+} from '@/lib/firebase-client-config';
 
-// Firebase Configuration
-const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || 'echo-prime-ai.firebaseapp.com',
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'echo-prime-ai',
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || 'echo-prime-ai.appspot.com',
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '249995513427',
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-};
+let firebaseApp: FirebaseApp | null = null;
+let firebaseAuth: Auth | null = null;
 
-// Check if Firebase can be initialized (has valid API key and in browser)
-const canInitFirebase = (): boolean => typeof window !== 'undefined' && !!firebaseConfig.apiKey;
-
-// Lazy initialization - only init when actually used
-let _app: FirebaseApp | null = null;
-let _auth: Auth | null = null;
-let _db: Firestore | null = null;
-
-function getApp(): FirebaseApp {
-  if (!canInitFirebase()) {
-    throw new Error('Firebase cannot be initialized (missing API key or not in browser)');
-  }
-  if (!_app) {
-    _app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-  }
-  return _app;
+function canInitializeFirebase(): boolean {
+  return (
+    typeof window !== 'undefined' &&
+    getFirebaseClientConfigurationStatus().configured
+  );
 }
 
-// Function to get Auth instance (lazy init)
-function getAuthInstance(): Auth {
-  if (!canInitFirebase()) {
-    throw new Error('Firebase Auth not available');
+function getFirebaseApp(): FirebaseApp {
+  const config = getFirebaseClientConfig();
+
+  if (firebaseApp) return firebaseApp;
+
+  const existing = getApps()[0];
+  if (existing) {
+    if (existing.options.projectId !== config.projectId) {
+      throw new Error(
+        `Existing Firebase app uses project ${existing.options.projectId ?? 'unknown'}, ` +
+          `but RAH requires ${config.projectId}.`,
+      );
+    }
+    firebaseApp = existing;
+  } else {
+    firebaseApp = initializeApp(config);
   }
-  if (!_auth) {
-    _auth = getAuth(getApp());
-  }
-  return _auth;
+
+  return firebaseApp;
 }
 
-// Function to get Firestore instance (lazy init)
-function getDbInstance(): Firestore {
-  if (!canInitFirebase()) {
-    throw new Error('Firestore not available');
+export function getAuthInstance(): Auth {
+  if (!canInitializeFirebase()) {
+    getFirebaseClientConfig();
+    throw new Error('Firebase Auth is unavailable in this environment.');
   }
-  if (!_db) {
-    _db = getFirestore(getApp());
-  }
-  return _db;
+  if (!firebaseAuth) firebaseAuth = getAuth(getFirebaseApp());
+  return firebaseAuth;
 }
 
-// Export auth for backward compatibility - use getAuthInstance() in new code
 export const auth = {
   get currentUser() {
     try {
@@ -75,41 +68,17 @@ export const auth = {
   },
 };
 
-// Export db getter for modules that need Firestore access
-export { getDbInstance as db };
-
-// Export getAuthInstance for modules that need full Auth access
-export { getAuthInstance };
-
-// Providers - lazily initialized
-let _googleProvider: GoogleAuthProvider | null = null;
-let _appleProvider: OAuthProvider | null = null;
-
-function getGoogleProvider(): GoogleAuthProvider {
-  if (!_googleProvider) {
-    _googleProvider = new GoogleAuthProvider();
-    _googleProvider.addScope('email');
-    _googleProvider.addScope('profile');
-  }
-  return _googleProvider;
-}
-
-function getAppleProvider(): OAuthProvider {
-  if (!_appleProvider) {
-    _appleProvider = new OAuthProvider('apple.com');
-    _appleProvider.addScope('email');
-    _appleProvider.addScope('name');
-  }
-  return _appleProvider;
-}
-
-// User roles - Four distinct access levels
 export type UserRole = 'guest' | 'worker' | 'admin' | 'owner';
 
-// Role permissions matrix
+type LegacyWorkerRole =
+  | 'cleaner'
+  | 'maintenance'
+  | 'yard_crew'
+  | 'handyman'
+  | 'both';
+
 export const ROLE_PERMISSIONS = {
   owner: {
-    // Full access for Steven (property owner)
     canViewProperties: true,
     canManageProperties: true,
     canViewBookings: true,
@@ -137,7 +106,6 @@ export const ROLE_PERMISSIONS = {
     canManageVRBO: true,
   },
   admin: {
-    // Full access for developers
     canViewProperties: true,
     canManageProperties: true,
     canViewBookings: true,
@@ -165,7 +133,6 @@ export const ROLE_PERMISSIONS = {
     canManageVRBO: true,
   },
   worker: {
-    // Limited access for cleaners and maintenance workers
     canViewProperties: true,
     canManageProperties: false,
     canViewBookings: false,
@@ -177,15 +144,15 @@ export const ROLE_PERMISSIONS = {
     canViewGuests: false,
     canManageGuests: false,
     canViewCleaningTasks: true,
-    canManageCleaningTasks: true, // Can update their own tasks
+    canManageCleaningTasks: true,
     canViewMaintenance: true,
-    canManageMaintenance: true, // Can update their own tasks
+    canManageMaintenance: true,
     canViewReports: false,
     canAccessSettings: false,
     canManageUsers: false,
     canViewAIChat: false,
-    canViewCalendar: true, // View cleaning schedule
-    canViewInventory: true, // Check/update supplies
+    canViewCalendar: true,
+    canViewInventory: true,
     canManageInventory: true,
     canViewSmartHome: false,
     canManageSmartHome: false,
@@ -193,11 +160,10 @@ export const ROLE_PERMISSIONS = {
     canManageVRBO: false,
   },
   guest: {
-    // Public/guest access - properties, reviews, bookings only
     canViewProperties: true,
     canManageProperties: false,
-    canViewBookings: true, // Their own bookings only
-    canManageBookings: true, // Can make/cancel their own
+    canViewBookings: true,
+    canManageBookings: true,
     canViewFinancials: false,
     canManageFinancials: false,
     canViewWorkers: false,
@@ -211,7 +177,7 @@ export const ROLE_PERMISSIONS = {
     canViewReports: false,
     canAccessSettings: false,
     canManageUsers: false,
-    canViewAIChat: true, // AI Concierge access
+    canViewAIChat: true,
     canViewCalendar: false,
     canViewInventory: false,
     canManageInventory: false,
@@ -222,7 +188,7 @@ export const ROLE_PERMISSIONS = {
   },
 } as const;
 
-export type Permission = keyof typeof ROLE_PERMISSIONS.admin;
+export type Permission = keyof typeof ROLE_PERMISSIONS.owner;
 
 export interface AppUser {
   uid: string;
@@ -230,249 +196,316 @@ export interface AppUser {
   displayName: string | null;
   photoURL: string | null;
   role: UserRole;
-  properties?: string[]; // For workers: assigned properties
+  properties?: string[];
+  assignedProperties?: string[];
   phone?: string;
   createdAt: Date;
   lastLogin: Date;
-  // Worker-specific fields
   isActiveWorker?: boolean;
   workerType?: 'cleaner' | 'maintenance' | 'both';
   hourlyRate?: number;
-  // Admin-specific fields
-  isOwner?: boolean; // Steven Palma
-  isDeveloper?: boolean; // Developer access
+  isOwner?: boolean;
+  isDeveloper?: boolean;
 }
 
-// Admin emails for automatic role assignment
-export const ADMIN_EMAILS = [
+const OWNER_EMAILS = [
   'steven@rah-midland.com',
   'spalma@rah-midland.com',
-  'bobmcwilliams4@outlook.com', // Developer
-  'bobmcwilliams4@gmail.com', // Developer
-];
+] as const;
 
-// Check if user has specific permission
-export function hasPermission(user: AppUser | null, permission: Permission): boolean {
-  if (!user) return ROLE_PERMISSIONS.guest[permission];
-  return ROLE_PERMISSIONS[user.role]?.[permission] ?? false;
-}
+export const ADMIN_EMAILS = [
+  ...OWNER_EMAILS,
+  'bobmcwilliams4@outlook.com',
+  'bobmcwilliams4@gmail.com',
+] as const;
 
-// Check if user can access route
-export function canAccessRoute(user: AppUser | null, route: string): boolean {
-  // Public routes
-  const publicRoutes = ['/', '/properties', '/login', '/register'];
-  if (publicRoutes.some(r => route === r || route.startsWith(r + '/'))) {
-    return true;
+function normalizeRole(value: unknown): UserRole {
+  if (value === 'owner' || value === 'admin' || value === 'worker' || value === 'guest') {
+    return value;
   }
-
-  if (!user) return false;
-
-  // Route-based access control
-  const routePermissions: Record<string, Permission[]> = {
-    '/admin': ['canAccessSettings'],
-    '/dashboard': ['canViewBookings'],
-    '/financials': ['canViewFinancials'],
-    '/workers': ['canViewWorkers'],
-    '/cleaning': ['canViewCleaningTasks'],
-    '/maintenance': ['canViewMaintenance'],
-    '/inventory': ['canViewInventory'],
-    '/calendar': ['canViewCalendar'],
-    '/smart-home': ['canViewSmartHome'],
-    '/reports': ['canViewReports'],
-    '/vrbo': ['canViewVRBO'],
-    '/guests': ['canViewGuests'],
-    '/settings': ['canAccessSettings'],
-  };
-
-  for (const [routePrefix, permissions] of Object.entries(routePermissions)) {
-    if (route.startsWith(routePrefix)) {
-      return permissions.every(p => hasPermission(user, p));
-    }
-  }
-
-  return true; // Allow by default for unlisted routes
-}
-
-// Sign in with Google
-export async function signInWithGoogle(): Promise<AppUser | null> {
-  if (!canInitFirebase()) {
-    throw new Error('Firebase not available');
-  }
-  try {
-    const authInstance = getAuthInstance();
-    const result = await signInWithPopup(authInstance, getGoogleProvider());
-    const user = result.user;
-
-    // Create/update user document
-    const appUser = await createOrUpdateUser(user);
-    return appUser;
-  } catch (error: any) {
-    console.error('Google sign-in error:', error);
-    throw error;
-  }
-}
-
-// Sign in with Apple
-export async function signInWithApple(): Promise<AppUser | null> {
-  if (!canInitFirebase()) {
-    throw new Error('Firebase not available');
-  }
-  try {
-    const authInstance = getAuthInstance();
-    const result = await signInWithPopup(authInstance, getAppleProvider());
-    const user = result.user;
-
-    // Create/update user document
-    const appUser = await createOrUpdateUser(user);
-    return appUser;
-  } catch (error: any) {
-    console.error('Apple sign-in error:', error);
-    throw error;
-  }
-}
-
-// Sign in with email and password
-export async function signInWithEmail(email: string, password: string): Promise<AppUser | null> {
-  if (!canInitFirebase()) {
-    throw new Error('Firebase not available');
-  }
-  try {
-    const authInstance = getAuthInstance();
-    const result = await signInWithEmailAndPassword(authInstance, email, password);
-    const user = result.user;
-
-    // Create/update user document
-    const appUser = await createOrUpdateUser(user);
-    return appUser;
-  } catch (error: any) {
-    console.error('Email sign-in error:', error);
-    throw error;
-  }
-}
-
-// Determine role based on email
-function determineUserRole(email: string | null): UserRole {
-  if (!email) return 'guest';
-  const emailLower = email.toLowerCase();
-
-  // Check for admin emails
-  if (ADMIN_EMAILS.some(e => e.toLowerCase() === emailLower)) {
-    return 'admin';
-  }
-
-  // Check for worker emails (can be expanded or stored in DB)
-  if (emailLower.includes('cleaner') || emailLower.includes('worker') || emailLower.includes('maintenance')) {
+  if (
+    value === 'cleaner' ||
+    value === 'maintenance' ||
+    value === 'yard_crew' ||
+    value === 'handyman' ||
+    value === 'both'
+  ) {
     return 'worker';
   }
-
   return 'guest';
 }
 
-// Create or update user document in Firestore
+function toDate(value: unknown, fallback = new Date()): Date {
+  if (value instanceof Date) return value;
+  if (value && typeof value === 'object' && 'toDate' in value) {
+    const converter = (value as { toDate?: () => Date }).toDate;
+    if (typeof converter === 'function') return converter.call(value);
+  }
+  if (typeof value === 'string' || typeof value === 'number') {
+    const parsed = new Date(value);
+    if (!Number.isNaN(parsed.getTime())) return parsed;
+  }
+  return fallback;
+}
+
+function appUserFromData(user: User, data: Record<string, unknown>): AppUser {
+  const role = normalizeRole(data.role);
+  const workerTypeValue = data.workerType ?? data.staffType;
+  const workerType =
+    workerTypeValue === 'cleaner' ||
+    workerTypeValue === 'maintenance' ||
+    workerTypeValue === 'both'
+      ? workerTypeValue
+      : undefined;
+
+  return {
+    uid: user.uid,
+    email: user.email ?? (typeof data.email === 'string' ? data.email : null),
+    displayName:
+      user.displayName ??
+      (typeof data.displayName === 'string' ? data.displayName : null),
+    photoURL: user.photoURL ?? (typeof data.photoURL === 'string' ? data.photoURL : null),
+    role,
+    properties: Array.isArray(data.properties)
+      ? data.properties.filter((item): item is string => typeof item === 'string')
+      : [],
+    assignedProperties: Array.isArray(data.assignedProperties)
+      ? data.assignedProperties.filter((item): item is string => typeof item === 'string')
+      : undefined,
+    phone: typeof data.phone === 'string' ? data.phone : undefined,
+    createdAt: toDate(data.createdAt),
+    lastLogin: toDate(data.lastLogin),
+    isActiveWorker: role === 'worker' ? data.isActiveWorker !== false : false,
+    workerType,
+    hourlyRate: typeof data.hourlyRate === 'number' ? data.hourlyRate : undefined,
+    isOwner: role === 'owner' || data.isOwner === true,
+    isDeveloper: data.isDeveloper === true,
+  };
+}
+
+function determineUserRole(email: string | null): UserRole {
+  if (!email) return 'guest';
+  const normalizedEmail = email.toLowerCase();
+  if (OWNER_EMAILS.some((candidate) => candidate === normalizedEmail)) return 'owner';
+  if (ADMIN_EMAILS.some((candidate) => candidate === normalizedEmail)) return 'admin';
+  return 'guest';
+}
+
+export function hasPermission(user: AppUser | null, permission: Permission): boolean {
+  const role = user?.role ?? 'guest';
+  return ROLE_PERMISSIONS[role][permission];
+}
+
+export function canAccessRoute(user: AppUser | null, route: string): boolean {
+  const publicExactRoutes = new Set([
+    '/',
+    '/properties',
+    '/login',
+    '/register',
+    '/privacy-policy',
+    '/terms-of-service',
+    '/booking/success',
+    '/booking/complete',
+    '/booking/cancelled',
+  ]);
+
+  if (publicExactRoutes.has(route)) return true;
+  if (/^\/properties\/[^/]+\/?$/.test(route) && route !== '/properties/new') return true;
+  if (!user) return false;
+
+  const routePermissions: Array<[string, Permission]> = [
+    ['/admin', 'canAccessSettings'],
+    ['/owner', 'canAccessSettings'],
+    ['/properties/new', 'canManageProperties'],
+    ['/financials', 'canViewFinancials'],
+    ['/workers', 'canViewWorkers'],
+    ['/cleaning', 'canViewCleaningTasks'],
+    ['/maintenance', 'canViewMaintenance'],
+    ['/inventory', 'canViewInventory'],
+    ['/calendar', 'canViewCalendar'],
+    ['/smart-home', 'canViewSmartHome'],
+    ['/reports', 'canViewReports'],
+    ['/vrbo', 'canViewVRBO'],
+    ['/guests', 'canViewGuests'],
+    ['/settings', 'canAccessSettings'],
+  ];
+
+  const match = routePermissions.find(
+    ([prefix]) => route === prefix || route.startsWith(`${prefix}/`),
+  );
+  return match ? hasPermission(user, match[1]) : true;
+}
+
+let googleProvider: GoogleAuthProvider | null = null;
+let appleProvider: OAuthProvider | null = null;
+
+function getGoogleProvider(): GoogleAuthProvider {
+  if (!googleProvider) {
+    googleProvider = new GoogleAuthProvider();
+    googleProvider.addScope('email');
+    googleProvider.addScope('profile');
+  }
+  return googleProvider;
+}
+
+function getAppleProvider(): OAuthProvider {
+  if (!appleProvider) {
+    appleProvider = new OAuthProvider('apple.com');
+    appleProvider.addScope('email');
+    appleProvider.addScope('name');
+  }
+  return appleProvider;
+}
+
 async function createOrUpdateUser(user: User): Promise<AppUser> {
-  const dbInstance = getDbInstance();
-  const userRef = doc(dbInstance, 'users', user.uid);
-  const userSnap = await getDoc(userRef);
+  // Formerly: read Firestore `users/{uid}`, and on first sign-in assign a role
+  // from a CLIENT-SIDE email allowlist and write it. The server no longer trusts
+  // Firestore for roles, so that write granted nothing -- but code that appears
+  // to hand out `owner` is a loaded gun for whoever reads it next, so it is gone.
+  //
+  // The role is now whatever the server says it is. AuthContext sets the auth
+  // cookie from the fresh ID token before its own load, and signIn* callers are
+  // followed by onAuthChange doing the same, so /api/me is reachable here.
+  const profile = await getCurrentUser();
+  if (profile) return profile;
 
-  if (userSnap.exists()) {
-    // Update last login
-    await setDoc(userRef, {
-      lastLogin: serverTimestamp(),
-    }, { merge: true });
+  // Signed in, but the server has no elevated role for this uid yet. Report the
+  // least privilege rather than inventing one -- never the email allowlist.
+  return appUserFromData(user, { role: 'guest' });
+}
 
-    return userSnap.data() as AppUser;
-  } else {
-    // Create new user with auto-assigned role
-    const autoRole = determineUserRole(user.email);
-    const isOwnerEmail = user.email?.toLowerCase().includes('steven') ||
-                         user.email?.toLowerCase().includes('spalma');
-    const isDeveloperEmail = user.email?.toLowerCase().includes('bobmcwilliams');
+export async function signInWithGoogle(): Promise<AppUser | null> {
+  const result = await signInWithPopup(getAuthInstance(), getGoogleProvider());
+  return createOrUpdateUser(result.user);
+}
 
-    const newUser: Omit<AppUser, 'createdAt' | 'lastLogin'> & { createdAt: any; lastLogin: any } = {
-      uid: user.uid,
-      email: user.email,
-      displayName: user.displayName,
-      photoURL: user.photoURL,
-      role: autoRole,
-      properties: [],
-      createdAt: serverTimestamp(),
-      lastLogin: serverTimestamp(),
-      isOwner: isOwnerEmail,
-      isDeveloper: isDeveloperEmail,
-    };
+export async function signInWithApple(): Promise<AppUser | null> {
+  const result = await signInWithPopup(getAuthInstance(), getAppleProvider());
+  return createOrUpdateUser(result.user);
+}
 
-    await setDoc(userRef, newUser);
-    return { ...newUser, createdAt: new Date(), lastLogin: new Date() } as AppUser;
+/**
+ * Raised when echo-auth itself is unreachable or erroring.
+ *
+ * Kept distinct from a rejected credential so the caller cannot turn an outage
+ * into "wrong password" -- that would send a user to reset a credential that was
+ * never wrong, and hide the real fault.
+ */
+export class SignInUnavailableError extends Error {
+  constructor() {
+    super('Sign-in is temporarily unavailable');
+    this.name = 'SignInUnavailableError';
   }
 }
 
-// Sign out
-export async function signOut(): Promise<void> {
+/**
+ * Sign in with email and password.
+ *
+ * echo-auth is the fleet's ONE identity runtime (CLAUDE.md LAW 2026-07-31), so
+ * it is asked first, through our own origin (see app/api/auth/login).
+ *
+ * THE FIREBASE FALLBACK IS GONE. It existed for one case -- an account created
+ * after echo-auth's one-time import, which would exist in Firebase and not in
+ * echo_auth -- and registration now creates accounts through echo-auth
+ * (`/api/auth/signup`), so that case can no longer arise.
+ *
+ * Removing it was checked, not assumed: the RAH `User` table holds exactly one
+ * row and ZERO rows carry an `authUid`, so no user was bound to a Firebase
+ * account and none could be locked out. echo-auth also handles legacy
+ * PASSWORDS itself for its imported users -- it verifies against Firebase once
+ * and re-hashes to argon2id -- so nothing here needed to.
+ *
+ * Every failure is now echo-auth's answer, which is what makes the fail-closed
+ * rule meaningful: there is no second opinion to paper over an outage.
+ */
+export async function signInWithEmail(
+  email: string,
+  password: string,
+): Promise<AppUser | null> {
+  let response: Response;
   try {
-    const authInstance = getAuthInstance();
-    await firebaseSignOut(authInstance);
-  } catch (error) {
-    console.error('Sign out error:', error);
-    throw error;
-  }
-}
-
-// Get current user with role
-export async function getCurrentUser(): Promise<AppUser | null> {
-  try {
-    const authInstance = getAuthInstance();
-    const user = authInstance.currentUser;
-    if (!user) return null;
-
-    const dbInstance = getDbInstance();
-    const userRef = doc(dbInstance, 'users', user.uid);
-    const userSnap = await getDoc(userRef);
-
-    if (userSnap.exists()) {
-      return userSnap.data() as AppUser;
-    }
-
-    return null;
+    response = await fetch('/api/auth/login', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
   } catch {
-    return null;
+    throw new SignInUnavailableError();
   }
+
+  if (response.ok) {
+    const session = await response.json().catch(() => null);
+    if (typeof session?.access_token === 'string' && session.access_token) {
+      // Publish the session before resolving the profile: /api/me authenticates
+      // with this cookie, and AuthContext's Firebase listener will not fire for
+      // an echo-auth sign-in, so nothing else is going to set it.
+      setAuthCookie(session.access_token);
+      return getCurrentUser();
+    }
+    throw new SignInUnavailableError();
+  }
+
+  if (response.status === 503) throw new SignInUnavailableError();
+
+  const payload = await response.json().catch(() => null);
+  throw new Error(payload?.error || 'Sign-in failed');
 }
 
-// Auth state listener
+export async function signOut(): Promise<void> {
+  await firebaseSignOut(getAuthInstance());
+}
+
+/**
+ * Ask the server who the current user is.
+ *
+ * This used to read Firestore `users/{uid}` straight from the browser, which put
+ * a Google project on the critical path of every authenticated page: when the
+ * billing accounts closed and Firestore began returning 429, the client could no
+ * longer resolve its own role. It also had the role read by the same party it
+ * authorises.
+ *
+ * GET /api/me resolves it server-side instead (echo-auth verifies the token, the
+ * role comes from the claim or Postgres). The auth cookie is already set by
+ * AuthContext before this runs, so a same-origin fetch carries the credential.
+ *
+ * A 503 is deliberately NOT treated as "signed out". The server uses it to say
+ * "an auth backend is down", and silently returning null here would log the user
+ * out during an outage and hide the cause -- the exact confusion that made the
+ * Firestore incident look like a login bug for 16 hours.
+ */
+export async function getCurrentUser(): Promise<AppUser | null> {
+  const currentUser = getAuthInstance().currentUser;
+  if (!currentUser) return null;
+
+  const response = await fetch('/api/me', {
+    credentials: 'same-origin',
+    headers: { Accept: 'application/json' },
+  });
+
+  if (response.status === 401) return null;
+  if (!response.ok) {
+    throw new Error(`identity unavailable (${response.status})`);
+  }
+
+  const data = (await response.json()) as Record<string, unknown>;
+  return appUserFromData(currentUser, data);
+}
+
 export function onAuthChange(callback: (user: User | null) => void): () => void {
   try {
-    const authInstance = getAuthInstance();
-    return onAuthStateChanged(authInstance, callback);
+    return onAuthStateChanged(getAuthInstance(), callback);
   } catch {
-    // Return no-op unsubscribe if Firebase not available
-    return () => {};
+    queueMicrotask(() => callback(null));
+    return () => undefined;
   }
 }
 
-// Check if user is owner
-export async function isOwner(uid: string): Promise<boolean> {
-  try {
-    const dbInstance = getDbInstance();
-    const userRef = doc(dbInstance, 'users', uid);
-    const userSnap = await getDoc(userRef);
+// isOwner() removed: Firestore-only and had zero callers. Ask /api/me.
 
-    if (userSnap.exists()) {
-      const userData = userSnap.data() as AppUser;
-      return userData.role === 'owner' || userData.role === 'admin';
-    }
+// promoteToOwner() removed: Firestore-only, zero callers, and role
+// changes belong on the server behind an admin gate, not in the browser.
 
-    return false;
-  } catch {
-    return false;
-  }
-}
 
-// Promote user to owner
-export async function promoteToOwner(uid: string, propertyIds: string[] = []): Promise<void> {
-  const dbInstance = getDbInstance();
-  const userRef = doc(dbInstance, 'users', uid);
-  await setDoc(userRef, {
-    role: 'owner',
-    properties: propertyIds,
-  }, { merge: true });
-}
+/** Legacy worker-role values retained for migration and reconciliation tooling. */
+export type StoredWorkerRole = LegacyWorkerRole;

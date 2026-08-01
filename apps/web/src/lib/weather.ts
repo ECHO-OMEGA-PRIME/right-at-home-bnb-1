@@ -1,12 +1,7 @@
 /**
- * Weather Service for Right at Home BnB
- * Fetches weather data for Midland, TX (79705)
- *
- * Uses OpenWeatherMap API (free tier: 1000 calls/day)
- * Caches results for 30 minutes to reduce API calls
+ * Right at Home BnB — Midland weather through the National Weather Service.
+ * No random or fabricated fallback values are returned.
  */
-
-// ============ Types ============
 
 export interface WeatherCondition {
   id: number;
@@ -42,13 +37,6 @@ export interface WeatherForecastDay {
   windSpeed: number;
 }
 
-export interface WeatherData {
-  current: CurrentWeather;
-  forecast: WeatherForecastDay[];
-  alerts: WeatherAlert[];
-  summary: string;
-}
-
 export interface WeatherAlert {
   event: string;
   headline: string;
@@ -58,445 +46,234 @@ export interface WeatherAlert {
   description: string;
 }
 
-// ============ Configuration ============
+export interface WeatherData {
+  current: CurrentWeather;
+  forecast: WeatherForecastDay[];
+  alerts: WeatherAlert[];
+  summary: string;
+  source?: 'NWS';
+}
 
-const MIDLAND_TX = {
-  zip: '79705',
+const MIDLAND = {
   city: 'Midland',
   state: 'TX',
-  lat: 31.9973,
-  lon: -102.0779,
-  country: 'US'
+  zipCode: '79705',
+  latitude: 31.9973,
+  longitude: -102.0779,
 };
 
-// Cache weather data for 30 minutes
-let weatherCache: { data: WeatherData | null; timestamp: number } = {
-  data: null,
-  timestamp: 0
-};
-const CACHE_DURATION_MS = 30 * 60 * 1000; // 30 minutes
+const CACHE_TTL_MS = 15 * 60 * 1000;
+let cache: { data: WeatherData | null; fetchedAt: number } = { data: null, fetchedAt: 0 };
 
-// ============ Helper Functions ============
-
-/**
- * Convert wind degrees to cardinal direction
- */
-function degreesToCardinal(degrees: number): string {
-  const directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
-  const index = Math.round(degrees / 22.5) % 16;
-  return directions[index];
+function nwsHeaders(): HeadersInit {
+  return {
+    Accept: 'application/geo+json, application/json',
+    'User-Agent': process.env.NWS_USER_AGENT || 'RightAtHomeBnB/1.0 (operations@rah-midland.com)',
+  };
 }
 
-/**
- * Convert Kelvin to Fahrenheit
- */
-function kelvinToFahrenheit(kelvin: number): number {
-  return Math.round((kelvin - 273.15) * 9/5 + 32);
-}
-
-/**
- * Convert m/s to mph
- */
-function msToMph(ms: number): number {
-  return Math.round(ms * 2.237);
-}
-
-/**
- * Format Unix timestamp to ISO string
- */
-function unixToISO(unix: number): string {
-  return new Date(unix * 1000).toISOString();
-}
-
-/**
- * Get day name from date
- */
-function getDayName(dateStr: string): string {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString('en-US', { weekday: 'long' });
-}
-
-/**
- * Generate weather summary for voice/AI
- */
-function generateWeatherSummary(data: Omit<WeatherData, 'summary'>): string {
-  const { current, forecast, alerts } = data;
-  const lines: string[] = [];
-
-  // Current conditions
-  const conditionText = current.conditions.map(c => c.description).join(', ');
-  lines.push(
-    `Currently ${current.temperature}°F and ${conditionText} in ${current.location}. ` +
-    `Feels like ${current.feelsLike}°F with ${current.humidity}% humidity.`
-  );
-
-  // Wind
-  if (current.windSpeed > 15) {
-    lines.push(`Winds are ${current.windSpeed} mph from the ${current.windDirection}.`);
+async function fetchJson(url: string): Promise<any> {
+  const response = await fetch(url, {
+    headers: nwsHeaders(),
+    next: { revalidate: 900 },
+  });
+  if (!response.ok) {
+    throw new Error(`NWS request failed with status ${response.status}`);
   }
-
-  // Today's forecast
-  if (forecast.length > 0) {
-    const today = forecast[0];
-    lines.push(`Today's high ${today.high}°F, low ${today.low}°F.`);
-  }
-
-  // Alerts
-  if (alerts.length > 0) {
-    const severeAlerts = alerts.filter(a => a.severity === 'severe' || a.severity === 'extreme');
-    if (severeAlerts.length > 0) {
-      lines.push(`WEATHER ALERT: ${severeAlerts.map(a => a.headline).join('. ')}`);
-    }
-  }
-
-  // Tomorrow
-  if (forecast.length > 1) {
-    const tomorrow = forecast[1];
-    lines.push(`Tomorrow: ${tomorrow.conditions[0]?.description || 'unknown'}, high ${tomorrow.high}°F.`);
-  }
-
-  return lines.join(' ');
+  return response.json();
 }
 
-// ============ API Functions ============
-
-/**
- * Fetch current weather from OpenWeatherMap
- */
-async function fetchCurrentWeather(apiKey: string): Promise<CurrentWeather | null> {
-  try {
-    const url = `https://api.openweathermap.org/data/2.5/weather?zip=${MIDLAND_TX.zip},${MIDLAND_TX.country}&appid=${apiKey}`;
-    const response = await fetch(url);
-
-    if (!response.ok) {
-      console.error('[Weather] API error:', response.status, response.statusText);
-      return null;
-    }
-
-    const data = await response.json();
-
-    return {
-      location: `${MIDLAND_TX.city}, ${MIDLAND_TX.state}`,
-      zipCode: MIDLAND_TX.zip,
-      temperature: kelvinToFahrenheit(data.main.temp),
-      feelsLike: kelvinToFahrenheit(data.main.feels_like),
-      humidity: data.main.humidity,
-      windSpeed: msToMph(data.wind.speed),
-      windDirection: degreesToCardinal(data.wind.deg || 0),
-      conditions: data.weather.map((w: any) => ({
-        id: w.id,
-        main: w.main,
-        description: w.description,
-        icon: w.icon
-      })),
-      visibility: Math.round((data.visibility || 10000) / 1609), // meters to miles
-      pressure: data.main.pressure,
-      sunrise: unixToISO(data.sys.sunrise),
-      sunset: unixToISO(data.sys.sunset),
-      updatedAt: new Date().toISOString()
-    };
-  } catch (error) {
-    console.error('[Weather] Error fetching current weather:', error);
-    return null;
-  }
+function finiteNumber(value: unknown, fallback = 0): number {
+  const number = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(number) ? number : fallback;
 }
 
-/**
- * Fetch 5-day forecast from OpenWeatherMap
- */
-async function fetchForecast(apiKey: string): Promise<WeatherForecastDay[]> {
-  try {
-    const url = `https://api.openweathermap.org/data/2.5/forecast?zip=${MIDLAND_TX.zip},${MIDLAND_TX.country}&appid=${apiKey}`;
-    const response = await fetch(url);
-
-    if (!response.ok) {
-      console.error('[Weather] Forecast API error:', response.status);
-      return [];
-    }
-
-    const data = await response.json();
-
-    // Group by day and find high/low
-    const dailyData: Map<string, {
-      temps: number[];
-      conditions: any[];
-      humidity: number[];
-      wind: number[];
-      rain: number;
-    }> = new Map();
-
-    for (const item of data.list) {
-      const date = item.dt_txt.split(' ')[0];
-
-      if (!dailyData.has(date)) {
-        dailyData.set(date, {
-          temps: [],
-          conditions: [],
-          humidity: [],
-          wind: [],
-          rain: 0
-        });
-      }
-
-      const day = dailyData.get(date)!;
-      day.temps.push(kelvinToFahrenheit(item.main.temp));
-      day.conditions.push(item.weather[0]);
-      day.humidity.push(item.main.humidity);
-      day.wind.push(msToMph(item.wind.speed));
-      day.rain += item.rain?.['3h'] || 0;
-    }
-
-    // Convert to forecast days
-    const forecast: WeatherForecastDay[] = [];
-
-    for (const [date, day] of Array.from(dailyData.entries())) {
-      if (forecast.length >= 5) break;
-
-      // Use noon conditions as representative
-      const noonIndex = Math.floor(day.conditions.length / 2);
-
-      forecast.push({
-        date,
-        dayName: getDayName(date),
-        high: Math.max(...day.temps),
-        low: Math.min(...day.temps),
-        conditions: [{
-          id: day.conditions[noonIndex].id,
-          main: day.conditions[noonIndex].main,
-          description: day.conditions[noonIndex].description,
-          icon: day.conditions[noonIndex].icon
-        }],
-        precipitation: Math.round(day.rain * 100) / 100,
-        humidity: Math.round(day.humidity.reduce((a, b) => a + b, 0) / day.humidity.length),
-        windSpeed: Math.round(day.wind.reduce((a, b) => a + b, 0) / day.wind.length)
-      });
-    }
-
-    return forecast;
-  } catch (error) {
-    console.error('[Weather] Error fetching forecast:', error);
-    return [];
-  }
+function parseWindSpeed(value: unknown): number {
+  const text = String(value || '0');
+  const numbers = text.match(/\d+(?:\.\d+)?/g)?.map(Number).filter(Number.isFinite) || [];
+  if (!numbers.length) return 0;
+  return Math.round(Math.max(...numbers));
 }
 
-/**
- * Fetch weather alerts from OpenWeatherMap One Call API
- * Note: Requires paid plan, returns empty if not available
- */
-async function fetchAlerts(apiKey: string): Promise<WeatherAlert[]> {
-  try {
-    // One Call API 3.0 for alerts (may require subscription)
-    const url = `https://api.openweathermap.org/data/3.0/onecall?lat=${MIDLAND_TX.lat}&lon=${MIDLAND_TX.lon}&exclude=minutely,hourly,daily&appid=${apiKey}`;
-    const response = await fetch(url);
-
-    if (!response.ok) {
-      // Not available on free tier, return empty
-      return [];
-    }
-
-    const data = await response.json();
-
-    if (!data.alerts || data.alerts.length === 0) {
-      return [];
-    }
-
-    return data.alerts.map((alert: any) => ({
-      event: alert.event,
-      headline: alert.event,
-      severity: getSeverity(alert.tags),
-      start: unixToISO(alert.start),
-      end: unixToISO(alert.end),
-      description: alert.description
-    }));
-  } catch (error) {
-    // Alerts not available, not an error
-    return [];
-  }
+function weatherCondition(shortForecast: string, icon: string | undefined): WeatherCondition {
+  const description = shortForecast || 'Conditions unavailable';
+  const main = description.split(/\s+/).slice(0, 3).join(' ');
+  return {
+    id: 0,
+    main,
+    description,
+    icon: icon || '',
+  };
 }
 
-function getSeverity(tags: string[]): 'minor' | 'moderate' | 'severe' | 'extreme' {
-  if (!tags) return 'moderate';
-  if (tags.includes('Extreme')) return 'extreme';
-  if (tags.includes('Severe')) return 'severe';
-  if (tags.includes('Moderate')) return 'moderate';
+function severity(value: unknown): WeatherAlert['severity'] {
+  const normalized = String(value || '').toLowerCase();
+  if (normalized === 'extreme') return 'extreme';
+  if (normalized === 'severe') return 'severe';
+  if (normalized === 'moderate') return 'moderate';
   return 'minor';
 }
 
-// ============ Main Export Functions ============
-
-/**
- * Get weather data for Midland, TX (79705)
- * Caches results for 30 minutes
- */
-export async function getWeather(): Promise<WeatherData | null> {
-  const apiKey = process.env.OPENWEATHER_API_KEY;
-
-  if (!apiKey) {
-    console.warn('[Weather] OPENWEATHER_API_KEY not configured');
-    return getMockWeather();
+function dailyForecast(periods: any[]): WeatherForecastDay[] {
+  const grouped = new Map<string, any[]>();
+  for (const period of periods) {
+    if (!period?.startTime) continue;
+    const date = String(period.startTime).slice(0, 10);
+    const values = grouped.get(date) || [];
+    values.push(period);
+    grouped.set(date, values);
   }
 
-  // Check cache
-  const now = Date.now();
-  if (weatherCache.data && (now - weatherCache.timestamp) < CACHE_DURATION_MS) {
-    console.log('[Weather] Returning cached data');
-    return weatherCache.data;
-  }
+  const output: WeatherForecastDay[] = [];
+  for (const [date, values] of grouped) {
+    if (output.length >= 7) break;
+    const temps = values.map((value) => finiteNumber(value.temperature, Number.NaN)).filter(Number.isFinite);
+    if (!temps.length) continue;
+    const daytime = values.find((value) => value.isDaytime) || values[0];
+    const humidityValues = values
+      .map((value) => finiteNumber(value.relativeHumidity?.value, Number.NaN))
+      .filter(Number.isFinite);
+    const precipValues = values
+      .map((value) => finiteNumber(value.probabilityOfPrecipitation?.value, 0))
+      .filter(Number.isFinite);
+    const winds = values.map((value) => parseWindSpeed(value.windSpeed));
 
-  console.log('[Weather] Fetching fresh weather data for', MIDLAND_TX.city);
-
-  // Fetch all data in parallel
-  const [current, forecast, alerts] = await Promise.all([
-    fetchCurrentWeather(apiKey),
-    fetchForecast(apiKey),
-    fetchAlerts(apiKey)
-  ]);
-
-  if (!current) {
-    console.error('[Weather] Failed to fetch current weather');
-    return weatherCache.data || getMockWeather();
-  }
-
-  const dataWithoutSummary = { current, forecast, alerts };
-  const summary = generateWeatherSummary(dataWithoutSummary);
-
-  const weatherData: WeatherData = {
-    ...dataWithoutSummary,
-    summary
-  };
-
-  // Update cache
-  weatherCache = {
-    data: weatherData,
-    timestamp: now
-  };
-
-  return weatherData;
-}
-
-/**
- * Get just the current conditions
- */
-export async function getCurrentWeather(): Promise<CurrentWeather | null> {
-  const data = await getWeather();
-  return data?.current || null;
-}
-
-/**
- * Get weather summary for voice/AI
- */
-export async function getWeatherSummary(): Promise<string> {
-  const data = await getWeather();
-  return data?.summary || 'Weather data unavailable.';
-}
-
-/**
- * Get mock weather data when API key not configured
- * Uses realistic Midland, TX weather patterns
- */
-function getMockWeather(): WeatherData {
-  const now = new Date();
-  const month = now.getMonth();
-
-  // Midland TX typical weather by season
-  let baseTemp: number;
-  let conditions: string;
-
-  if (month >= 5 && month <= 8) {
-    // Summer: Hot and dry
-    baseTemp = 95 + Math.floor(Math.random() * 10);
-    conditions = 'clear sky';
-  } else if (month >= 11 || month <= 2) {
-    // Winter: Cool and dry
-    baseTemp = 50 + Math.floor(Math.random() * 15);
-    conditions = 'few clouds';
-  } else {
-    // Spring/Fall: Variable
-    baseTemp = 70 + Math.floor(Math.random() * 15);
-    conditions = 'scattered clouds';
-  }
-
-  const current: CurrentWeather = {
-    location: `${MIDLAND_TX.city}, ${MIDLAND_TX.state}`,
-    zipCode: MIDLAND_TX.zip,
-    temperature: baseTemp,
-    feelsLike: baseTemp + 3,
-    humidity: 25 + Math.floor(Math.random() * 20),
-    windSpeed: 10 + Math.floor(Math.random() * 15),
-    windDirection: ['N', 'S', 'SW', 'NW'][Math.floor(Math.random() * 4)],
-    conditions: [{
-      id: 800,
-      main: 'Clear',
-      description: conditions,
-      icon: '01d'
-    }],
-    visibility: 10,
-    pressure: 1015,
-    sunrise: new Date(now.setHours(6, 30, 0)).toISOString(),
-    sunset: new Date(now.setHours(19, 30, 0)).toISOString(),
-    updatedAt: new Date().toISOString()
-  };
-
-  const forecast: WeatherForecastDay[] = [];
-  for (let i = 0; i < 5; i++) {
-    const date = new Date();
-    date.setDate(date.getDate() + i);
-    forecast.push({
-      date: date.toISOString().split('T')[0],
-      dayName: getDayName(date.toISOString()),
-      high: baseTemp + Math.floor(Math.random() * 5),
-      low: baseTemp - 15 - Math.floor(Math.random() * 10),
-      conditions: current.conditions,
-      precipitation: 0,
-      humidity: current.humidity,
-      windSpeed: current.windSpeed
+    output.push({
+      date,
+      dayName: new Date(`${date}T12:00:00-05:00`).toLocaleDateString('en-US', {
+        weekday: 'long',
+        timeZone: 'America/Chicago',
+      }),
+      high: Math.round(Math.max(...temps)),
+      low: Math.round(Math.min(...temps)),
+      conditions: [weatherCondition(daytime.shortForecast, daytime.icon)],
+      precipitation: Math.round(Math.max(0, ...precipValues)),
+      humidity: humidityValues.length
+        ? Math.round(humidityValues.reduce((sum, value) => sum + value, 0) / humidityValues.length)
+        : 0,
+      windSpeed: winds.length ? Math.round(Math.max(...winds)) : 0,
     });
   }
-
-  const dataWithoutSummary = { current, forecast, alerts: [] };
-
-  return {
-    ...dataWithoutSummary,
-    summary: generateWeatherSummary(dataWithoutSummary) + ' (Mock data - API key not configured)'
-  };
+  return output;
 }
 
-/**
- * Check if weather affects property operations
- * Returns warnings for extreme conditions
- */
+function buildSummary(data: Omit<WeatherData, 'summary' | 'source'>): string {
+  const current = data.current;
+  const description = current.conditions[0]?.description || 'conditions unavailable';
+  const lines = [
+    `Currently ${current.temperature}°F and ${description} in Midland, Texas.`,
+    `Humidity is ${current.humidity}% with winds ${current.windSpeed} mph from the ${current.windDirection}.`,
+  ];
+  if (data.forecast[0]) {
+    lines.push(`Today's high is ${data.forecast[0].high}°F and low is ${data.forecast[0].low}°F.`);
+  }
+  const urgent = data.alerts.filter((alert) => alert.severity === 'severe' || alert.severity === 'extreme');
+  if (urgent.length) {
+    lines.push(`Weather alert: ${urgent.map((alert) => alert.headline).join('; ')}.`);
+  }
+  return lines.join(' ');
+}
+
+export async function getWeather(): Promise<WeatherData | null> {
+  const now = Date.now();
+  if (cache.data && now - cache.fetchedAt < CACHE_TTL_MS) return cache.data;
+
+  try {
+    const pointUrl = `https://api.weather.gov/points/${MIDLAND.latitude},${MIDLAND.longitude}`;
+    const point = await fetchJson(pointUrl);
+    const forecastUrl = point?.properties?.forecast;
+    const hourlyUrl = point?.properties?.forecastHourly;
+    if (!forecastUrl || !hourlyUrl) throw new Error('NWS point response did not include forecast URLs');
+
+    const alertsUrl = `https://api.weather.gov/alerts/active?point=${MIDLAND.latitude},${MIDLAND.longitude}`;
+    const [forecastResponse, hourlyResponse, alertsResponse] = await Promise.all([
+      fetchJson(forecastUrl),
+      fetchJson(hourlyUrl),
+      fetchJson(alertsUrl).catch(() => ({ features: [] })),
+    ]);
+
+    const hourly = Array.isArray(hourlyResponse?.properties?.periods)
+      ? hourlyResponse.properties.periods
+      : [];
+    const forecastPeriods = Array.isArray(forecastResponse?.properties?.periods)
+      ? forecastResponse.properties.periods
+      : [];
+    const first = hourly[0] || forecastPeriods[0];
+    if (!first || !Number.isFinite(Number(first.temperature))) {
+      throw new Error('NWS forecast did not contain a valid temperature');
+    }
+
+    const humidity = finiteNumber(first.relativeHumidity?.value, 0);
+    const current: CurrentWeather = {
+      location: `${MIDLAND.city}, ${MIDLAND.state}`,
+      zipCode: MIDLAND.zipCode,
+      temperature: Math.round(finiteNumber(first.temperature)),
+      feelsLike: Math.round(finiteNumber(first.temperature)),
+      humidity: Math.round(humidity),
+      windSpeed: parseWindSpeed(first.windSpeed),
+      windDirection: String(first.windDirection || 'N/A'),
+      conditions: [weatherCondition(first.shortForecast, first.icon)],
+      visibility: 10,
+      pressure: 0,
+      sunrise: '',
+      sunset: '',
+      updatedAt: new Date().toISOString(),
+    };
+
+    const alerts: WeatherAlert[] = (alertsResponse?.features || []).map((feature: any) => ({
+      event: String(feature?.properties?.event || 'Weather alert'),
+      headline: String(feature?.properties?.headline || feature?.properties?.event || 'Weather alert'),
+      severity: severity(feature?.properties?.severity),
+      start: String(feature?.properties?.onset || feature?.properties?.effective || ''),
+      end: String(feature?.properties?.ends || feature?.properties?.expires || ''),
+      description: String(feature?.properties?.description || ''),
+    }));
+
+    const forecast = dailyForecast(forecastPeriods);
+    const withoutSummary = { current, forecast, alerts };
+    const data: WeatherData = {
+      ...withoutSummary,
+      summary: buildSummary(withoutSummary),
+      source: 'NWS',
+    };
+    cache = { data, fetchedAt: now };
+    return data;
+  } catch {
+    return cache.data;
+  }
+}
+
+export async function getCurrentWeather(): Promise<CurrentWeather | null> {
+  return (await getWeather())?.current || null;
+}
+
+export async function getWeatherSummary(): Promise<string> {
+  return (await getWeather())?.summary || 'Weather data is currently unavailable.';
+}
+
 export function checkWeatherImpact(weather: WeatherData): string[] {
   const warnings: string[] = [];
-  const { current, alerts } = weather;
+  const current = weather.current;
 
-  // Temperature warnings
   if (current.temperature >= 105) {
-    warnings.push('EXTREME HEAT WARNING: Consider rescheduling outdoor work');
+    warnings.push('EXTREME HEAT: reschedule nonessential outdoor work and verify property cooling.');
   } else if (current.temperature >= 95) {
-    warnings.push('Heat advisory: Ensure cleaners have water, AC working at properties');
+    warnings.push('HEAT ADVISORY: confirm air conditioning and provide water for outdoor workers.');
   } else if (current.temperature <= 32) {
-    warnings.push('FREEZE WARNING: Check pipes, leave faucets dripping at vacant properties');
+    warnings.push('FREEZE RISK: inspect exposed plumbing and vacant-property freeze protection.');
   }
 
-  // Wind warnings
   if (current.windSpeed >= 40) {
-    warnings.push('HIGH WIND WARNING: Secure outdoor furniture at properties');
+    warnings.push('HIGH WIND: secure outdoor furniture and suspend unsafe yard or pool work.');
   } else if (current.windSpeed >= 25) {
-    warnings.push('Wind advisory: May affect pool cleaning, outdoor tasks');
+    warnings.push('WIND ADVISORY: outdoor cleaning, pool, and yard work may be affected.');
   }
 
-  // Visibility (dust storms common in Midland)
-  if (current.visibility <= 3) {
-    warnings.push('LOW VISIBILITY: Possible dust storm, may affect travel');
-  }
-
-  // Weather alerts
-  for (const alert of alerts) {
+  for (const alert of weather.alerts) {
     if (alert.severity === 'severe' || alert.severity === 'extreme') {
       warnings.push(`${alert.severity.toUpperCase()}: ${alert.headline}`);
     }
   }
-
   return warnings;
 }
 
@@ -504,5 +281,5 @@ export default {
   getWeather,
   getCurrentWeather,
   getWeatherSummary,
-  checkWeatherImpact
+  checkWeatherImpact,
 };

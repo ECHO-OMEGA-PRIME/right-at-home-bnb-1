@@ -1,111 +1,142 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireOneOfRoles } from '@/lib/api-auth';
+import { prisma } from '@/lib/prisma';
+import { assertPeriodOpen, periodLockResponse } from '@/lib/period-lock';
 
-// ── Mock invoices (shared reference) ─────────────────────────────────────
-const invoices: any[] = [
-  {
-    id: 'INV-001', booking_id: 'BK-001', guest_id: 'GUEST-001',
-    guest_name: 'Sarah Johnson', guest_email: 'sarah@example.com',
-    property_name: 'Sunset Retreat', status: 'paid',
-    issued_date: '2026-03-10', due_date: '2026-03-20', paid_date: '2026-03-10',
-    lines: [
-      { description: 'Nightly Rate (3 nights @ $175.00)', quantity: 3, unit_price_cents: 17500, total_cents: 52500 },
-      { description: 'Cleaning Fee', quantity: 1, unit_price_cents: 12500, total_cents: 12500 },
-    ],
-    subtotal_cents: 65000, tax_cents: 5363, total_cents: 70363, paid_cents: 70363,
-    notes: null, created_at: '2026-03-10T14:30:00Z', updated_at: '2026-03-10T15:00:00Z',
-  },
-  {
-    id: 'INV-002', booking_id: 'BK-002', guest_id: 'GUEST-002',
-    guest_name: 'Mike Chen', guest_email: 'mike.chen@example.com',
-    property_name: 'Oilfield Oasis', status: 'sent',
-    issued_date: '2026-03-12', due_date: '2026-03-22', paid_date: null,
-    lines: [
-      { description: 'Nightly Rate (3 nights @ $225.00)', quantity: 3, unit_price_cents: 22500, total_cents: 67500 },
-      { description: 'Cleaning Fee', quantity: 1, unit_price_cents: 15000, total_cents: 15000 },
-    ],
-    subtotal_cents: 82500, tax_cents: 6806, total_cents: 89306, paid_cents: 0,
-    notes: 'VRBO booking', created_at: '2026-03-12T09:15:00Z', updated_at: '2026-03-12T09:15:00Z',
-  },
-];
+// Real Invoice / InvoiceLine rows (queue #26855). Previously a hardcoded array,
+// so recorded payments disappeared on the next cold start -- an invoice ledger
+// that forgot who had paid.
 
 type RouteContext = { params: Promise<{ id: string }> };
 
+const iso = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : null);
+
+const VALID_TRANSITIONS: Record<string, string[]> = {
+  draft: ['sent', 'void'],
+  sent: ['paid', 'overdue', 'void'],
+  overdue: ['paid', 'void'],
+  paid: [],
+  void: [],
+};
+
+async function toContract(inv: any) {
+  const guest = inv.guestId
+    ? await prisma.guest.findUnique({ where: { id: inv.guestId }, select: { name: true, email: true } })
+    : null;
+  return {
+    id: inv.id,
+    number: inv.number,
+    booking_id: inv.bookingId,
+    guest_id: inv.guestId,
+    guest_name: guest?.name ?? null,
+    guest_email: guest?.email ?? null,
+    property_name: inv.property?.name ?? null,
+    status: inv.status,
+    issued_date: iso(inv.issueDate),
+    due_date: iso(inv.dueDate),
+    paid_date: iso(inv.paidDate),
+    lines: (inv.lines ?? []).map((l: any) => ({
+      description: l.description,
+      quantity: l.quantity,
+      unit_price_cents: l.unitCents,
+      total_cents: l.totalCents,
+    })),
+    subtotal_cents: inv.subtotalCents,
+    tax_cents: inv.taxCents,
+    total_cents: inv.totalCents,
+    paid_cents: inv.paidCents,
+    notes: inv.notes,
+    created_at: inv.createdAt.toISOString(),
+    updated_at: inv.updatedAt.toISOString(),
+  };
+}
+
+const INCLUDE = { lines: true, property: { select: { name: true } } } as const;
+
 // ── GET /api/invoices/[id] ───────────────────────────────────────────────
 export async function GET(request: NextRequest, context: RouteContext) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const { id } = await context.params;
-    const invoice = invoices.find((i) => i.id === id);
-
-    if (!invoice) {
-      return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
-    }
-
-    return NextResponse.json({ invoice });
+    const invoice = await prisma.invoice.findUnique({ where: { id }, include: INCLUDE });
+    if (!invoice) return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
+    return NextResponse.json({ invoice: await toContract(invoice) });
   } catch (error: any) {
     return NextResponse.json(
-      { error: 'Failed to fetch invoice', detail: error.message },
+      { error: 'Failed to load invoice', detail: error.message },
       { status: 500 },
     );
   }
 }
 
-// ── PUT /api/invoices/[id] — Update status, record payment ──────────────
+// ── PUT /api/invoices/[id] ───────────────────────────────────────────────
 export async function PUT(request: NextRequest, context: RouteContext) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const { id } = await context.params;
-    const idx = invoices.findIndex((i) => i.id === id);
-
-    if (idx === -1) {
-      return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
-    }
+    const existing = await prisma.invoice.findUnique({ where: { id } });
+    if (!existing) return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
 
     const body = await request.json();
-    const invoice = invoices[idx];
+    const data: Record<string, unknown> = {};
 
-    // Status transitions
     if (body.status) {
-      const validTransitions: Record<string, string[]> = {
-        draft: ['sent', 'void'],
-        sent: ['paid', 'overdue', 'void'],
-        overdue: ['paid', 'void'],
-        paid: [],
-        void: [],
-      };
-
-      const allowed = validTransitions[invoice.status] || [];
+      const allowed = VALID_TRANSITIONS[existing.status] ?? [];
       if (!allowed.includes(body.status)) {
         return NextResponse.json(
-          { error: `Cannot transition from '${invoice.status}' to '${body.status}'` },
+          { error: `Cannot transition from '${existing.status}' to '${body.status}'` },
           { status: 400 },
         );
       }
-      invoice.status = body.status;
-
+      data.status = body.status;
       if (body.status === 'paid') {
-        invoice.paid_date = new Date().toISOString().split('T')[0];
-        invoice.paid_cents = body.paid_cents || invoice.total_cents;
+        data.paidDate = new Date();
+        data.paidCents = body.paid_cents ?? existing.totalCents;
       }
     }
 
-    // Record partial payment
+    // A payment without an explicit status change: accumulate, and let the
+    // invoice settle itself once it is fully covered.
     if (body.payment_cents && !body.status) {
-      invoice.paid_cents = Math.min(
-        (invoice.paid_cents || 0) + body.payment_cents,
-        invoice.total_cents,
-      );
-      if (invoice.paid_cents >= invoice.total_cents) {
-        invoice.status = 'paid';
-        invoice.paid_date = new Date().toISOString().split('T')[0];
+      if (!Number.isInteger(body.payment_cents) || body.payment_cents <= 0) {
+        return NextResponse.json(
+          { error: 'payment_cents must be a positive integer' },
+          { status: 400 },
+        );
+      }
+      // Capped at the total: a payment cannot make an invoice more than paid,
+      // which would silently create a negative balance owed.
+      const paid = Math.min(existing.paidCents + body.payment_cents, existing.totalCents);
+      data.paidCents = paid;
+      if (paid >= existing.totalCents) {
+        data.status = 'paid';
+        data.paidDate = new Date();
       }
     }
 
-    if (body.notes !== undefined) invoice.notes = body.notes;
+    if (body.notes !== undefined) data.notes = body.notes;
 
-    invoice.updated_at = new Date().toISOString();
-    invoices[idx] = invoice;
+    // Closed books stay closed (P5-1). Both the invoice's EXISTING dates and any
+    // new paid date are checked: marking a closed month's invoice paid changes
+    // that month's figures, and so does moving a paid date out of one. Checking
+    // only the new value would leave the obvious way around the lock.
+    await assertPeriodOpen(
+      existing.issueDate,
+      existing.paidDate,
+      data.paidDate as Date | undefined,
+    );
 
-    return NextResponse.json({ invoice });
+    const updated = await prisma.invoice.update({ where: { id }, data, include: INCLUDE });
+    return NextResponse.json({ invoice: await toContract(updated) });
   } catch (error: any) {
+    // A locked accounting period is a REFUSAL, not a fault. Returning the
+    // generic 500 below would tell the caller the system broke when it did
+    // exactly what it was built to do, and the reason would be lost.
+    const locked = periodLockResponse(error);
+    if (locked) return NextResponse.json(locked.body, { status: locked.status });
+
     return NextResponse.json(
       { error: 'Failed to update invoice', detail: error.message },
       { status: 500 },
@@ -113,29 +144,32 @@ export async function PUT(request: NextRequest, context: RouteContext) {
   }
 }
 
-// ── DELETE /api/invoices/[id] — Void invoice ─────────────────────────────
+// ── DELETE /api/invoices/[id] — void, never destroy ──────────────────────
 export async function DELETE(request: NextRequest, context: RouteContext) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const { id } = await context.params;
-    const idx = invoices.findIndex((i) => i.id === id);
+    const existing = await prisma.invoice.findUnique({ where: { id } });
+    if (!existing) return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
 
-    if (idx === -1) {
-      return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
-    }
-
-    if (invoices[idx].status === 'paid') {
+    if (existing.status === 'paid') {
       return NextResponse.json(
-        { error: 'Cannot void a paid invoice. Issue a credit note instead.' },
+        { error: 'Cannot void a paid invoice; issue a credit note instead' },
         { status: 400 },
       );
     }
 
-    invoices[idx].status = 'void';
-    invoices[idx].updated_at = new Date().toISOString();
-
+    // Voiding preserves the number and the record. Deleting an invoice would
+    // leave a gap in the sequence, which is exactly what auditors look for.
+    const updated = await prisma.invoice.update({
+      where: { id },
+      data: { status: 'void' },
+      include: INCLUDE,
+    });
     return NextResponse.json({
-      message: 'Invoice voided',
-      invoice: invoices[idx],
+      invoice: await toContract(updated),
+      message: 'Invoice voided (not deleted — the number and record are preserved)',
     });
   } catch (error: any) {
     return NextResponse.json(

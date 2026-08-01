@@ -6,8 +6,23 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { requireOneOfRoles } from '@/lib/api-auth';
+import { adminSecretMatches } from '@/lib/admin-secret';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  // GET lists every property's iCal export URL and sync status -- admin data,
+  // and it was relying on the middleware prefix alone. Guarded here too so the
+  // route defends itself, matching POST.
+  const apiSecret = request.headers.get('x-api-secret');
+  if (apiSecret) {
+    if (!adminSecretMatches(apiSecret)) {
+      return NextResponse.json({ error: 'Invalid API secret' }, { status: 403 });
+    }
+  } else {
+    const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+    if (auth.error) return auth.error;
+  }
+
   try {
     const syncs = await prisma.vrboSync.findMany({
       include: { property: { select: { id: true, name: true, vrboId: true } } },
@@ -49,14 +64,33 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    // Allow programmatic access with API secret
+    // Two defects replaced here (see @/lib/admin-secret):
+    //   - the secret was compared against `env.ADMIN_API_SECRET || 'rah-vrbo-...'`,
+    //     so an unset env var would have accepted a PUBLISHED literal;
+    //   - `if (!apiSecret && !cookie)` accepted ANY cookie value without
+    //     validating it, treating presence as authentication.
+    //
+    // Neither was live — /api/admin is in the middleware's ADMIN_ONLY_PREFIXES
+    // and an unauthenticated request is refused before this runs (verified: a
+    // garbage cookie gets 401). This is defence-in-depth for the day that list
+    // changes.
     const apiSecret = request.headers.get('x-api-secret');
     const cookie = request.cookies.get('rah-auth-token')?.value;
-    if (!apiSecret && !cookie) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-    }
-    if (apiSecret && apiSecret !== (process.env.ADMIN_API_SECRET || 'rah-vrbo-sync-2026')) {
-      return NextResponse.json({ error: 'Invalid API secret' }, { status: 403 });
+
+    if (apiSecret) {
+      // A supplied secret must be CORRECT. Wrong secret denies outright rather
+      // than falling through to the session path.
+      if (!adminSecretMatches(apiSecret)) {
+        return NextResponse.json({ error: 'Invalid API secret' }, { status: 403 });
+      }
+    } else {
+      // No secret: require a genuinely verified admin session. A cookie being
+      // present proves nothing about who sent it.
+      if (!cookie) {
+        return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+      }
+      const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+      if (auth.error) return auth.error;
     }
 
     const body = await request.json();

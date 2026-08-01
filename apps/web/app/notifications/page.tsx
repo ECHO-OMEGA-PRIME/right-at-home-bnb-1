@@ -13,7 +13,7 @@ import {
   ServiceRequest,
   serviceProviders,
   getServiceProvider
-} from '@/lib/cleaning-system';
+} from '@/lib/cleaning-domain';
 import DashboardShell from '@/components/layout/DashboardShell';
 
 // Mock notifications - empty for production

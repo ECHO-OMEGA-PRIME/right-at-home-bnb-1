@@ -3,10 +3,13 @@
  * GET /api/bookings/sync/status — returns sync status for all properties
  */
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { PROPERTIES } from '@/lib/property-data';
+import { requireOneOfRoles } from '@/lib/api-auth';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   // Build status from properties list
   const status: Record<string, Record<string, any>> = {};
 

@@ -1,0 +1,46 @@
+﻿{
+    "checked_utc":  "2026-07-24T00:43:41.7744986Z",
+    "dns":  [
+                {
+                    "error":  "api.rah-midland.com : DNS name does not exist"
+                }
+            ],
+    "probes":  [
+                   {
+                       "url":  "https://api.rah-midland.com/",
+                       "status":  null,
+                       "elapsed_ms":  268,
+                       "content_type":  null,
+                       "server":  null,
+                       "content_length":  0,
+                       "error":  "The remote name could not be resolved: \u0027api.rah-midland.com\u0027"
+                   },
+                   {
+                       "url":  "https://api.rah-midland.com/health",
+                       "status":  null,
+                       "elapsed_ms":  3,
+                       "content_type":  null,
+                       "server":  null,
+                       "content_length":  0,
+                       "error":  "The remote name could not be resolved: \u0027api.rah-midland.com\u0027"
+                   },
+                   {
+                       "url":  "https://api.rah-midland.com/docs",
+                       "status":  null,
+                       "elapsed_ms":  3,
+                       "content_type":  null,
+                       "server":  null,
+                       "content_length":  0,
+                       "error":  "The remote name could not be resolved: \u0027api.rah-midland.com\u0027"
+                   },
+                   {
+                       "url":  "https://api.rah-midland.com/openapi.json",
+                       "status":  null,
+                       "elapsed_ms":  1,
+                       "content_type":  null,
+                       "server":  null,
+                       "content_length":  0,
+                       "error":  "The remote name could not be resolved: \u0027api.rah-midland.com\u0027"
+                   }
+               ]
+}

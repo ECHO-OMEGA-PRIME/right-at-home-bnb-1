@@ -6,6 +6,10 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { PROPERTIES } from '@/lib/property-data';
+import { requireOneOfRoles } from '@/lib/api-auth';
+
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 // VRBO listing IDs for all active properties
 const VRBO_PROPERTIES: Record<string, { vrboId: string; name: string }> = {};
@@ -239,6 +243,8 @@ async function fetchPrismaBookings(month: number, year: number, propertyFilter?:
 
 // ── GET handler ──────────────────────────────────────────────────────────────
 export async function GET(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const params = request.nextUrl.searchParams;
     const month = parseInt(params.get('month') || String(new Date().getMonth() + 1));

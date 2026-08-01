@@ -1,5 +1,9 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { paypalFetch } from "@/lib/integrations/paypal-client";
+import { requireOneOfRoles } from '@/lib/api-auth';
+
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 /**
  * GET /api/integrations/paypal/balance
@@ -7,7 +11,9 @@ import { paypalFetch } from "@/lib/integrations/paypal-client";
  * Returns the current PayPal account balance(s) using the
  * Reporting API /v1/reporting/balances endpoint.
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const now = new Date().toISOString();
 

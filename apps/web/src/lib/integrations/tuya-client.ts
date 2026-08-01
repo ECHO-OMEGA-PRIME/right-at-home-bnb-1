@@ -8,10 +8,9 @@
  *  - Unlock activity logs with worker identification
  *  - Time-on-site tracking per worker per property
  *
- * ENV:
- *  TUYA_CLIENT_ID     — Tuya Cloud project client ID
- *  TUYA_CLIENT_SECRET — Tuya Cloud project secret
- *  TUYA_BASE_URL      — Region endpoint (default: https://openapi.tuyaus.com)
+ * ENV (edge → FORGE proxy; Tuya secret is NOT on the edge anymore):
+ *  RAH_API_BASE  — echo-rah-api base (default: https://rah-api.echo-op.com)
+ *  RAH_API_TOKEN — edge service token; sent as `Bearer owner:<token>`
  *
  * @author ECHO OMEGA PRIME
  */
@@ -67,97 +66,49 @@ export interface WorkerTimeEntry {
   duration_minutes: number | null;
 }
 
-// ─── Tuya Auth ───────────────────────────────────────────────────────────────
+// ─── RAH API proxy (edge → FORGE echo-rah-api) ───────────────────────────────
+// SECURITY: the Tuya Access Secret NO LONGER lives on the Vercel edge. Every
+// Tuya call is proxied through echo-rah-api on FORGE (single egress
+// 107.219.15.225), which holds the Tuya creds server-side and is the only IP
+// allowlisted at Tuya. This is the rah-midland "Exposed RAH provider credentials
+// require rotation" remediation (Tuya portion): a leaked Tuya secret is now
+// useless from any other origin. Rotate RAH_API_TOKEN (not the Tuya secret) if
+// this edge token ever leaks — echo-rah-api tokens are freely rotatable.
 
-const TUYA_BASE_URL = process.env.TUYA_BASE_URL || 'https://openapi.tuyaus.com';
-const TUYA_CLIENT_ID = process.env.TUYA_CLIENT_ID || process.env.TUYA_ACCESS_ID || '';
-const TUYA_CLIENT_SECRET = process.env.TUYA_CLIENT_SECRET || process.env.TUYA_ACCESS_SECRET || '';
-
-let _accessToken: string | null = null;
-let _tokenExpiry = 0;
-
-/**
- * Generate HMAC-SHA256 signature for Tuya API requests.
- */
-function generateSign(
-  clientId: string,
-  secret: string,
-  timestamp: string,
-  accessToken: string,
-  nonce: string,
-  method: string,
-  path: string,
-  body: string,
-): string {
-  const contentHash = crypto.createHash('sha256').update(body || '').digest('hex');
-  const stringToSign = [method, contentHash, '', path].join('\n');
-  const signStr = clientId + accessToken + timestamp + nonce + stringToSign;
-  return crypto.createHmac('sha256', secret).update(signStr).digest('hex').toUpperCase();
-}
+const RAH_API_BASE = process.env.RAH_API_BASE || 'https://rah-api.echo-op.com';
+const RAH_API_TOKEN = process.env.RAH_API_TOKEN || '';
 
 /**
- * Get an access token from Tuya Cloud (cached).
+ * Call an echo-rah-api lock endpoint on FORGE with the edge service token.
+ * Throws on transport error, non-2xx, or an {ok:false} body.
  */
-async function getAccessToken(): Promise<string> {
-  if (_accessToken && Date.now() < _tokenExpiry) {
-    return _accessToken;
+async function rahFetch(method: string, path: string, body?: Record<string, unknown>): Promise<any> {
+  if (!RAH_API_TOKEN) {
+    throw new Error('RAH_API_TOKEN not configured — edge→FORGE lock proxy unavailable');
   }
-
-  const timestamp = Date.now().toString();
-  const nonce = crypto.randomUUID();
-  const path = '/v1.0/token?grant_type=1';
-  const sign = generateSign(TUYA_CLIENT_ID, TUYA_CLIENT_SECRET, timestamp, '', nonce, 'GET', path, '');
-
-  const res = await fetch(`${TUYA_BASE_URL}${path}`, {
-    method: 'GET',
-    headers: {
-      'client_id': TUYA_CLIENT_ID,
-      'sign': sign,
-      'sign_method': 'HMAC-SHA256',
-      't': timestamp,
-      'nonce': nonce,
-    },
-  });
-
-  const data = await res.json();
-  if (!data.success) {
-    throw new Error(`Tuya auth failed: ${data.msg || JSON.stringify(data)}`);
-  }
-
-  _accessToken = data.result.access_token;
-  _tokenExpiry = Date.now() + (data.result.expire_time * 1000) - 60000; // 60s buffer
-  return _accessToken!;
-}
-
-/**
- * Make an authenticated Tuya API request.
- */
-async function tuyaFetch(method: string, path: string, body?: Record<string, unknown>): Promise<any> {
-  const token = await getAccessToken();
-  const timestamp = Date.now().toString();
-  const nonce = crypto.randomUUID();
-  const bodyStr = body ? JSON.stringify(body) : '';
-  const sign = generateSign(TUYA_CLIENT_ID, TUYA_CLIENT_SECRET, timestamp, token, nonce, method, path, bodyStr);
-
-  const res = await fetch(`${TUYA_BASE_URL}${path}`, {
+  const res = await fetch(`${RAH_API_BASE}${path}`, {
     method,
     headers: {
-      'client_id': TUYA_CLIENT_ID,
-      'access_token': token,
-      'sign': sign,
-      'sign_method': 'HMAC-SHA256',
-      't': timestamp,
-      'nonce': nonce,
+      Authorization: `Bearer owner:${RAH_API_TOKEN}`,
       ...(body ? { 'Content-Type': 'application/json' } : {}),
     },
-    ...(body ? { body: bodyStr } : {}),
+    ...(body ? { body: JSON.stringify(body) } : {}),
+    cache: 'no-store',
   });
-
-  const data = await res.json();
-  if (!data.success) {
-    throw new Error(`Tuya API error: ${data.msg || JSON.stringify(data)}`);
+  const text = await res.text();
+  let data: any = {};
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch {
+    data = { raw: text };
   }
-  return data.result;
+  if (!res.ok || data?.ok === false) {
+    const detail = data?.detail ?? data?.error ?? res.statusText;
+    throw new Error(
+      `RAH lock API ${method} ${path} -> ${res.status}: ${typeof detail === 'string' ? detail : JSON.stringify(detail)}`,
+    );
+  }
+  return data;
 }
 
 // ─── Lock Management ─────────────────────────────────────────────────────────
@@ -166,24 +117,32 @@ async function tuyaFetch(method: string, path: string, body?: Record<string, unk
  * Get all smart lock devices registered in Tuya.
  */
 export async function getLocks(): Promise<any[]> {
-  const result = await tuyaFetch('GET', '/v1.0/devices?category=ms');
-  return result?.devices || result || [];
+  const data = await rahFetch('GET', '/locks');
+  return data?.locks || [];
 }
 
 /**
  * Get lock status (online, battery, locked state).
  */
 export async function getLockStatus(deviceId: string): Promise<any> {
-  return tuyaFetch('GET', `/v1.0/devices/${deviceId}/status`);
+  const data = await rahFetch('GET', `/locks/status?lock=${encodeURIComponent(deviceId)}`);
+  // Return the DEVICE, not the top-level `status`.
+  //
+  // The proxy responds {ok, lock, device_id, device:{...}, status:[...]} where
+  // `status` is the raw Tuya dps ARRAY. The old `data?.status ?? data?.device`
+  // therefore always short-circuited on that array, so every caller asking for
+  // device metadata (online, update_time, battery) silently got a list of
+  // unlock-method datapoints and read `undefined` off it.
+  //
+  // The device carries the dps at `device.status`, so nothing is lost.
+  return data?.device ?? data?.status ?? data;
 }
 
 /**
  * Lock or unlock a device remotely.
  */
 export async function setLockState(deviceId: string, locked: boolean): Promise<any> {
-  return tuyaFetch('POST', `/v1.0/devices/${deviceId}/commands`, {
-    commands: [{ code: locked ? 'lock' : 'unlock', value: true }],
-  });
+  return rahFetch('POST', '/locks/state', { lock: deviceId, locked });
 }
 
 // ─── Password / Code Management ──────────────────────────────────────────────
@@ -197,13 +156,14 @@ export async function createWorkerCode(
   workerName: string,
   code: string,
 ): Promise<any> {
-  return tuyaFetch('POST', `/v1.0/devices/${deviceId}/door-lock/temp-password`, {
-    name: `Worker: ${workerName}`,
-    password: code,
-    password_type: 'ticket', // permanent until deleted
-    effective_time: Math.floor(Date.now() / 1000),
-    invalid_time: Math.floor(Date.now() / 1000) + (365 * 24 * 60 * 60), // 1 year
-    type: 0, // 0 = custom password
+  const now = new Date();
+  const oneYear = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
+  return rahFetch('POST', '/locks/set-code', {
+    property_or_lock: deviceId,
+    code,
+    guest_name: `Worker: ${workerName}`,
+    valid_from: now.toISOString(),
+    valid_to: oneYear.toISOString(),
   });
 }
 
@@ -240,13 +200,12 @@ export async function createGuestCode(
   startsAt: Date,
   expiresAt: Date,
 ): Promise<any> {
-  return tuyaFetch('POST', `/v1.0/devices/${deviceId}/door-lock/temp-password`, {
-    name: `Guest: ${guestName}`,
-    password: code,
-    password_type: 'ticket',
-    effective_time: Math.floor(startsAt.getTime() / 1000),
-    invalid_time: Math.floor(expiresAt.getTime() / 1000),
-    type: 0,
+  return rahFetch('POST', '/locks/set-code', {
+    property_or_lock: deviceId,
+    code,
+    guest_name: `Guest: ${guestName}`,
+    valid_from: startsAt.toISOString(),
+    valid_to: expiresAt.toISOString(),
   });
 }
 
@@ -254,15 +213,15 @@ export async function createGuestCode(
  * Delete a code from a lock.
  */
 export async function deleteCode(deviceId: string, passwordId: string): Promise<any> {
-  return tuyaFetch('DELETE', `/v1.0/devices/${deviceId}/door-lock/temp-password/${passwordId}`);
+  return rahFetch('POST', '/locks/clear-code', { lock: deviceId, password_id: passwordId });
 }
 
 /**
  * List all codes on a lock.
  */
 export async function listCodes(deviceId: string): Promise<any[]> {
-  const result = await tuyaFetch('GET', `/v1.0/devices/${deviceId}/door-lock/temp-passwords`);
-  return result || [];
+  const data = await rahFetch('GET', `/locks/codes?lock=${encodeURIComponent(deviceId)}`);
+  return data?.codes || [];
 }
 
 // ─── Activity Logs ───────────────────────────────────────────────────────────
@@ -275,13 +234,13 @@ export async function getUnlockHistory(
   startTime?: Date,
   endTime?: Date,
 ): Promise<any[]> {
-  const start = startTime ? Math.floor(startTime.getTime() / 1000) : Math.floor((Date.now() - 7 * 86400000) / 1000);
-  const end = endTime ? Math.floor(endTime.getTime() / 1000) : Math.floor(Date.now() / 1000);
-  const result = await tuyaFetch(
+  const start = startTime ? startTime.getTime() : Date.now() - 7 * 86400000;
+  const end = endTime ? endTime.getTime() : Date.now();
+  const data = await rahFetch(
     'GET',
-    `/v1.0/devices/${deviceId}/door-lock/open-logs?start_time=${start}&end_time=${end}&page_no=1&page_size=100`,
+    `/locks/history?lock=${encodeURIComponent(deviceId)}&start=${start}&end=${end}`,
   );
-  return result?.records || result || [];
+  return data?.records || [];
 }
 
 // ─── Worker Time Tracking ────────────────────────────────────────────────────
@@ -392,7 +351,7 @@ export function computeWorkerTimeOnSite(
 export function generateSecurePin(): string {
   let pin: string;
   do {
-    pin = Math.floor(100000 + Math.random() * 900000).toString();
+    pin = crypto.randomInt(100000, 1000000).toString();
   } while (
     /(.)\1{3,}/.test(pin) || // No 4+ repeated digits
     pin === '123456' ||
@@ -404,8 +363,9 @@ export function generateSecurePin(): string {
 }
 
 /**
- * Check if Tuya credentials are configured.
+ * Check if the lock backend is reachable — now the FORGE edge→backend token,
+ * not the (removed) Tuya secret. Callers gate lock ops on this.
  */
 export function isTuyaConfigured(): boolean {
-  return !!(TUYA_CLIENT_ID && TUYA_CLIENT_SECRET);
+  return !!RAH_API_TOKEN;
 }

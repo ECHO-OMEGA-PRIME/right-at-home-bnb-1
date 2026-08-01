@@ -242,9 +242,51 @@ export async function createPayPalOrder(
 /**
  * Capture payment after the customer has approved via PayPal.
  */
+/**
+ * Read an order WITHOUT capturing it.
+ *
+ * Exists so the caller can verify an order belongs to the booking it is about
+ * to confirm, and is for the right money, BEFORE taking the payment. Verifying
+ * after capture means money can be taken on a request that is then correctly
+ * refused -- safer than confirming wrongly, but still the wrong order of events.
+ */
+export async function getPayPalOrder(orderId: string): Promise<{
+  status: string;
+  referenceId: string | null;
+  amount: number | null;
+  currency: string | null;
+}> {
+  const res = await paypalFetch(`/v2/checkout/orders/${orderId}`, { method: "GET" });
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`PayPal getOrder failed (${res.status}): ${err}`);
+  }
+
+  const data = await res.json();
+  const unit = data.purchase_units?.[0] ?? {};
+  const amount = unit.amount ?? {};
+
+  return {
+    status: data.status as string,
+    referenceId: (unit.reference_id as string) ?? null,
+    amount: amount.value != null ? Number(amount.value) : null,
+    currency: (amount.currency_code as string) ?? null,
+  };
+}
+
 export async function capturePayPalOrder(
   orderId: string
-): Promise<{ transactionId: string; status: string; payer: Record<string, unknown> }> {
+): Promise<{
+  transactionId: string;
+  status: string;
+  payer: Record<string, unknown>;
+  /** purchase_units[0].reference_id -- the bookingRef the order was CREATED for. */
+  referenceId: string | null;
+  /** Captured amount, as a number of dollars. */
+  amount: number | null;
+  currency: string | null;
+}> {
   const res = await paypalFetch(`/v2/checkout/orders/${orderId}/capture`, {
     method: "POST",
   });
@@ -258,10 +300,19 @@ export async function capturePayPalOrder(
   const capture =
     data.purchase_units?.[0]?.payments?.captures?.[0] ?? {};
 
+  // The reference and amount were discarded here, which meant the caller had no
+  // way to check that the order it captured was the order for the booking it was
+  // about to confirm, or that the right money was paid. Both are returned now.
+  const unit = data.purchase_units?.[0] ?? {};
+  const captured = capture.amount ?? unit.amount ?? {};
+
   return {
     transactionId: (capture.id as string) ?? orderId,
     status: data.status as string,
     payer: data.payer ?? {},
+    referenceId: (unit.reference_id as string) ?? null,
+    amount: captured.value != null ? Number(captured.value) : null,
+    currency: (captured.currency_code as string) ?? null,
   };
 }
 

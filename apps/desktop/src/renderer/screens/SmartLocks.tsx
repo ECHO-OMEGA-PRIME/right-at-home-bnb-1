@@ -575,9 +575,11 @@ export default function SmartLocks() {
                   <p className="text-sm text-gray-500 flex items-center gap-2">
                     <Clock className="w-4 h-4" />
                     Last activity:{' '}
-                    {formatDistanceToNow(new Date(lock.lastActivity), {
-                      addSuffix: true,
-                    })}
+                    {lock.lastActivity
+                      ? formatDistanceToNow(new Date(lock.lastActivity), {
+                          addSuffix: true,
+                        })
+                      : 'No activity recorded'}
                   </p>
                 </div>
               </motion.div>

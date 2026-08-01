@@ -328,7 +328,7 @@ export class OwnerRezClient {
   // --------------------------------------------------------------------------
 
   async getPayments(bookingId?: number): Promise<unknown[]> {
-    const params = bookingId ? { booking_id: bookingId.toString() } : {};
+    const params: Record<string, string> = bookingId ? { booking_id: bookingId.toString() } : {};
     const result = await this.get<{ items: unknown[] }>('/payments', params);
     return result.items || [];
   }

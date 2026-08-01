@@ -1,49 +1,127 @@
-# Right at Home BnB - Deployment Script
-# Deploys all platforms: Web, Backend, Mobile, Desktop
-# Usage: .\deploy.ps1 -Target [all|web|backend|mobile|desktop]
-
+[CmdletBinding()]
 param(
-    [Parameter(Mandatory=$false)]
-    [ValidateSet("all", "web", "backend", "mobile", "desktop")]
-    [string]$Target = "all",
+    [ValidateSet('validate', 'web', 'backend', 'mobile', 'desktop', 'all')]
+    [string]$Target = 'validate',
 
-    [Parameter(Mandatory=$false)]
-    [ValidateSet("development", "preview", "production")]
-    [string]$Environment = "production"
+    [ValidateSet('preview', 'production')]
+    [string]$Environment = 'production',
+
+    [string]$Confirmation = ''
 )
 
-$ErrorActionPreference = "Stop"
-$ProjectRoot = $PSScriptRoot
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
 
-Write-Host "
-╔═══════════════════════════════════════════════════════════╗
-║     RIGHT AT HOME BnB - DEPLOYMENT SCRIPT                  ║
-║     Steven Palma | Midland, TX | 22 Properties             ║
-╠═══════════════════════════════════════════════════════════╣
-║     Target: $Target
-║     Environment: $Environment
-╚═══════════════════════════════════════════════════════════╝
-" -ForegroundColor Cyan
+$ProjectRoot = $PSScriptRoot
+# echo-prime-ai is the real, controlled Firebase project (fixed 2026-07-30,
+# commit c442be3). This gate previously threw on the CORRECT env and would
+# have blocked every deploy since the fix landed.
+$ExpectedFirebaseProject = 'echo-prime-ai'
+$ProductionConfirmation = 'DEPLOY_RAH_PRODUCTION'
+
+function Assert-CommandAvailable {
+    param([Parameter(Mandatory = $true)][string]$Name)
+    if (-not (Get-Command $Name -ErrorAction SilentlyContinue)) {
+        throw "Required command is unavailable: $Name"
+    }
+}
+
+function Invoke-Checked {
+    param(
+        [Parameter(Mandatory = $true)][string]$Name,
+        [Parameter(Mandatory = $true)][scriptblock]$Command
+    )
+
+    Write-Host "[CHECK] $Name" -ForegroundColor Cyan
+    & $Command
+    if ($LASTEXITCODE -ne 0) {
+        throw "$Name failed with exit code $LASTEXITCODE"
+    }
+}
+
+function Assert-DeploymentAuthority {
+    $clientProject = $env:NEXT_PUBLIC_FIREBASE_PROJECT_ID
+    $serverProject = $env:FIREBASE_PROJECT_ID
+
+    if ($clientProject -ne $ExpectedFirebaseProject) {
+        throw "NEXT_PUBLIC_FIREBASE_PROJECT_ID must equal $ExpectedFirebaseProject"
+    }
+    if ($serverProject -ne $ExpectedFirebaseProject) {
+        throw "FIREBASE_PROJECT_ID must equal $ExpectedFirebaseProject"
+    }
+
+    $projectFile = Join-Path $ProjectRoot 'apps\web\.vercel\project.json'
+    if (-not (Test-Path -LiteralPath $projectFile -PathType Leaf)) {
+        throw "Vercel project linkage is missing: $projectFile"
+    }
+
+    $project = Get-Content -LiteralPath $projectFile -Raw | ConvertFrom-Json
+    if ($project.projectName -ne 'right-at-home-bnb') {
+        throw "Unexpected Vercel project: $($project.projectName)"
+    }
+}
+
+function Invoke-Validation {
+    Assert-CommandAvailable -Name 'git.exe'
+    Assert-CommandAvailable -Name 'node.exe'
+    Assert-CommandAvailable -Name 'pnpm.cmd'
+
+    Push-Location $ProjectRoot
+    try {
+        Invoke-Checked -Name 'P0 static assertions' -Command {
+            node .\tools\p0_static_assertions.mjs
+        }
+        Invoke-Checked -Name 'Web TypeScript validation' -Command {
+            pnpm --dir apps/web exec tsc --noEmit
+        }
+        Invoke-Checked -Name 'Web Prisma schema validation' -Command {
+            pnpm --dir apps/web exec prisma validate
+        }
+        Invoke-Checked -Name 'Web production build' -Command {
+            pnpm --dir apps/web build
+        }
+    }
+    finally {
+        Pop-Location
+    }
+}
+
+function Assert-ProductionGate {
+    if ($Environment -ne 'production') {
+        return
+    }
+
+    if ($Confirmation -ne $ProductionConfirmation) {
+        throw "Production deployment requires -Confirmation $ProductionConfirmation"
+    }
+
+    $dirty = & git.exe -C $ProjectRoot status --porcelain
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Unable to determine Git working-tree state'
+    }
+    if ($dirty) {
+        throw 'Production deployment requires a clean Git working tree'
+    }
+
+    Assert-DeploymentAuthority
+}
 
 function Deploy-Web {
-    Write-Host "`n[WEB] Deploying to Vercel..." -ForegroundColor Yellow
-    Push-Location "$ProjectRoot\apps\web"
+    Assert-CommandAvailable -Name 'vercel.cmd'
+    Assert-ProductionGate
 
+    Push-Location (Join-Path $ProjectRoot 'apps\web')
     try {
-        # Install dependencies
-        npm install
-
-        # Build
-        npm run build
-
-        # Deploy
-        if ($Environment -eq "production") {
-            vercel --prod --yes
-        } else {
-            vercel --yes
+        if ($Environment -eq 'production') {
+            Invoke-Checked -Name 'Vercel production deployment' -Command {
+                vercel --prod --yes
+            }
         }
-
-        Write-Host "[WEB] Deployed successfully!" -ForegroundColor Green
+        else {
+            Invoke-Checked -Name 'Vercel preview deployment' -Command {
+                vercel --yes
+            }
+        }
     }
     finally {
         Pop-Location
@@ -51,88 +129,59 @@ function Deploy-Web {
 }
 
 function Deploy-Backend {
-    Write-Host "`n[BACKEND] Deploying to Cloud Run..." -ForegroundColor Yellow
-    Push-Location "$ProjectRoot\backend"
-
-    try {
-        # Build and deploy using gcloud
-        gcloud builds submit --config cloudbuild.yaml --project echo-prime-ai
-
-        Write-Host "[BACKEND] Deployed successfully!" -ForegroundColor Green
-
-        # Get service URL
-        $url = gcloud run services describe rightathome-api --platform managed --region us-central1 --format 'value(status.url)' 2>$null
-        Write-Host "[BACKEND] Service URL: $url" -ForegroundColor Cyan
-    }
-    finally {
-        Pop-Location
-    }
+    throw (
+        'Legacy Cloud Run/Railway deployment is disabled. ' +
+        'Deploy the RAH API only through the verified Echo/FORGE service manifest, ' +
+        'with an immutable commit and rollback evidence.'
+    )
 }
 
-function Deploy-Mobile {
-    Write-Host "`n[MOBILE] Building with EAS..." -ForegroundColor Yellow
-    Push-Location "$ProjectRoot\apps\mobile"
+function Build-Mobile {
+    Assert-CommandAvailable -Name 'eas.cmd'
+    Assert-ProductionGate
 
+    Push-Location (Join-Path $ProjectRoot 'apps\mobile')
     try {
-        # Install dependencies
-        npm install
-
-        # Build for both platforms
-        if ($Environment -eq "production") {
-            eas build --platform all --profile production --non-interactive
-        } elseif ($Environment -eq "preview") {
-            eas build --platform all --profile preview --non-interactive
-        } else {
-            eas build --platform all --profile development --non-interactive
+        $profile = if ($Environment -eq 'production') { 'production' } else { 'preview' }
+        Invoke-Checked -Name "EAS $profile build" -Command {
+            eas build --platform all --profile $profile --non-interactive
         }
-
-        Write-Host "[MOBILE] Build submitted to EAS!" -ForegroundColor Green
     }
     finally {
         Pop-Location
     }
 }
 
-function Deploy-Desktop {
-    Write-Host "`n[DESKTOP] Building Electron app..." -ForegroundColor Yellow
-    Push-Location "$ProjectRoot\apps\desktop"
+function Build-Desktop {
+    Assert-ProductionGate
 
+    Push-Location (Join-Path $ProjectRoot 'apps\desktop')
     try {
-        # Install dependencies
-        npm install
-
-        # Build for Windows
-        npm run build:win
-
-        # Build for macOS (if on Mac)
-        if ($IsMacOS) {
-            npm run build:mac
+        Invoke-Checked -Name 'Desktop Windows build' -Command {
+            pnpm build:win
         }
-
-        Write-Host "[DESKTOP] Build complete!" -ForegroundColor Green
-        Write-Host "[DESKTOP] Installers in: $ProjectRoot\apps\desktop\dist" -ForegroundColor Cyan
     }
     finally {
         Pop-Location
     }
 }
 
-# Execute deployment based on target
+Write-Host "RAH Midland deployment gate" -ForegroundColor Cyan
+Write-Host "Target: $Target"
+Write-Host "Environment: $Environment"
+
+Invoke-Validation
+
 switch ($Target) {
-    "all" {
+    'validate' { Write-Host 'Validation completed. No deployment requested.' -ForegroundColor Green }
+    'web' { Deploy-Web }
+    'backend' { Deploy-Backend }
+    'mobile' { Build-Mobile }
+    'desktop' { Build-Desktop }
+    'all' {
         Deploy-Backend
         Deploy-Web
-        Deploy-Mobile
-        Deploy-Desktop
+        Build-Mobile
+        Build-Desktop
     }
-    "web" { Deploy-Web }
-    "backend" { Deploy-Backend }
-    "mobile" { Deploy-Mobile }
-    "desktop" { Deploy-Desktop }
 }
-
-Write-Host "`n
-╔═══════════════════════════════════════════════════════════╗
-║                 DEPLOYMENT COMPLETE                        ║
-╚═══════════════════════════════════════════════════════════╝
-" -ForegroundColor Green

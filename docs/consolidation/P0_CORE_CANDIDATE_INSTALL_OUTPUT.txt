@@ -1,0 +1,191 @@
+﻿started_utc=2026-07-24T00:21:34.0268885Z
+Scope: all 16 workspace projects
+Lockfile is up to date, resolution step is skipped
+Progress: resolved 1, reused 0, downloaded 0, added 0
+Packages: +1873
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Progress: resolved 1873, reused 78, downloaded 0, added 0
+Progress: resolved 1873, reused 446, downloaded 0, added 0
+Progress: resolved 1873, reused 707, downloaded 0, added 0
+Progress: resolved 1873, reused 923, downloaded 0, added 0
+Progress: resolved 1873, reused 1173, downloaded 0, added 0
+Progress: resolved 1873, reused 1634, downloaded 0, added 0
+Progress: resolved 1873, reused 1865, downloaded 0, added 0
+Progress: resolved 1873, reused 1868, downloaded 0, added 15
+Progress: resolved 1873, reused 1868, downloaded 0, added 36
+Progress: resolved 1873, reused 1868, downloaded 0, added 52
+Progress: resolved 1873, reused 1868, downloaded 0, added 72
+Progress: resolved 1873, reused 1868, downloaded 0, added 85
+Progress: resolved 1873, reused 1868, downloaded 0, added 94
+Progress: resolved 1873, reused 1868, downloaded 0, added 105
+Progress: resolved 1873, reused 1868, downloaded 0, added 127
+Progress: resolved 1873, reused 1868, downloaded 0, added 133
+Progress: resolved 1873, reused 1868, downloaded 0, added 142
+Progress: resolved 1873, reused 1868, downloaded 0, added 146
+Progress: resolved 1873, reused 1868, downloaded 0, added 156
+Progress: resolved 1873, reused 1868, downloaded 0, added 170
+Progress: resolved 1873, reused 1868, downloaded 0, added 198
+Progress: resolved 1873, reused 1868, downloaded 0, added 205
+Progress: resolved 1873, reused 1868, downloaded 0, added 206
+Progress: resolved 1873, reused 1868, downloaded 0, added 249
+Progress: resolved 1873, reused 1868, downloaded 0, added 254
+Progress: resolved 1873, reused 1868, downloaded 0, added 303
+Progress: resolved 1873, reused 1868, downloaded 0, added 326
+Progress: resolved 1873, reused 1868, downloaded 0, added 339
+Progress: resolved 1873, reused 1868, downloaded 0, added 370
+Progress: resolved 1873, reused 1868, downloaded 0, added 397
+Progress: resolved 1873, reused 1868, downloaded 0, added 416
+Progress: resolved 1873, reused 1868, downloaded 0, added 437
+Progress: resolved 1873, reused 1868, downloaded 0, added 461
+Progress: resolved 1873, reused 1868, downloaded 0, added 494
+Progress: resolved 1873, reused 1868, downloaded 0, added 503
+Progress: resolved 1873, reused 1868, downloaded 0, added 527
+Progress: resolved 1873, reused 1868, downloaded 0, added 535
+Progress: resolved 1873, reused 1868, downloaded 0, added 542
+Progress: resolved 1873, reused 1868, downloaded 0, added 574
+Progress: resolved 1873, reused 1868, downloaded 0, added 591
+Progress: resolved 1873, reused 1868, downloaded 0, added 610
+Progress: resolved 1873, reused 1868, downloaded 0, added 642
+Progress: resolved 1873, reused 1868, downloaded 0, added 655
+Progress: resolved 1873, reused 1868, downloaded 0, added 676
+Progress: resolved 1873, reused 1868, downloaded 0, added 692
+Progress: resolved 1873, reused 1868, downloaded 0, added 695
+Progress: resolved 1873, reused 1868, downloaded 0, added 708
+Progress: resolved 1873, reused 1868, downloaded 0, added 734
+Progress: resolved 1873, reused 1868, downloaded 0, added 747
+Progress: resolved 1873, reused 1868, downloaded 0, added 758
+Progress: resolved 1873, reused 1868, downloaded 0, added 759
+Progress: resolved 1873, reused 1868, downloaded 0, added 765
+Progress: resolved 1873, reused 1868, downloaded 0, added 773
+Progress: resolved 1873, reused 1868, downloaded 0, added 783
+Progress: resolved 1873, reused 1868, downloaded 0, added 792
+Progress: resolved 1873, reused 1868, downloaded 0, added 797
+Progress: resolved 1873, reused 1868, downloaded 0, added 814
+Progress: resolved 1873, reused 1868, downloaded 0, added 819
+Progress: resolved 1873, reused 1868, downloaded 0, added 850
+Progress: resolved 1873, reused 1868, downloaded 0, added 859
+Progress: resolved 1873, reused 1868, downloaded 0, added 862
+Progress: resolved 1873, reused 1868, downloaded 0, added 863
+Progress: resolved 1873, reused 1868, downloaded 0, added 869
+Progress: resolved 1873, reused 1868, downloaded 0, added 872
+Progress: resolved 1873, reused 1868, downloaded 0, added 874
+Progress: resolved 1873, reused 1868, downloaded 0, added 882
+Progress: resolved 1873, reused 1868, downloaded 0, added 884
+Progress: resolved 1873, reused 1868, downloaded 0, added 889
+Progress: resolved 1873, reused 1868, downloaded 0, added 903
+Progress: resolved 1873, reused 1868, downloaded 0, added 915
+Progress: resolved 1873, reused 1868, downloaded 0, added 936
+Progress: resolved 1873, reused 1868, downloaded 0, added 937
+Progress: resolved 1873, reused 1868, downloaded 0, added 968
+Progress: resolved 1873, reused 1868, downloaded 0, added 978
+Progress: resolved 1873, reused 1868, downloaded 0, added 979
+Progress: resolved 1873, reused 1868, downloaded 0, added 1001
+Progress: resolved 1873, reused 1868, downloaded 0, added 1009
+Progress: resolved 1873, reused 1868, downloaded 0, added 1017
+Progress: resolved 1873, reused 1868, downloaded 0, added 1023
+Progress: resolved 1873, reused 1868, downloaded 0, added 1024
+Progress: resolved 1873, reused 1868, downloaded 0, added 1035
+Progress: resolved 1873, reused 1868, downloaded 0, added 1040
+Progress: resolved 1873, reused 1868, downloaded 0, added 1043
+Progress: resolved 1873, reused 1868, downloaded 0, added 1060
+Progress: resolved 1873, reused 1868, downloaded 0, added 1068
+Progress: resolved 1873, reused 1868, downloaded 0, added 1078
+Progress: resolved 1873, reused 1868, downloaded 0, added 1083
+Progress: resolved 1873, reused 1868, downloaded 0, added 1086
+Progress: resolved 1873, reused 1868, downloaded 0, added 1109
+Progress: resolved 1873, reused 1868, downloaded 0, added 1110
+Progress: resolved 1873, reused 1868, downloaded 0, added 1135
+Progress: resolved 1873, reused 1868, downloaded 0, added 1178
+Progress: resolved 1873, reused 1868, downloaded 0, added 1203
+Progress: resolved 1873, reused 1868, downloaded 0, added 1221
+Progress: resolved 1873, reused 1868, downloaded 0, added 1252
+Progress: resolved 1873, reused 1868, downloaded 0, added 1264
+Progress: resolved 1873, reused 1868, downloaded 0, added 1267
+Progress: resolved 1873, reused 1868, downloaded 0, added 1280
+Progress: resolved 1873, reused 1868, downloaded 0, added 1281
+Progress: resolved 1873, reused 1868, downloaded 0, added 1289
+Progress: resolved 1873, reused 1868, downloaded 0, added 1304
+Progress: resolved 1873, reused 1868, downloaded 0, added 1336
+Progress: resolved 1873, reused 1868, downloaded 0, added 1363
+Progress: resolved 1873, reused 1868, downloaded 0, added 1370
+Progress: resolved 1873, reused 1868, downloaded 0, added 1379
+Progress: resolved 1873, reused 1868, downloaded 0, added 1426
+Progress: resolved 1873, reused 1868, downloaded 0, added 1471
+Progress: resolved 1873, reused 1868, downloaded 0, added 1493
+Progress: resolved 1873, reused 1868, downloaded 0, added 1522
+Progress: resolved 1873, reused 1868, downloaded 0, added 1540
+Progress: resolved 1873, reused 1868, downloaded 0, added 1552
+Progress: resolved 1873, reused 1868, downloaded 0, added 1557
+Progress: resolved 1873, reused 1868, downloaded 0, added 1576
+Progress: resolved 1873, reused 1868, downloaded 0, added 1599
+Progress: resolved 1873, reused 1868, downloaded 0, added 1613
+Progress: resolved 1873, reused 1868, downloaded 0, added 1620
+Progress: resolved 1873, reused 1868, downloaded 0, added 1642
+Progress: resolved 1873, reused 1868, downloaded 0, added 1651
+Progress: resolved 1873, reused 1868, downloaded 0, added 1652
+Progress: resolved 1873, reused 1868, downloaded 0, added 1660
+Progress: resolved 1873, reused 1868, downloaded 0, added 1662
+Progress: resolved 1873, reused 1868, downloaded 0, added 1666
+Progress: resolved 1873, reused 1868, downloaded 0, added 1668
+Progress: resolved 1873, reused 1868, downloaded 0, added 1680
+Progress: resolved 1873, reused 1868, downloaded 0, added 1685
+Progress: resolved 1873, reused 1868, downloaded 0, added 1695
+Progress: resolved 1873, reused 1868, downloaded 0, added 1712
+Progress: resolved 1873, reused 1868, downloaded 0, added 1721
+Progress: resolved 1873, reused 1868, downloaded 0, added 1725
+Progress: resolved 1873, reused 1868, downloaded 0, added 1726
+Progress: resolved 1873, reused 1868, downloaded 0, added 1754
+Progress: resolved 1873, reused 1868, downloaded 0, added 1776
+Progress: resolved 1873, reused 1868, downloaded 0, added 1793
+Progress: resolved 1873, reused 1868, downloaded 0, added 1797
+Progress: resolved 1873, reused 1868, downloaded 0, added 1805
+Progress: resolved 1873, reused 1868, downloaded 0, added 1816
+Progress: resolved 1873, reused 1868, downloaded 0, added 1829
+Progress: resolved 1873, reused 1868, downloaded 0, added 1830
+Progress: resolved 1873, reused 1868, downloaded 0, added 1851
+Progress: resolved 1873, reused 1868, downloaded 0, added 1856
+Progress: resolved 1873, reused 1868, downloaded 0, added 1859
+Progress: resolved 1873, reused 1868, downloaded 0, added 1862
+Progress: resolved 1873, reused 1868, downloaded 0, added 1867
+Progress: resolved 1873, reused 1868, downloaded 0, added 1868
+Progress: resolved 1873, reused 1868, downloaded 0, added 1869
+Progress: resolved 1873, reused 1868, downloaded 0, added 1870
+Progress: resolved 1873, reused 1868, downloaded 0, added 1871
+Progress: resolved 1873, reused 1868, downloaded 0, added 1872
+Progress: resolved 1873, reused 1868, downloaded 0, added 1872, done
+
+dependencies:
++ @prisma/client 5.22.0
+
+devDependencies:
++ @types/node 20.19.30
++ prettier 3.8.1
++ prisma 5.22.0
++ ts-node 10.9.2
++ turbo 1.13.4
++ typescript 5.9.3
+
+apps/web postinstall$ prisma generate
+. postinstall$ prisma generate
+. postinstall: Prisma schema loaded from prisma\schema.prisma
+apps/web postinstall: Prisma schema loaded from prisma\schema.prisma
+apps/web postinstall: Γ£ö Generated Prisma Client (v5.22.0) to .\..\..\node_modules\.pnpm\@prisma+client@5.22.0_prisma@5.22.0\node_modules\@prisma\client in 305ms
+apps/web postinstall: Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
+apps/web postinstall: Tip: Need your database queries to be 1000x faster? Accelerate offers you that and more: https://pris.ly/tip-2-accelerate
+apps/web postinstall: Done
+. postinstall: Γ£ö Generated Prisma Client (v5.22.0) to .\node_modules\.pnpm\@prisma+client@5.22.0_prisma@5.22.0\node_modules\@prisma\client in 300ms
+. postinstall: Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
+. postinstall: Tip: Easily identify and fix slow SQL queries in your app. Optimize helps you enhance your visibility: https://pris.ly/--optimize
+. postinstall: Done
+Γò¡ Warning ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓò«
+Γöé                                                                              Γöé
+Γöé   Ignored build scripts: @firebase/util@1.13.0, bufferutil@4.0.8,            Γöé
+Γöé   electron@28.3.3, es5-ext@0.10.64, msw@2.12.14, protobufjs@7.5.4,           Γöé
+Γöé   utf-8-validate@6.0.3.                                                      Γöé
+Γöé   Run "pnpm approve-builds" to pick which dependencies should be allowed     Γöé
+Γöé   to run scripts.                                                            Γöé
+Γöé                                                                              Γöé
+Γò░ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓò»
+Done in 3m 7.3s using pnpm v10.33.0
+completed_utc=2026-07-24T00:24:41.8671467Z exit_code=0
+P0_CORE_INSTALL_GREEN

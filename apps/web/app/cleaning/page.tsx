@@ -17,7 +17,7 @@ import {
   ThumbsUp, ThumbsDown, MessageSquare, Phone, Filter, Search, MoreVertical,
   ChevronDown, Maximize2, Minimize2, Battery, Wifi, WifiOff, Car
 } from 'lucide-react';
-import { CleaningReport, CleaningJobType } from '@/lib/cleaning-system';
+import { CleaningReport, CleaningJobType } from '@/lib/cleaning-domain';
 import { properties } from '@/lib/property-knowledge';
 import toast from 'react-hot-toast';
 

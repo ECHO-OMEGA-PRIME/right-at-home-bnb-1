@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPayPalBaseUrl } from "@/lib/integrations/paypal-client";
+import { requireOneOfRoles } from '@/lib/api-auth';
+
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 /**
  * GET /api/integrations/paypal/callback
@@ -12,6 +16,8 @@ import { getPayPalBaseUrl } from "@/lib/integrations/paypal-client";
  *   state - CSRF / session state token (should be validated)
  */
 export async function GET(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const { searchParams } = new URL(request.url);
     const code = searchParams.get("code");

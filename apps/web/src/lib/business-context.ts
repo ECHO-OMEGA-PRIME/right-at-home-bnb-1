@@ -11,8 +11,43 @@
  * - Recent alerts and issues
  */
 
-import { db, isConfigurationIssue } from './firebase-admin';
-import { Timestamp } from 'firebase-admin/firestore';
+import prisma from './prisma';
+import { listOpenAlerts } from './operational-alerts';
+
+/** Booking row -> the Reservation shape callers already consume. */
+function toReservation(booking: {
+  id: string;
+  checkIn: Date;
+  checkOut: Date;
+  guestCount: number;
+  status: string;
+  specialReqs: string | null;
+  guest: { name: string; email: string; phone: string | null } | null;
+  property: { id: string; name: string } | null;
+}): Reservation {
+  return {
+    id: booking.id,
+    guestName: booking.guest?.name || 'Unknown Guest',
+    guestEmail: booking.guest?.email || '',
+    guestPhone: booking.guest?.phone || '',
+    propertyId: booking.property?.id || '',
+    propertyName: booking.property?.name || 'Unknown Property',
+    checkIn: booking.checkIn.toISOString(),
+    checkOut: booking.checkOut.toISOString(),
+    status: (booking.status || 'confirmed').toLowerCase() as Reservation['status'],
+    numGuests: booking.guestCount || 1,
+    notes: booking.specialReqs ?? undefined,
+  };
+}
+
+/** Local midnight to next midnight — the window every "today" query shares. */
+function todayRange(): { start: Date; end: Date } {
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 1);
+  return { start, end };
+}
 
 // ============ Types ============
 
@@ -117,34 +152,33 @@ export interface Alert {
 export async function getSystemHealth(): Promise<SystemHealth> {
   const now = new Date().toISOString();
   const errors: ErrorLog[] = [];
-  const isFirebaseConfigIssue = isConfigurationIssue();
 
-  // Check Firebase connection
+  // Probe the store this app actually depends on.
+  //
+  // This used to read a Firestore `system_health` collection, so the health
+  // check reported on a database the product had largely stopped using -- and
+  // the whole "is it a config issue or a real outage?" branch existed because
+  // Firebase was frequently unconfigured on Vercel. Postgres has no such
+  // ambiguity: the query either answers or it does not.
   let dbHealthy = false;
-  let authHealthy = false;
-  let storageHealthy = false;
-
   try {
-    // Test database connection
-    if (db) {
-      const testRef = db.collection('system_health').limit(1);
-      await testRef.get();
-      dbHealthy = true;
-    } else if (isFirebaseConfigIssue) {
-      // Firebase not configured - this is expected, not an error
-      console.log('[BusinessContext] Firebase not configured (expected on Vercel without env vars)');
-    }
+    await prisma.$queryRaw`SELECT 1`;
+    dbHealthy = true;
   } catch (e) {
-    // Only log as error if Firebase WAS configured but failed
-    if (!isFirebaseConfigIssue) {
-      errors.push({
-        timestamp: now,
-        type: 'database',
-        message: `Database connection error: ${e instanceof Error ? e.message : 'Unknown'}`,
-        resolved: false
-      });
-    }
+    errors.push({
+      timestamp: now,
+      type: 'database',
+      message: `Database connection error: ${e instanceof Error ? e.message : 'Unknown'}`,
+      resolved: false
+    });
   }
+
+  // Auth and storage are no longer Firebase services: identity is echo-auth
+  // (verified against its JWKS, which needs no live call here) and property
+  // photos are served from our own origin out of Postgres. Both therefore ride
+  // on the same database probe rather than pretending to be separately checked.
+  const authHealthy = dbHealthy;
+  const storageHealthy = dbHealthy;
 
   // Check Twilio (via env vars) - missing config is not an error
   const twilioHealthy = !!(
@@ -163,18 +197,15 @@ export async function getSystemHealth(): Promise<SystemHealth> {
 
   let status: 'healthy' | 'degraded' | 'critical' = 'healthy';
 
-  if (isFirebaseConfigIssue) {
-    // Firebase not configured - mark as degraded, not critical
-    // This prevents emergency calls for missing env vars
-    status = twilioHealthy ? 'degraded' : 'degraded';
-  } else {
-    // Firebase was configured - check if it's working
-    if (!dbHealthy && errors.some(e => e.type === 'database')) {
-      // Was configured but failing = critical
-      status = 'critical';
-    } else if (!dbHealthy || !twilioHealthy) {
-      status = 'degraded';
-    }
+  if (!dbHealthy) {
+    // The system of record is unreachable. There is no "maybe it just isn't
+    // configured" reading of that any more, so it is critical without
+    // qualification -- which is the point of moving off a store whose absence
+    // was indistinguishable from its failure.
+    status = 'critical';
+  } else if (!twilioHealthy) {
+    // Twilio is optional; missing credentials degrade, never page.
+    status = 'degraded';
   }
 
   return {
@@ -195,162 +226,119 @@ export async function getSystemHealth(): Promise<SystemHealth> {
  * Get currently active/logged-in users
  */
 export async function getActiveUsers(): Promise<ActiveUser[]> {
-  if (!db) return [];
-
-  try {
-    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-
-    const snapshot = await db.collection('users')
-      .where('lastActive', '>=', Timestamp.fromDate(fiveMinutesAgo))
-      .orderBy('lastActive', 'desc')
-      .limit(50)
-      .get();
-
-    return snapshot.docs.map(doc => {
-      const data = doc.data();
-      return {
-        uid: doc.id,
-        email: data.email || '',
-        displayName: data.displayName || data.name || 'Unknown',
-        role: data.role || 'guest',
-        lastActive: data.lastActive?.toDate?.()?.toISOString() || new Date().toISOString()
-      };
-    });
-  } catch (e) {
-    console.error('[BusinessContext] Error getting active users:', e);
-    return [];
-  }
+  // PRESENCE IS NOT TRACKED, and this deliberately does not pretend otherwise.
+  //
+  // The Firestore version filtered `users` on `lastActive >= 5 minutes ago`.
+  // The Postgres `User` table has no such column and nothing writes one -- the
+  // closest available field is `updatedAt`, which changes when an admin edits a
+  // role, not when somebody signs in. Reporting those users as "active" would
+  // put a fabricated number into a voice summary the Commander hears and into
+  // the health dashboard.
+  //
+  // Returning empty is the accurate answer to "who is online": we do not know.
+  // Making it real needs a `lastActiveAt` column written on authenticated
+  // requests, which is a product decision rather than a migration detail.
+  return [];
 }
 
 /**
  * Get today's check-ins
  */
 export async function getTodayCheckIns(): Promise<Reservation[]> {
-  if (!db) return [];
+  const { start, end } = todayRange();
 
-  try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+  const bookings = await prisma.booking.findMany({
+    where: { checkIn: { gte: start, lt: end }, status: { not: 'CANCELLED' } },
+    orderBy: { checkIn: 'asc' },
+      select: {
+        id: true,
+        checkIn: true,
+        checkOut: true,
+        guestCount: true,
+        status: true,
+        specialReqs: true,
+        guest: { select: { name: true, email: true, phone: true } },
+        property: { select: { id: true, name: true } },
+      },
+  });
 
-    const snapshot = await db.collection('reservations')
-      .where('checkIn', '>=', Timestamp.fromDate(today))
-      .where('checkIn', '<', Timestamp.fromDate(tomorrow))
-      .orderBy('checkIn', 'asc')
-      .get();
-
-    return snapshot.docs.map(doc => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        guestName: data.guestName || 'Unknown Guest',
-        guestEmail: data.guestEmail || '',
-        guestPhone: data.guestPhone || '',
-        propertyId: data.propertyId || '',
-        propertyName: data.propertyName || 'Unknown Property',
-        checkIn: data.checkIn?.toDate?.()?.toISOString() || '',
-        checkOut: data.checkOut?.toDate?.()?.toISOString() || '',
-        status: data.status || 'confirmed',
-        numGuests: data.numGuests || 1,
-        notes: data.notes
-      };
-    });
-  } catch (e) {
-    console.error('[BusinessContext] Error getting check-ins:', e);
-    return [];
-  }
+  return bookings.map(toReservation);
 }
 
 /**
  * Get today's check-outs
  */
 export async function getTodayCheckOuts(): Promise<Reservation[]> {
-  if (!db) return [];
+  const { start, end } = todayRange();
 
-  try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+  const bookings = await prisma.booking.findMany({
+    where: { checkOut: { gte: start, lt: end }, status: { not: 'CANCELLED' } },
+    orderBy: { checkOut: 'asc' },
+      select: {
+        id: true,
+        checkIn: true,
+        checkOut: true,
+        guestCount: true,
+        status: true,
+        specialReqs: true,
+        guest: { select: { name: true, email: true, phone: true } },
+        property: { select: { id: true, name: true } },
+      },
+  });
 
-    const snapshot = await db.collection('reservations')
-      .where('checkOut', '>=', Timestamp.fromDate(today))
-      .where('checkOut', '<', Timestamp.fromDate(tomorrow))
-      .orderBy('checkOut', 'asc')
-      .get();
-
-    return snapshot.docs.map(doc => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        guestName: data.guestName || 'Unknown Guest',
-        guestEmail: data.guestEmail || '',
-        guestPhone: data.guestPhone || '',
-        propertyId: data.propertyId || '',
-        propertyName: data.propertyName || 'Unknown Property',
-        checkIn: data.checkIn?.toDate?.()?.toISOString() || '',
-        checkOut: data.checkOut?.toDate?.()?.toISOString() || '',
-        status: data.status || 'confirmed',
-        numGuests: data.numGuests || 1,
-        notes: data.notes
-      };
-    });
-  } catch (e) {
-    console.error('[BusinessContext] Error getting check-outs:', e);
-    return [];
-  }
+  return bookings.map(toReservation);
 }
 
 /**
  * Get today's cleaner schedules
  */
 export async function getCleanerSchedules(): Promise<CleanerSchedule[]> {
-  if (!db) return [];
+  const { start, end } = todayRange();
 
-  try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+  // CleaningJob is the real cleaning schedule -- the same rows /api/cleaning
+  // creates and the crew completes. The Firestore `cleaning_schedules`
+  // collection was a parallel copy that nothing else in the product wrote to,
+  // so the late-cleaner monitor was watching a shadow of the actual schedule.
+  const jobs = await prisma.cleaningJob.findMany({
+    where: { scheduledAt: { gte: start, lt: end } },
+    orderBy: { scheduledAt: 'asc' },
+    select: {
+      id: true,
+      scheduledAt: true,
+      startedAt: true,
+      completedAt: true,
+      status: true,
+      cleanerId: true,
+      cleaner: { select: { name: true, phone: true } },
+      property: { select: { id: true, name: true } },
+    },
+  });
 
-    const snapshot = await db.collection('cleaning_schedules')
-      .where('scheduledTime', '>=', Timestamp.fromDate(today))
-      .where('scheduledTime', '<', Timestamp.fromDate(tomorrow))
-      .orderBy('scheduledTime', 'asc')
-      .get();
+  const now = new Date();
 
-    const now = new Date();
+  return jobs.map((job) => {
+    const status = (job.status || 'SCHEDULED').toLowerCase();
 
-    return snapshot.docs.map(doc => {
-      const data = doc.data();
-      const scheduledTime = data.scheduledTime?.toDate?.() || new Date();
-      const status = data.status || 'scheduled';
+    // Late only applies to work that never started.
+    let hoursLate = 0;
+    if (status === 'scheduled' && job.scheduledAt < now) {
+      hoursLate = Math.floor((now.getTime() - job.scheduledAt.getTime()) / (1000 * 60 * 60));
+    }
 
-      // Calculate if late
-      let hoursLate = 0;
-      if (status === 'scheduled' && scheduledTime < now) {
-        hoursLate = Math.floor((now.getTime() - scheduledTime.getTime()) / (1000 * 60 * 60));
-      }
-
-      return {
-        id: doc.id,
-        cleanerId: data.cleanerId || '',
-        cleanerName: data.cleanerName || 'Unknown Cleaner',
-        cleanerPhone: data.cleanerPhone || '',
-        propertyId: data.propertyId || '',
-        propertyName: data.propertyName || 'Unknown Property',
-        scheduledTime: scheduledTime.toISOString(),
-        status: hoursLate >= 1 ? 'late' : status,
-        startedAt: data.startedAt?.toDate?.()?.toISOString(),
-        completedAt: data.completedAt?.toDate?.()?.toISOString(),
-        hoursLate: hoursLate > 0 ? hoursLate : undefined
-      };
-    });
-  } catch (e) {
-    console.error('[BusinessContext] Error getting cleaner schedules:', e);
-    return [];
-  }
+    return {
+      id: job.id,
+      cleanerId: job.cleanerId || '',
+      cleanerName: job.cleaner?.name || 'Unknown Cleaner',
+      cleanerPhone: job.cleaner?.phone || '',
+      propertyId: job.property?.id || '',
+      propertyName: job.property?.name || 'Unknown Property',
+      scheduledTime: job.scheduledAt.toISOString(),
+      status: (hoursLate >= 1 ? 'late' : status) as CleanerSchedule['status'],
+      startedAt: job.startedAt?.toISOString(),
+      completedAt: job.completedAt?.toISOString(),
+      hoursLate: hoursLate > 0 ? hoursLate : undefined,
+    };
+  });
 }
 
 /**
@@ -369,63 +357,81 @@ export async function getLateCleaners(minHoursLate: number = 1): Promise<Cleaner
  * Get property statuses
  */
 export async function getPropertyStatuses(): Promise<PropertyStatus[]> {
-  if (!db) return [];
+  const now = new Date();
 
-  try {
-    const snapshot = await db.collection('properties')
-      .orderBy('name', 'asc')
-      .get();
+  // currentGuest / nextCheckIn / nextCheckOut / lastCleaned were stored fields
+  // in Firestore, kept up to date by nothing in particular. They are DERIVED
+  // here from the bookings and cleaning jobs that actually exist, so they
+  // cannot drift from reality the way a denormalised copy does.
+  const properties = await prisma.property.findMany({
+    orderBy: { name: 'asc' },
+    select: {
+      id: true,
+      name: true,
+      address: true,
+      status: true,
+      bookings: {
+        where: { checkOut: { gte: now }, status: { not: 'CANCELLED' } },
+        orderBy: { checkIn: 'asc' },
+        take: 2,
+        select: {
+          checkIn: true,
+          checkOut: true,
+          guest: { select: { name: true } },
+        },
+      },
+      cleaningJobs: {
+        where: { completedAt: { not: null } },
+        orderBy: { completedAt: 'desc' },
+        take: 1,
+        select: { completedAt: true },
+      },
+    },
+  });
 
-    return snapshot.docs.map(doc => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        name: data.name || 'Unknown Property',
-        address: data.address || '',
-        status: data.status || 'available',
-        currentGuest: data.currentGuest,
-        nextCheckIn: data.nextCheckIn?.toDate?.()?.toISOString(),
-        nextCheckOut: data.nextCheckOut?.toDate?.()?.toISOString(),
-        lastCleaned: data.lastCleaned?.toDate?.()?.toISOString(),
-        issues: data.issues || []
-      };
-    });
-  } catch (e) {
-    console.error('[BusinessContext] Error getting property statuses:', e);
-    return [];
-  }
+  return properties.map((property) => {
+    const inHouse = property.bookings.find((b) => b.checkIn <= now && b.checkOut >= now);
+    const upcoming = property.bookings.find((b) => b.checkIn > now);
+
+    return {
+      id: property.id,
+      name: property.name || 'Unknown Property',
+      address: property.address || '',
+      status: (property.status || 'available').toLowerCase() as PropertyStatus['status'],
+      currentGuest: inHouse?.guest?.name,
+      nextCheckIn: upcoming?.checkIn.toISOString(),
+      nextCheckOut: inHouse?.checkOut.toISOString(),
+      lastCleaned: property.cleaningJobs[0]?.completedAt?.toISOString(),
+      // Open issues live in OperationalAlert now; getActiveAlerts carries them
+      // with their own severity rather than as bare strings on the property.
+      issues: [],
+    };
+  });
 }
 
 /**
  * Get active alerts
  */
 export async function getActiveAlerts(): Promise<Alert[]> {
-  if (!db) return [];
+  // One alert table for the whole product now -- the same rows the cleaner and
+  // system monitors write. The Firestore `alerts` collection was a third
+  // alert store that only this file read.
+  const stored = await listOpenAlerts();
 
-  try {
-    const snapshot = await db.collection('alerts')
-      .where('acknowledged', '==', false)
-      .orderBy('timestamp', 'desc')
-      .limit(20)
-      .get();
-
-    return snapshot.docs.map(doc => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        type: data.type || 'system',
-        priority: data.priority || 'medium',
-        message: data.message || '',
-        timestamp: data.timestamp?.toDate?.()?.toISOString() || new Date().toISOString(),
-        acknowledged: data.acknowledged || false,
-        propertyId: data.propertyId,
-        propertyName: data.propertyName
-      };
-    });
-  } catch (e) {
-    console.error('[BusinessContext] Error getting alerts:', e);
-    return [];
-  }
+  return stored.slice(0, 20).map((row) => ({
+    id: row.id,
+    type: (row.alertType === 'LATE_CLEANER' ? 'cleaner_late' : 'system') as Alert['type'],
+    priority: (row.severity === 'CRITICAL'
+      ? 'critical'
+      : row.severity === 'HIGH'
+        ? 'high'
+        : 'medium') as Alert['priority'],
+    message: row.message,
+    timestamp: row.createdAt.toISOString(),
+    acknowledged: row.status === 'ACKNOWLEDGED',
+    propertyId: row.propertyId ?? undefined,
+    propertyName: row.metadata.propertyName ? String(row.metadata.propertyName) : undefined,
+  }));
 }
 
 /**
@@ -492,16 +498,16 @@ function generateSummary(context: Omit<BusinessContext, 'summary'>): string {
 export async function getBusinessContext(): Promise<BusinessContext> {
   console.log('[BusinessContext] Gathering complete business context...');
 
-  // Gather all context in parallel
-  const [
-    systemHealth,
-    activeUsers,
-    todayCheckIns,
-    todayCheckOuts,
-    cleanerSchedules,
-    propertyStatuses,
-    alerts
-  ] = await Promise.all([
+  // allSettled, not all.
+  //
+  // Each getter now THROWS on a store failure instead of quietly returning [],
+  // and this object feeds both the monitors that decide whether to phone
+  // somebody and the summary Steven reads aloud. One rejected section must
+  // therefore neither take down the whole context nor silently become "nothing
+  // to report" -- a failed read of today's check-ins looks exactly like a day
+  // with no arrivals. Failures are recorded as errors ON the health object and
+  // downgrade its status, so the degradation is stated rather than inferred.
+  const settled = await Promise.allSettled([
     getSystemHealth(),
     getActiveUsers(),
     getTodayCheckIns(),
@@ -510,6 +516,48 @@ export async function getBusinessContext(): Promise<BusinessContext> {
     getPropertyStatuses(),
     getActiveAlerts()
   ]);
+
+  const failures: ErrorLog[] = [];
+  const at = new Date().toISOString();
+
+  function section<T>(index: number, name: string, fallback: T): T {
+    const outcome = settled[index];
+    if (outcome.status === 'fulfilled') return outcome.value as T;
+
+    const reason = outcome.reason;
+    console.error(`[BusinessContext] ${name} unavailable:`, reason);
+    failures.push({
+      timestamp: at,
+      type: name,
+      message: `${name} unavailable: ${reason instanceof Error ? reason.message : 'Unknown'}`,
+      resolved: false
+    });
+    return fallback;
+  }
+
+  const health = section<SystemHealth>(0, 'system_health', {
+    status: 'critical',
+    uptime: 'unknown',
+    lastCheck: at,
+    services: { database: false, auth: false, storage: false, twilio: false },
+    recentErrors: []
+  });
+  const activeUsers = section<ActiveUser[]>(1, 'active_users', []);
+  const todayCheckIns = section<Reservation[]>(2, 'today_check_ins', []);
+  const todayCheckOuts = section<Reservation[]>(3, 'today_check_outs', []);
+  const cleanerSchedules = section<CleanerSchedule[]>(4, 'cleaner_schedules', []);
+  const propertyStatuses = section<PropertyStatus[]>(5, 'property_statuses', []);
+  const alerts = section<Alert[]>(6, 'alerts', []);
+
+  const systemHealth: SystemHealth = failures.length
+    ? {
+        ...health,
+        // A section we could not read is a real degradation, and saying
+        // "healthy" next to a list of unreadable sections would be a lie.
+        status: health.status === 'critical' ? 'critical' : 'degraded',
+        recentErrors: [...health.recentErrors, ...failures]
+      }
+    : health;
 
   // Filter late cleaners
   const lateCleaners = cleanerSchedules.filter(s =>

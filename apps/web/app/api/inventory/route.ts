@@ -1,133 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireOneOfRoles } from '@/lib/api-auth';
+import { propertyScopeFor } from '@/lib/tenant-scope';
+import { createInventoryItem, listInventory } from '@/lib/inventory';
 
-// ── In-memory inventory store ───────────────────────────────────────────────
-const inventory: any[] = [
-  {
-    id: 'INV-001',
-    name: 'Bath Towels (White)',
-    category: 'linens',
-    sku: 'LIN-TOWEL-WHT',
-    quantity_on_hand: 24,
-    reorder_level: 10,
-    reorder_quantity: 20,
-    unit_cost_cents: 1200,
-    storage_location: 'Main Storage - Shelf A2',
-    supplier: 'Midland Wholesale Linens',
-    property_id: null,
-    last_counted_at: '2026-03-01T00:00:00Z',
-    created_at: '2025-06-01T00:00:00Z',
-    updated_at: '2026-03-15T00:00:00Z',
-  },
-  {
-    id: 'INV-002',
-    name: 'Toilet Paper (12-pack)',
-    category: 'toiletries',
-    sku: 'TOI-TP-12PK',
-    quantity_on_hand: 8,
-    reorder_level: 10,
-    reorder_quantity: 24,
-    unit_cost_cents: 1499,
-    storage_location: 'Main Storage - Shelf B1',
-    supplier: 'Costco Business',
-    property_id: null,
-    last_counted_at: '2026-03-01T00:00:00Z',
-    created_at: '2025-06-01T00:00:00Z',
-    updated_at: '2026-03-10T00:00:00Z',
-  },
-  {
-    id: 'INV-003',
-    name: 'All-Purpose Cleaner (1 gal)',
-    category: 'cleaning',
-    sku: 'CLN-APC-1GAL',
-    quantity_on_hand: 5,
-    reorder_level: 3,
-    reorder_quantity: 6,
-    unit_cost_cents: 1899,
-    storage_location: 'Cleaning Closet',
-    supplier: 'Home Depot',
-    property_id: null,
-    last_counted_at: '2026-03-01T00:00:00Z',
-    created_at: '2025-08-01T00:00:00Z',
-    updated_at: '2026-03-12T00:00:00Z',
-  },
-  {
-    id: 'INV-004',
-    name: 'Smart Lock Batteries (AA 8-pack)',
-    category: 'hardware',
-    sku: 'HW-BATT-AA8',
-    quantity_on_hand: 3,
-    reorder_level: 4,
-    reorder_quantity: 10,
-    unit_cost_cents: 899,
-    storage_location: 'Maintenance Closet',
-    supplier: 'Amazon Business',
-    property_id: null,
-    last_counted_at: '2026-03-01T00:00:00Z',
-    created_at: '2025-09-01T00:00:00Z',
-    updated_at: '2026-03-05T00:00:00Z',
-  },
-  {
-    id: 'INV-005',
-    name: 'Coffee Pods (K-Cup 50ct)',
-    category: 'amenities',
-    sku: 'AMN-KCUP-50',
-    quantity_on_hand: 2,
-    reorder_level: 3,
-    reorder_quantity: 6,
-    unit_cost_cents: 2499,
-    storage_location: 'Main Storage - Shelf C1',
-    supplier: 'Costco Business',
-    property_id: null,
-    last_counted_at: '2026-03-01T00:00:00Z',
-    created_at: '2025-10-01T00:00:00Z',
-    updated_at: '2026-03-14T00:00:00Z',
-  },
+// Real InventoryItem / InventoryMovement rows (queue #26855). This route served
+// a hardcoded array, so stock levels, low-stock alerts and reorder decisions
+// were all driven by numbers nobody had ever counted.
+//
+// quantity_on_hand is DERIVED from the movement log rather than stored, so the
+// count cannot drift away from the movements that produced it.
+
+const VALID_CATEGORIES = [
+  'linens', 'toiletries', 'cleaning', 'hardware',
+  'amenities', 'kitchen', 'outdoor', 'other',
 ];
-
-function generateId(prefix: string): string {
-  return `${prefix}-${Date.now().toString(36).toUpperCase()}`;
-}
 
 // ── GET /api/inventory ──────────────────────────────────────────────────────
 export async function GET(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['worker', 'owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const params = request.nextUrl.searchParams;
-    const category = params.get('category');
-    const lowStock = params.get('low_stock');
-    const search = params.get('search');
+    const result = await listInventory({
+      category: params.get('category'),
+      lowStock: params.get('low_stock'),
+      search: params.get('search'),
+      propertyId: params.get('property_id'),
+      // Property-level isolation (#26919): a worker sees stock for the houses
+      // they work at, not the whole portfolio.
+      scope: await propertyScopeFor(auth.user),
+    });
 
-    let filtered = [...inventory];
-
-    if (category) {
-      filtered = filtered.filter((i) => i.category === category);
-    }
-    if (search) {
-      const q = search.toLowerCase();
-      filtered = filtered.filter(
-        (i) =>
-          i.name.toLowerCase().includes(q) ||
-          i.sku.toLowerCase().includes(q) ||
-          i.supplier.toLowerCase().includes(q),
-      );
-    }
-    if (lowStock === 'true') {
-      filtered = filtered.filter((i) => i.quantity_on_hand <= i.reorder_level);
-    }
-
-    const lowStockItems = inventory.filter((i) => i.quantity_on_hand <= i.reorder_level);
-
+    // Exactly the contract's four keys.
     return NextResponse.json({
-      inventory: filtered,
-      total: filtered.length,
-      low_stock_alerts: lowStockItems.map((i) => ({
-        id: i.id,
-        name: i.name,
-        quantity_on_hand: i.quantity_on_hand,
-        reorder_level: i.reorder_level,
-        reorder_quantity: i.reorder_quantity,
-        supplier: i.supplier,
-      })),
-      low_stock_count: lowStockItems.length,
+      inventory: result.inventory,
+      total: result.total,
+      low_stock_alerts: result.low_stock_alerts,
+      low_stock_count: result.low_stock_count,
     });
   } catch (error: any) {
     return NextResponse.json(
@@ -139,56 +48,48 @@ export async function GET(request: NextRequest) {
 
 // ── POST /api/inventory ─────────────────────────────────────────────────────
 export async function POST(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['worker', 'owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const body = await request.json();
 
-    const required = ['name', 'category', 'quantity_on_hand'];
-    for (const field of required) {
-      if (body[field] === undefined || body[field] === null) {
-        return NextResponse.json(
-          { error: `Missing required field: ${field}` },
-          { status: 400 },
-        );
+    for (const field of ['name', 'category'] as const) {
+      if (!body[field]) {
+        return NextResponse.json({ error: `Missing required field: ${field}` }, { status: 400 });
       }
     }
-
     if (typeof body.quantity_on_hand !== 'number' || body.quantity_on_hand < 0) {
       return NextResponse.json(
         { error: 'quantity_on_hand must be a non-negative number' },
         { status: 400 },
       );
     }
-
-    const validCategories = ['linens', 'toiletries', 'cleaning', 'hardware', 'amenities', 'kitchen', 'outdoor', 'other'];
-    if (!validCategories.includes(body.category)) {
+    if (!VALID_CATEGORIES.includes(body.category)) {
       return NextResponse.json(
-        { error: `Invalid category. Must be one of: ${validCategories.join(', ')}` },
+        { error: `Invalid category. Must be one of: ${VALID_CATEGORIES.join(', ')}` },
         { status: 400 },
       );
     }
 
-    const now = new Date().toISOString();
-    const item = {
-      id: generateId('INV'),
+    const item = await createInventoryItem({
       name: body.name,
       category: body.category,
       sku: body.sku ?? null,
-      quantity_on_hand: body.quantity_on_hand,
-      reorder_level: body.reorder_level ?? 5,
-      reorder_quantity: body.reorder_quantity ?? 10,
-      unit_cost_cents: body.unit_cost_cents ?? 0,
-      storage_location: body.storage_location ?? '',
-      supplier: body.supplier ?? '',
-      property_id: body.property_id ?? null,
-      last_counted_at: now,
-      created_at: now,
-      updated_at: now,
-    };
-
-    inventory.push(item);
+      quantityOnHand: body.quantity_on_hand,
+      reorderLevel: body.reorder_level,
+      reorderQuantity: body.reorder_quantity,
+      unitCostCents: body.unit_cost_cents,
+      storageLocation: body.storage_location ?? null,
+      supplier: body.supplier ?? null,
+      propertyId: body.property_id ?? null,
+    });
 
     return NextResponse.json({ item }, { status: 201 });
   } catch (error: any) {
+    // A duplicate SKU is a client error, not a server fault.
+    if (String(error.message).includes('Unique constraint')) {
+      return NextResponse.json({ error: 'An item with that SKU already exists' }, { status: 409 });
+    }
     return NextResponse.json(
       { error: 'Failed to create inventory item', detail: error.message },
       { status: 500 },

@@ -1,11 +1,21 @@
 'use client';
 
 /**
- * Right at Home BnB - VRBO Integration Module
- * Complete VRBO channel management for property listings
- * @author ECHO OMEGA PRIME
+ * Right at Home BnB - VRBO channel management, over the server API.
  *
- * Integration Types:
+ * This module used to talk to Firestore directly FROM THE BROWSER, against a
+ * `vrbo_listings` collection of its own. That was a duplicate of the real
+ * integration: `VrboSync`, `SyncLog` and VRBO-platform `Booking` rows already
+ * live in Postgres and are driven by `/api/admin/vrbo-status`,
+ * `/api/admin/vrbo-ical` and the vrbo-sync-service. Two stores meant the VRBO
+ * page could show a listing as "connected" that the sync service had never
+ * heard of, and a client-side write meant channel configuration bypassed the
+ * owner/admin check every one of those routes enforces.
+ *
+ * It is now a thin typed client over those routes. The exported shapes are
+ * unchanged, so the page keeps its contract; only the data source moved.
+ *
+ * Integration types:
  * 1. iCal Sync (Free) - Calendar synchronization every 60 minutes
  * 2. Full API (Requires Partner Agreement) - Real-time everything
  *
@@ -13,28 +23,15 @@
  * Contact: pmsalesinquiry@expediagroup.com
  */
 
-import { db } from './auth';
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  setDoc,
-  updateDoc,
-  query,
-  where,
-  orderBy,
-  serverTimestamp,
-} from 'firebase/firestore';
-
 // VRBO Connection Types
 export type VRBOConnectionStatus = 'connected' | 'disconnected' | 'pending' | 'error';
 export type SyncDirection = 'import' | 'export' | 'both';
 
-// VRBO Property Listing
 export interface VRBOListing {
+  /** The propertyId. VrboSync is unique per property, so it IS the identity. */
   id: string;
   propertyId: string;
+  propertyName?: string;
   vrboListingId: string;
   vrboUrl: string;
   icalImportUrl: string;
@@ -52,7 +49,6 @@ export interface VRBOListing {
   instantBook?: boolean;
 }
 
-// VRBO Booking from iCal
 export interface VRBOBooking {
   uid: string;
   propertyId: string;
@@ -67,7 +63,6 @@ export interface VRBOBooking {
   importedAt: string;
 }
 
-// Sync Log Entry
 export interface VRBOSyncLog {
   id: string;
   propertyId: string;
@@ -79,7 +74,6 @@ export interface VRBOSyncLog {
   timestamp: string;
 }
 
-// VRBO Integration Stats
 export interface VRBOStats {
   connectedListings: number;
   totalBookings: number;
@@ -88,391 +82,269 @@ export interface VRBOStats {
   upcomingVRBOBookings: number;
 }
 
-// Register a property for VRBO iCal sync
+// ============================================================
+// TRANSPORT
+// ============================================================
+
+const STATUS_ENDPOINT = '/api/admin/vrbo-status';
+
+/**
+ * Every call goes through here so no caller can forget `credentials`.
+ *
+ * The routes authenticate with the `rah-auth-token` COOKIE (see api-auth), and
+ * middleware refuses `/api/admin/*` outright for anyone below owner/admin. A
+ * failure therefore has to surface as a real error rather than an empty list --
+ * rendering "0 connected listings" for what is actually a 403 or an outage is
+ * how a broken integration comes to look like a working one with nothing in it.
+ */
+async function callStatusApi<T>(init?: RequestInit): Promise<T> {
+  const response = await fetch(STATUS_ENDPOINT, {
+    credentials: 'same-origin',
+    cache: 'no-store',
+    ...init,
+    headers: {
+      Accept: 'application/json',
+      ...(init?.body ? { 'Content-Type': 'application/json' } : {}),
+    },
+  });
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => null);
+    const detail =
+      payload && typeof payload.error === 'string' ? payload.error : response.statusText;
+    throw new Error(`VRBO API ${response.status}: ${detail}`);
+  }
+
+  return (await response.json()) as T;
+}
+
+interface StatusResponse {
+  properties: Array<{
+    propertyId: string;
+    propertyName: string;
+    vrboId: string;
+    vrboUrl: string;
+    icalUrl: string | null;
+    lastIcalSync: string | null;
+    lastScrapeSync: string | null;
+    syncEnabled: boolean;
+    bookingCount: number;
+    status: string;
+  }>;
+  stats: {
+    totalProperties: number;
+    enabledProperties: number;
+    totalVrboBookings: number;
+    upcomingVrboBookings: number;
+    last24h: { syncs: number; successes: number; failures: number; imported: number };
+  };
+  recentLogs: Array<{
+    syncType: string;
+    status: string;
+    itemsCreated: number;
+    itemsUpdated: number;
+    error: string | null;
+    durationMs: number | null;
+    at: string;
+  }>;
+  upcomingBookings: Array<{
+    id: string;
+    propertyId: string;
+    guestName: string | null;
+    checkIn: string;
+    checkOut: string;
+    confirmCode: string | null;
+    status: string;
+  }>;
+}
+
+function getStatus(): Promise<StatusResponse> {
+  return callStatusApi<StatusResponse>();
+}
+
+function exportCalendarUrl(propertyId: string): string {
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || '';
+  return `${baseUrl}/api/integrations/ical/${propertyId}/vrbo.ics`;
+}
+
+/**
+ * Connection status is DERIVED, never stored.
+ *
+ * The Firestore version persisted a `connectionStatus` string that only its own
+ * writes ever updated, so a listing stayed "connected" long after syncing began
+ * failing. Deriving it from what the sync service actually did means the badge
+ * cannot disagree with reality.
+ */
+function deriveStatus(
+  syncEnabled: boolean,
+  lastSync: string | null,
+  lastLogStatus?: string,
+): VRBOConnectionStatus {
+  if (!syncEnabled) return 'disconnected';
+  if (lastLogStatus === 'failed') return 'error';
+  if (!lastSync) return 'pending';
+  return 'connected';
+}
+
+function toListing(
+  row: StatusResponse['properties'][number],
+  logs: StatusResponse['recentLogs'],
+): VRBOListing {
+  const lastSync = row.lastIcalSync ?? row.lastScrapeSync;
+  const lastLog = logs[0];
+
+  return {
+    id: row.propertyId,
+    propertyId: row.propertyId,
+    propertyName: row.propertyName,
+    vrboListingId: row.vrboId,
+    vrboUrl: row.vrboUrl,
+    icalImportUrl: row.icalUrl ?? '',
+    icalExportUrl: exportCalendarUrl(row.propertyId),
+    connectionStatus: deriveStatus(row.syncEnabled, lastSync, lastLog?.status),
+    lastSyncTime: lastSync ?? undefined,
+    lastSyncStatus: (lastLog?.status as VRBOListing['lastSyncStatus']) ?? undefined,
+    lastSyncBookings: row.bookingCount,
+    title: row.propertyName,
+    createdAt: lastSync ?? '',
+    updatedAt: lastSync ?? '',
+  };
+}
+
+// ============================================================
+// READS
+// ============================================================
+
+export async function getVRBOListings(): Promise<VRBOListing[]> {
+  const status = await getStatus();
+  return status.properties.map((p) => toListing(p, status.recentLogs));
+}
+
+export async function getVRBOListingByProperty(propertyId: string): Promise<VRBOListing | null> {
+  const listings = await getVRBOListings();
+  return listings.find((l) => l.propertyId === propertyId) ?? null;
+}
+
+export async function getVRBOStats(): Promise<VRBOStats> {
+  const { properties, stats } = await getStatus();
+
+  const attempted = stats.last24h.syncs;
+  const lastSyncTimes = properties
+    .map((p) => p.lastIcalSync ?? p.lastScrapeSync)
+    .filter((t): t is string => Boolean(t))
+    .sort();
+
+  return {
+    connectedListings: stats.enabledProperties,
+    totalBookings: stats.totalVrboBookings,
+    lastSyncTime: lastSyncTimes.length ? lastSyncTimes[lastSyncTimes.length - 1] : undefined,
+    // No syncs attempted is NOT a 0% success rate -- that renders as total
+    // failure on an install that has simply not run yet.
+    syncSuccessRate:
+      attempted === 0 ? 100 : Math.round((stats.last24h.successes / attempted) * 100),
+    upcomingVRBOBookings: stats.upcomingVrboBookings,
+  };
+}
+
+export async function getUpcomingVRBOBookings(limit: number = 10): Promise<VRBOBooking[]> {
+  const { upcomingBookings, properties } = await getStatus();
+  const vrboIdByProperty = Object.fromEntries(properties.map((p) => [p.propertyId, p.vrboId]));
+
+  return upcomingBookings.slice(0, limit).map((b) => ({
+    uid: b.id,
+    propertyId: b.propertyId,
+    vrboListingId: vrboIdByProperty[b.propertyId] ?? '',
+    source: 'vrbo' as const,
+    guestName: b.guestName ?? undefined,
+    checkIn: b.checkIn,
+    checkOut: b.checkOut,
+    confirmationCode: b.confirmCode ?? undefined,
+    status: b.status?.toUpperCase() === 'CANCELLED' ? 'cancelled' : 'confirmed',
+    importedAt: b.checkIn,
+  }));
+}
+
+export async function getSyncLogs(propertyId: string, limit: number = 20): Promise<VRBOSyncLog[]> {
+  const { recentLogs } = await getStatus();
+
+  return recentLogs.slice(0, limit).map((l, i) => ({
+    id: `${l.at}-${i}`,
+    propertyId,
+    direction: l.syncType?.includes('export') ? 'export' : 'import',
+    status: (l.status as VRBOSyncLog['status']) ?? 'failed',
+    bookingsImported: l.itemsCreated,
+    bookingsExported: l.itemsUpdated,
+    errors: l.error ? [l.error] : undefined,
+    timestamp: l.at,
+  }));
+}
+
+// ============================================================
+// WRITES -- all server-side, all behind the owner/admin guard
+// ============================================================
+
 export async function registerVRBOProperty(
   propertyId: string,
   vrboListingId: string,
   icalImportUrl: string,
-  options?: {
-    title?: string;
-    nightlyRate?: number;
-    minNights?: number;
-    maxGuests?: number;
-  }
 ): Promise<VRBOListing> {
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.rah-midland.com';
-  const icalExportUrl = `${baseUrl}/ical/${propertyId}/vrbo.ics`;
-  const vrboUrl = `https://www.vrbo.com/${vrboListingId}`;
-
-  const listing: VRBOListing = {
-    id: `vrbo_${propertyId}_${vrboListingId}`,
-    propertyId,
-    vrboListingId,
-    vrboUrl,
-    icalImportUrl,
-    icalExportUrl,
-    connectionStatus: 'pending',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    ...options,
-  };
-
-  await setDoc(doc(db(), 'vrbo_listings', listing.id), {
-    ...listing,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
+  await callStatusApi({
+    method: 'POST',
+    body: JSON.stringify({ action: 'connect', propertyId, vrboListingId, icalUrl: icalImportUrl }),
   });
 
+  const listing = await getVRBOListingByProperty(propertyId);
+  if (!listing) {
+    // The write succeeded but the row is not readable back -- report that
+    // rather than fabricating a listing object the server never confirmed.
+    throw new Error('VRBO listing was connected but could not be read back');
+  }
   return listing;
 }
 
-// Update VRBO listing configuration
-export async function updateVRBOListing(
-  listingId: string,
-  updates: Partial<VRBOListing>
-): Promise<void> {
-  const listingRef = doc(db(), 'vrbo_listings', listingId);
-  await updateDoc(listingRef, {
-    ...updates,
-    updatedAt: serverTimestamp(),
+export async function disconnectVRBOProperty(propertyId: string): Promise<void> {
+  await callStatusApi({
+    method: 'POST',
+    body: JSON.stringify({ action: 'set_sync', propertyId, enabled: false }),
   });
 }
 
-// Disconnect property from VRBO
-export async function disconnectVRBOProperty(listingId: string): Promise<void> {
-  await updateVRBOListing(listingId, {
-    connectionStatus: 'disconnected',
+export async function reconnectVRBOProperty(propertyId: string): Promise<void> {
+  await callStatusApi({
+    method: 'POST',
+    body: JSON.stringify({ action: 'set_sync', propertyId, enabled: true }),
   });
 }
 
-// Parse iCal content and extract bookings
-function parseICalContent(icalContent: string, propertyId: string, vrboListingId: string): VRBOBooking[] {
-  const bookings: VRBOBooking[] = [];
-  const eventRegex = /BEGIN:VEVENT([\s\S]*?)END:VEVENT/g;
-  let match;
-
-  while ((match = eventRegex.exec(icalContent)) !== null) {
-    const eventContent = match[1];
-
-    const uid = extractICalField(eventContent, 'UID');
-    const summary = extractICalField(eventContent, 'SUMMARY');
-    const dtstart = extractICalField(eventContent, 'DTSTART');
-    const dtend = extractICalField(eventContent, 'DTEND');
-    const description = extractICalField(eventContent, 'DESCRIPTION');
-
-    if (uid && dtstart && dtend) {
-      const checkIn = parseICalDate(dtstart);
-      const checkOut = parseICalDate(dtend);
-      const guestName = extractGuestName(summary || '');
-      const confirmationCode = extractConfirmationCode(description || '');
-      const status = summary?.toLowerCase().includes('blocked') ? 'blocked' : 'confirmed';
-
-      bookings.push({
-        uid,
-        propertyId,
-        vrboListingId,
-        source: 'vrbo',
-        guestName,
-        checkIn: checkIn.toISOString(),
-        checkOut: checkOut.toISOString(),
-        confirmationCode,
-        description: description ?? undefined,
-        status,
-        importedAt: new Date().toISOString(),
-      });
-    }
-  }
-
-  return bookings;
-}
-
-// Extract field value from iCal content
-function extractICalField(content: string, field: string): string | null {
-  const regex = new RegExp(`${field}(?:;[^:]*)?:(.+?)(?:\\r?\\n|$)`);
-  const match = content.match(regex);
-  return match ? match[1].trim() : null;
-}
-
-// Parse iCal date format
-function parseICalDate(dateStr: string): Date {
-  if (dateStr.length === 8) {
-    const year = parseInt(dateStr.slice(0, 4));
-    const month = parseInt(dateStr.slice(4, 6)) - 1;
-    const day = parseInt(dateStr.slice(6, 8));
-    return new Date(year, month, day);
-  }
-  if (dateStr.includes('T')) {
-    return new Date(
-      dateStr.replace(/(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z?/, '$1-$2-$3T$4:$5:$6Z')
-    );
-  }
-  return new Date(dateStr);
-}
-
-// Extract guest name from booking summary
-function extractGuestName(summary: string): string | undefined {
-  const patterns = [
-    /Reserved\s*[-:]\s*(.+)/i,
-    /Booked\s*[-:]\s*(.+)/i,
-    /(.+?)\s*[-:]\s*(?:VRBO|Reserved|Blocked)/i,
-  ];
-
-  for (const pattern of patterns) {
-    const match = summary.match(pattern);
-    if (match) return match[1].trim();
-  }
-
-  if (summary && !summary.toLowerCase().includes('blocked') && !summary.toLowerCase().includes('unavailable')) {
-    return summary;
-  }
-
-  return undefined;
-}
-
-// Extract confirmation code from description
-function extractConfirmationCode(description: string): string | undefined {
-  const patterns = [
-    /confirmation[:\s]*([A-Z0-9-]+)/i,
-    /code[:\s]*([A-Z0-9-]+)/i,
-    /booking[:\s]*([A-Z0-9-]+)/i,
-    /reservation[:\s]*([A-Z0-9-]+)/i,
-    /HA-([A-Z0-9]+)/i,
-  ];
-
-  for (const pattern of patterns) {
-    const match = description.match(pattern);
-    if (match) return match[1].trim();
-  }
-
-  return undefined;
-}
-
-// Sync calendar from VRBO (import bookings)
-export async function syncFromVRBO(listingId: string): Promise<{
+export async function syncFromVRBO(propertyId: string): Promise<{
   success: boolean;
   bookingsImported: number;
-  bookings: VRBOBooking[];
   error?: string;
 }> {
   try {
-    const listingRef = doc(db(), 'vrbo_listings', listingId);
-    const listingSnap = await getDoc(listingRef);
-
-    if (!listingSnap.exists()) {
-      return { success: false, bookingsImported: 0, bookings: [], error: 'Listing not found' };
-    }
-
-    const listing = listingSnap.data() as VRBOListing;
-    const response = await fetch(listing.icalImportUrl);
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch iCal: ${response.status}`);
-    }
-
-    const icalContent = await response.text();
-    const bookings = parseICalContent(icalContent, listing.propertyId, listing.vrboListingId);
-
-    for (const booking of bookings) {
-      await setDoc(doc(db(), 'vrbo_bookings', booking.uid), booking);
-    }
-
-    await updateDoc(listingRef, {
-      connectionStatus: 'connected',
-      lastSyncTime: new Date().toISOString(),
-      lastSyncStatus: 'success',
-      lastSyncBookings: bookings.length,
-      updatedAt: serverTimestamp(),
+    const result = await callStatusApi<{
+      ok: boolean;
+      created?: number;
+      imported?: number;
+      error?: string;
+    }>({
+      method: 'POST',
+      body: JSON.stringify({ action: 'sync_one', propertyId }),
     });
-
-    await logSync(listing.propertyId, 'import', 'success', bookings.length, 0);
-
     return {
-      success: true,
-      bookingsImported: bookings.length,
-      bookings,
+      success: Boolean(result.ok),
+      bookingsImported: result.created ?? result.imported ?? 0,
+      error: result.error,
     };
-  } catch (error: any) {
-    const listingRef = doc(db(), 'vrbo_listings', listingId);
-    await updateDoc(listingRef, {
-      lastSyncTime: new Date().toISOString(),
-      lastSyncStatus: 'failed',
-      updatedAt: serverTimestamp(),
-    });
-
+  } catch (error) {
     return {
       success: false,
       bookingsImported: 0,
-      bookings: [],
-      error: error.message,
+      error: error instanceof Error ? error.message : 'Sync failed',
     };
   }
 }
 
-// Generate iCal content for VRBO to import
-export async function generateExportCalendar(propertyId: string): Promise<string> {
-  const bookingsQuery = query(
-    collection(db(), 'bookings'),
-    where('propertyId', '==', propertyId),
-    orderBy('checkIn')
-  );
-
-  const snapshot = await getDocs(bookingsQuery);
-  const bookings = snapshot.docs.map(doc => doc.data());
-
-  let ical = [
-    'BEGIN:VCALENDAR',
-    'VERSION:2.0',
-    'PRODID:-//Right at Home BnB//EN',
-    'CALSCALE:GREGORIAN',
-    'METHOD:PUBLISH',
-    'X-WR-CALNAME:Right at Home BnB',
-  ];
-
-  for (const booking of bookings) {
-    if (booking.source === 'vrbo') continue; // Skip VRBO bookings
-
-    const uid = `rah-${booking.id}@rah-midland.com`;
-    const dtstart = formatICalDate(new Date(booking.checkIn));
-    const dtend = formatICalDate(new Date(booking.checkOut));
-    const dtstamp = formatICalDateTime(new Date());
-    const summary = `Blocked - ${booking.guestName || 'Reserved'}`;
-
-    ical.push(
-      'BEGIN:VEVENT',
-      `UID:${uid}`,
-      `DTSTART;VALUE=DATE:${dtstart}`,
-      `DTEND;VALUE=DATE:${dtend}`,
-      `DTSTAMP:${dtstamp}`,
-      `SUMMARY:${summary}`,
-      'DESCRIPTION:Booking from Right at Home BnB',
-      'END:VEVENT'
-    );
-  }
-
-  ical.push('END:VCALENDAR');
-  return ical.join('\r\n');
-}
-
-// Format date for iCal (YYYYMMDD)
-function formatICalDate(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}${month}${day}`;
-}
-
-// Format datetime for iCal (YYYYMMDDTHHMMSSZ)
-function formatICalDateTime(date: Date): string {
-  return date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
-}
-
-// Log a sync operation
-async function logSync(
-  propertyId: string,
-  direction: SyncDirection,
-  status: 'success' | 'failed' | 'partial',
-  bookingsImported: number,
-  bookingsExported: number,
-  errors?: string[]
-): Promise<void> {
-  const logEntry: VRBOSyncLog = {
-    id: `sync_${propertyId}_${Date.now()}`,
-    propertyId,
-    direction,
-    status,
-    bookingsImported,
-    bookingsExported,
-    errors,
-    timestamp: new Date().toISOString(),
-  };
-
-  await setDoc(doc(db(), 'vrbo_sync_logs', logEntry.id), logEntry);
-}
-
-// Get all VRBO listings
-export async function getVRBOListings(): Promise<VRBOListing[]> {
-  const snapshot = await getDocs(collection(db(), 'vrbo_listings'));
-  return snapshot.docs.map(doc => doc.data() as VRBOListing);
-}
-
-// Get VRBO listing by property ID
-export async function getVRBOListingByProperty(propertyId: string): Promise<VRBOListing | null> {
-  const q = query(
-    collection(db(), 'vrbo_listings'),
-    where('propertyId', '==', propertyId)
-  );
-  const snapshot = await getDocs(q);
-  return snapshot.empty ? null : (snapshot.docs[0].data() as VRBOListing);
-}
-
-// Get VRBO bookings for a property
-export async function getVRBOBookings(propertyId: string): Promise<VRBOBooking[]> {
-  const q = query(
-    collection(db(), 'vrbo_bookings'),
-    where('propertyId', '==', propertyId),
-    orderBy('checkIn')
-  );
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map(doc => doc.data() as VRBOBooking);
-}
-
-// Get upcoming VRBO bookings across all properties
-export async function getUpcomingVRBOBookings(limit: number = 10): Promise<VRBOBooking[]> {
-  const now = new Date().toISOString();
-  const q = query(
-    collection(db(), 'vrbo_bookings'),
-    where('checkIn', '>=', now),
-    where('status', '==', 'confirmed'),
-    orderBy('checkIn')
-  );
-  const snapshot = await getDocs(q);
-  return snapshot.docs.slice(0, limit).map(doc => doc.data() as VRBOBooking);
-}
-
-// Get sync logs for a property
-export async function getSyncLogs(propertyId: string, limit: number = 20): Promise<VRBOSyncLog[]> {
-  const q = query(
-    collection(db(), 'vrbo_sync_logs'),
-    where('propertyId', '==', propertyId),
-    orderBy('timestamp', 'desc')
-  );
-  const snapshot = await getDocs(q);
-  return snapshot.docs.slice(0, limit).map(doc => doc.data() as VRBOSyncLog);
-}
-
-// Get VRBO integration statistics
-export async function getVRBOStats(): Promise<VRBOStats> {
-  const listings = await getVRBOListings();
-  const connectedListings = listings.filter(l => l.connectionStatus === 'connected').length;
-
-  const bookingsSnap = await getDocs(collection(db(), 'vrbo_bookings'));
-  const totalBookings = bookingsSnap.size;
-
-  const upcomingBookings = await getUpcomingVRBOBookings(100);
-
-  const listingsWithSync = listings.filter(l => l.lastSyncTime);
-  const mostRecentSync = listingsWithSync.length > 0
-    ? listingsWithSync.sort((a, b) =>
-        new Date(b.lastSyncTime!).getTime() - new Date(a.lastSyncTime!).getTime()
-      )[0].lastSyncTime
-    : undefined;
-
-  let successRate = 100;
-  if (listingsWithSync.length > 0) {
-    const successfulSyncs = listingsWithSync.filter(l => l.lastSyncStatus === 'success').length;
-    successRate = Math.round((successfulSyncs / listingsWithSync.length) * 100);
-  }
-
-  return {
-    connectedListings,
-    totalBookings,
-    lastSyncTime: mostRecentSync,
-    syncSuccessRate: successRate,
-    upcomingVRBOBookings: upcomingBookings.length,
-  };
-}
-
-// VRBO Setup Instructions
 export const VRBO_SETUP_GUIDE = {
   icalSync: {
     title: 'iCal Calendar Sync (Free)',

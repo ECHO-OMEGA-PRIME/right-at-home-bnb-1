@@ -51,8 +51,6 @@ export interface BookingEmailData {
   totalAmount: number;
   confirmationNumber: string;
   wifiName?: string;
-  wifiPassword?: string;
-  doorCode?: string;
   parkingInstructions?: string;
   specialInstructions?: string;
   contactPhone: string;
@@ -213,30 +211,11 @@ export function generateCheckInEmail(data: BookingEmailData): string {
       <p>Hi ${data.guestName},</p>
       <p>Your stay at <strong>${data.propertyName}</strong> begins tomorrow! Here's everything you need to check in:</p>
 
-      <!-- Door Code -->
-      ${data.doorCode ? `
-      <div class="code-box">
-        <p class="label">DOOR CODE</p>
-        <p class="code">${data.doorCode}</p>
-        <p style="font-size: 12px; margin-top: 15px; opacity: 0.8;">This code will work from ${data.checkInTime} on ${data.checkInDate}</p>
-      </div>
-      ` : ''}
-
-      <!-- Address -->
       <div class="info-box">
-        <h3 style="margin-top: 0; color: #500000;">📍 Property Address</h3>
-        <p style="font-size: 18px; margin: 0;">${data.propertyAddress}</p>
-        <a href="https://maps.google.com/?q=${encodeURIComponent(data.propertyAddress)}" style="color: #500000;">Open in Google Maps →</a>
+        <h3 style="margin-top: 0; color: #500000;">Secure Stay Access</h3>
+        <p>Temporary entry and Wi-Fi details are available only in the authenticated active-stay dashboard and may be delivered separately shortly before check-in.</p>
+        <p>This general email intentionally contains no private access values.</p>
       </div>
-
-      <!-- WiFi -->
-      ${data.wifiName ? `
-      <div class="info-box">
-        <h3 style="margin-top: 0; color: #500000;">📶 WiFi Access</h3>
-        <p><strong>Network:</strong> ${data.wifiName}</p>
-        <p><strong>Password:</strong> ${data.wifiPassword}</p>
-      </div>
-      ` : ''}
 
       <!-- Parking -->
       ${data.parkingInstructions ? `

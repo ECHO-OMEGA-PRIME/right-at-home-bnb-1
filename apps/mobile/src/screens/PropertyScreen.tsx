@@ -20,7 +20,7 @@ export default function PropertyScreen({ route }: any) {
     bathrooms: 3,
     maxGuests: 8,
     amenities: ['WiFi', 'Smart TV', 'Kitchen', 'Washer/Dryer', 'Pool', 'Hot Tub'],
-    wifi: { network: 'RightAtHome_Guest', password: 'Welcome2024' },
+    wifiAccess: 'Available only in the authenticated active-stay dashboard.',
     checkout: '11:00 AM',
     supplies: [
       { item: 'Toilet Paper', location: 'Hall Closet', qty: 12 },
@@ -57,14 +57,7 @@ export default function PropertyScreen({ route }: any) {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>📶 WiFi Information</Text>
         <View style={styles.card}>
-          <View style={styles.wifiRow}>
-            <Text style={styles.wifiLabel}>Network:</Text>
-            <Text style={styles.wifiValue}>{property.wifi.network}</Text>
-          </View>
-          <View style={styles.wifiRow}>
-            <Text style={styles.wifiLabel}>Password:</Text>
-            <Text style={styles.wifiValue}>{property.wifi.password}</Text>
-          </View>
+          <Text style={styles.wifiValue}>{property.wifiAccess}</Text>
         </View>
       </View>
 

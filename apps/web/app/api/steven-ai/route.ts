@@ -12,6 +12,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { requireOneOfRoles } from '@/lib/api-auth';
 import {
   getOrCreateGuestMemory,
   addConversationEntry,
@@ -173,6 +174,8 @@ interface ConversationMessage {
  * Main chat endpoint with voice, memory, and ops context
  */
 export async function POST(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   try {
     const body: StevenAIRequest = await request.json();
     const {
@@ -269,8 +272,11 @@ export async function POST(request: NextRequest) {
         guestId: memory.guestId,
         guestName: memory.guestName,
         vipStatus: memory.vipStatus,
-        totalConversations: memory.conversations.length,
-        totalStays: memory.stays.length,
+        // Real totals. `conversations` is only the recent context window, so
+        // reporting its length as a total understated any guest with a long
+        // history at exactly the cap.
+        totalConversations: memory.conversationCount,
+        totalStays: memory.stayCount,
       } : null,
     });
 
@@ -404,7 +410,7 @@ CONTACT INFO:
 GUEST CONTEXT:
 ${guestSummary || `Guest: ${memory?.guestName || 'Unknown'}`}
 ${memory ? `
-Remember: This guest has interacted with us ${memory.conversations.length} times. Reference past conversations naturally.
+Remember: This guest has interacted with us ${memory.conversationCount} times. Reference past conversations naturally.
 ` : ''}
 `;
   }
@@ -590,7 +596,9 @@ async function generateStevenVoice(
  * GET /api/steven-ai
  * API status and capabilities
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  if (auth.error) return auth.error;
   return NextResponse.json({
     name: 'Steven AI',
     version: '1.0.0',

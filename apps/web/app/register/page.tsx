@@ -12,9 +12,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Eye, EyeOff, Lock, Mail, ArrowRight, Home, User, Phone } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { getAuthInstance, signInWithGoogle, signInWithApple, db } from '@/lib/auth';
-import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { signInWithGoogle, signInWithApple } from '@/lib/auth';
 
 type AccountType = 'guest' | 'cleaner' | 'yard_crew' | 'handyman';
 
@@ -36,6 +34,8 @@ export default function RegisterPage() {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  /** Signup succeeded and the address now needs confirming — there is no session yet. */
+  const [submitted, setSubmitted] = useState(false);
   const [accountType, setAccountType] = useState<'guest' | 'staff'>('guest');
   const [staffType, setStaffType] = useState<AccountType>('cleaner');
 
@@ -63,69 +63,67 @@ export default function RegisterPage() {
     setIsLoading(true);
 
     try {
-      // Create Firebase Auth user
-      const userCredential = await createUserWithEmailAndPassword(
-        getAuthInstance(),
-        formData.email,
-        formData.password
-      );
-
-      const user = userCredential.user;
-      const role = accountType === 'guest' ? 'guest' : staffType;
-
-      // Update display name
-      await updateProfile(user, {
-        displayName: `${formData.firstName} ${formData.lastName}`
-      });
-
-      // Create user document in Firestore
-      await setDoc(doc(db(), 'users', user.uid), {
-        uid: user.uid,
-        email: formData.email,
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        displayName: `${formData.firstName} ${formData.lastName}`,
-        phone: formData.phone || null,
-        role: role,
-        staffType: accountType === 'staff' ? staffType : null,
-        status: accountType === 'staff' ? 'pending_approval' : 'active',
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
-
-      // If guest, also create entry in steven_guests for AI memory
-      if (accountType === 'guest') {
-        await setDoc(doc(db(), 'steven_guests', user.uid), {
-          guestId: user.uid,
-          guestName: `${formData.firstName} ${formData.lastName}`,
+      // Create the account through echo-auth, the fleet's ONE identity runtime.
+      //
+      // This replaces createUserWithEmailAndPassword. The flow is deliberately
+      // different, and the difference is the security property: echo-auth
+      // answers 202 with NO session, because four of the six services behind it
+      // authorize by EMAIL rather than uid -- signing in an address nobody has
+      // proved they control would hand over that address's existing access. So
+      // there is no redirect to /dashboard here; the address must be confirmed
+      // first.
+      const response = await fetch('/api/auth/signup', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({
           email: formData.email,
-          phone: formData.phone || null,
-          conversations: [],
-          preferences: {},
-          stays: [],
-          tags: ['registered_user'],
-          vipStatus: 'standard',
-          createdAt: serverTimestamp(),
-          lastInteraction: serverTimestamp(),
-        });
+          password: formData.password,
+        }),
+      });
+
+      if (response.status !== 202) {
+        const payload = await response.json().catch(() => null);
+        throw new Error(payload?.error || 'Registration failed. Please try again.');
       }
 
-      toast.success('Account created successfully!');
-
-      if (accountType === 'staff') {
-        toast.success('Your account is pending approval by the administrator.');
+      // Hold the profile details until the account can actually own them.
+      //
+      // /api/register writes the User and Guest rows from a VERIFIED token, and
+      // there is no token yet -- by design. Rather than drop what the visitor
+      // typed, keep it locally and let the first authenticated page load submit
+      // it. It is ordinary profile data, never a credential.
+      try {
+        localStorage.setItem(
+          'rah_pending_profile',
+          JSON.stringify({
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            phone: formData.phone || null,
+            accountType,
+            staffType: accountType === 'staff' ? staffType : null,
+          }),
+        );
+      } catch {
+        // A full or disabled localStorage must not fail the signup itself; the
+        // account exists either way and the profile can be re-entered.
       }
 
-      router.push('/dashboard');
+      // The SAME message whatever happened upstream. echo-auth returns an
+      // identical 202 for a new address and an existing one so that signup
+      // cannot be used to discover who has an account; saying "check your
+      // email" for one case and "already registered" for the other would hand
+      // that oracle straight back.
+      setSubmitted(true);
+      toast.success('Check your email to confirm your address.');
     } catch (error: any) {
       console.error('Registration error:', error);
 
-      if (error.code === 'auth/email-already-in-use') {
-        toast.error('An account with this email already exists');
-      } else if (error.code === 'auth/invalid-email') {
+      if (error.code === 'auth/invalid-email') {
         toast.error('Please enter a valid email address');
-      } else if (error.code === 'auth/weak-password') {
-        toast.error('Password is too weak. Please use a stronger password.');
       } else {
         toast.error('Registration failed. Please try again.');
       }
@@ -169,6 +167,43 @@ export default function RegisterPage() {
       setIsLoading(false);
     }
   };
+
+  // No session exists yet — echo-auth issues none until the address is proved —
+  // so there is nowhere to redirect. This screen IS the success state.
+  if (submitted) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#F5F5F0] p-8">
+        <motion.div
+          initial={{ y: 16, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.5 }}
+          className="w-full max-w-md text-center"
+        >
+          <div className="w-14 h-14 rounded-xl bg-[#500000] flex items-center justify-center mx-auto mb-6">
+            <Mail className="w-7 h-7 text-[#C4A777]" />
+          </div>
+          <h1 className="text-3xl font-['Playfair_Display'] font-semibold text-[#2D2D2D] mb-3">
+            Check your email
+          </h1>
+          <p className="text-[#2D2D2D]/70 leading-relaxed mb-2">
+            If that address can be registered, we have sent a confirmation link to{' '}
+            <span className="font-medium text-[#2D2D2D]">{formData.email}</span>.
+          </p>
+          <p className="text-[#2D2D2D]/60 text-sm leading-relaxed mb-8">
+            The link expires in 24 hours and can be used once. Your account stays
+            inactive until the address is confirmed.
+          </p>
+          <Link
+            href="/login"
+            className="inline-flex items-center gap-2 text-[#500000] font-medium hover:underline"
+          >
+            Continue to sign in
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex">
