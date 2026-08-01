@@ -18,7 +18,7 @@ interface Booking {
   guestName: string;
   checkIn: string;   // ISO 8601 date string
   checkOut: string;   // ISO 8601 date string
-  status: 'confirmed' | 'pending' | 'cancelled';
+  status: 'confirmed' | 'pending' | 'blocked' | 'cancelled';
   source: string;
   summary?: string;
 }
@@ -116,9 +116,19 @@ function foldLine(line: string): string {
  */
 function buildVEvent(booking: Booking, propertyId: string): string {
   const now = formatICalTimestamp(new Date());
+
+  // Only a genuinely pending booking is TENTATIVE. An owner hold (BLOCKED) is a
+  // definite unavailability, and it used to publish as `STATUS:TENTATIVE` simply
+  // because it was not the string 'confirmed' -- some channel managers ignore
+  // tentative events when deciding whether a date is free, which would let the
+  // channel re-sell a date the owner has taken off the market. TRANSP:OPAQUE
+  // already says "this blocks time"; the STATUS must not contradict it.
+  const isTentative = booking.status === 'pending';
   const summary =
     booking.summary ??
-    `${booking.status === 'confirmed' ? 'Reserved' : 'Tentative'} - ${escapeICalText(booking.guestName)}`;
+    (booking.status === 'blocked'
+      ? 'Blocked'
+      : `${isTentative ? 'Tentative' : 'Reserved'} - ${escapeICalText(booking.guestName)}`);
   const description = `Booking ${booking.id} via ${booking.source}. Guest: ${escapeICalText(booking.guestName)}.`;
   const uid = `${booking.id}@rah-midland.com`;
 
@@ -130,7 +140,7 @@ function buildVEvent(booking: Booking, propertyId: string): string {
     `DTEND;VALUE=DATE:${formatICalDate(booking.checkOut)}`,
     foldLine(`SUMMARY:${summary}`),
     foldLine(`DESCRIPTION:${description}`),
-    `STATUS:${booking.status === 'confirmed' ? 'CONFIRMED' : 'TENTATIVE'}`,
+    `STATUS:${isTentative ? 'TENTATIVE' : 'CONFIRMED'}`,
     `TRANSP:OPAQUE`,
     foldLine(`X-RAH-PROPERTY-ID:${propertyId}`),
     foldLine(`X-RAH-BOOKING-SOURCE:${booking.source}`),
