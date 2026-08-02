@@ -43,6 +43,22 @@ function proxyResponds(body: Record<string, unknown>) {
   );
 }
 
+function proxySequence(...bodies: Array<Record<string, unknown>>) {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () => {
+      const body = bodies.shift() ?? {};
+      return {
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        json: async () => body,
+        text: async () => JSON.stringify(body),
+      };
+    }),
+  );
+}
+
 afterEach(() => {
   vi.unstubAllGlobals();
 });
@@ -83,15 +99,18 @@ describe('deleteCode — a code still on the lock is not a successful revocation
     // Without this, a change that threw unconditionally would look like a fix
     // and would break every legitimate revocation — every grant would land on
     // REVOCATION_FAILED and no code would ever be cleanly retired.
-    proxyResponds({
-      ok: true,
-      revoked: true,
-      gone_from_lock: true,
-      still_on_lock: false,
-      device_phase: 0,
-      verification: 'confirmed_deleted',
-      password_id: PASSWORD_ID,
-    });
+    proxySequence(
+      {
+        ok: true,
+        revoked: true,
+        gone_from_lock: true,
+        still_on_lock: false,
+        device_phase: 0,
+        verification: 'confirmed_deleted',
+        password_id: PASSWORD_ID,
+      },
+      { ok: true, codes: [] },
+    );
 
     const result = await deleteCode(DEVICE, PASSWORD_ID);
 
@@ -100,16 +119,17 @@ describe('deleteCode — a code still on the lock is not a successful revocation
   });
 
   it('POSITIVE CONTROL: confirmed_absent also resolves', async () => {
-    proxyResponds({ ok: true, revoked: true, still_on_lock: false, verification: 'confirmed_absent' });
+    proxySequence(
+      { ok: true, revoked: true, still_on_lock: false, verification: 'confirmed_absent' },
+      { ok: true, codes: [] },
+    );
 
     await expect(deleteCode(DEVICE, PASSWORD_ID)).resolves.toBeTruthy();
   });
 
-  it('treats a body with no still_on_lock field as success, so an older proxy keeps working', async () => {
-    // still_on_lock is checked with === true rather than truthiness: a proxy
-    // build that omits the field must not start failing every revocation.
-    proxyResponds({ ok: true, revoked: true });
+  it('fails closed when the reconciled codes payload is missing', async () => {
+    proxySequence({ ok: true, revoked: true }, { ok: true });
 
-    await expect(deleteCode(DEVICE, PASSWORD_ID)).resolves.toBeTruthy();
+    await expect(deleteCode(DEVICE, PASSWORD_ID)).rejects.toThrow(/invalid codes payload/);
   });
 });

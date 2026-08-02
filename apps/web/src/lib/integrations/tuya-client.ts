@@ -209,6 +209,19 @@ export async function createGuestCode(
   });
 }
 
+function codeReference(item: any): string {
+  return String(item?.id ?? item?.password_id ?? item?.passwordId ?? '');
+}
+
+/** Require device-side positive control for an exact temporary-password id. */
+export async function assertCodePresent(deviceId: string, passwordId: string): Promise<void> {
+  const codes = await listCodes(deviceId, true);
+  const exact = codes.find((item: any) => codeReference(item) === passwordId);
+  if (!exact || exact.device_view !== 'present') {
+    throw new Error('Guest code was not verified present on the physical lock');
+  }
+}
+
 /**
  * Delete a code from a lock.
  *
@@ -239,9 +252,15 @@ export async function deleteCode(deviceId: string, passwordId: string): Promise<
 
   if (result?.still_on_lock === true) {
     throw new Error(
-      `RAH lock clear-code did not remove ${passwordId} from ${deviceId}: ` +
+      `RAH lock clear-code did not remove the requested grant: ` +
         `still_on_lock=true, verification=${result?.verification ?? 'unknown'}`,
     );
+  }
+
+  const codes = await listCodes(deviceId, true);
+  const exact = codes.find((item: any) => codeReference(item) === passwordId);
+  if (exact?.device_view === 'present' || (exact && exact.device_view !== 'absent')) {
+    throw new Error('Guest code removal was not verified on the physical lock');
   }
 
   return result;
@@ -250,9 +269,15 @@ export async function deleteCode(deviceId: string, passwordId: string): Promise<
 /**
  * List all codes on a lock.
  */
-export async function listCodes(deviceId: string): Promise<any[]> {
-  const data = await rahFetch('GET', `/locks/codes?lock=${encodeURIComponent(deviceId)}`);
-  return data?.codes || [];
+export async function listCodes(deviceId: string, reconcile = false): Promise<any[]> {
+  const data = await rahFetch(
+    'GET',
+    `/locks/codes?lock=${encodeURIComponent(deviceId)}${reconcile ? '&reconcile=1' : ''}`,
+  );
+  if (reconcile && !Array.isArray(data?.codes)) {
+    throw new Error('Lock-code reconciliation returned an invalid codes payload');
+  }
+  return Array.isArray(data?.codes) ? data.codes : [];
 }
 
 // ─── Activity Logs ───────────────────────────────────────────────────────────
