@@ -69,6 +69,17 @@ const PUBLIC_API_PREFIXES = [
   '/api/bookings/capture',
 ];
 
+// These are the only unauthenticated auth mutations. Login/signup must be
+// reachable before a session exists, and logout must remain idempotent when a
+// cookie is missing, expired, or malformed. Keep this exact-path + method
+// allowlist narrow: /api/auth/link changes authorization state and must always
+// pass through the authenticated API gate below.
+const PUBLIC_AUTH_POST_ROUTES = new Set([
+  '/api/auth/login',
+  '/api/auth/signup',
+  '/api/auth/logout',
+]);
+
 // Defense in depth: these listings are visible for portfolio/history purposes,
 // but their direct-booking forms must not be reachable while inactive.
 const INACTIVE_PROPERTY_SLUGS = new Set([
@@ -211,7 +222,7 @@ function rejectDevApiToken(): NextResponse {
   );
 }
 
-function rejectDevPageToken(request: NextRequest): NextResponse {
+function rejectPageToken(request: NextRequest): NextResponse {
   const loginUrl = new URL('/login', request.url);
   loginUrl.searchParams.set('error', 'invalid_session');
   return clearAuthCookie(NextResponse.redirect(loginUrl));
@@ -240,6 +251,11 @@ function isPublicPropertiesRead(request: NextRequest): boolean {
 function isPublicApi(request: NextRequest): boolean {
   const pathname = request.nextUrl.pathname;
   if (pathname === '/api/health') return true;
+  // /api/me is the Node-runtime cryptographic verifier used by this Edge
+  // middleware. It performs requireAuth itself, so middleware must let that
+  // exact GET reach the handler or its own introspection request would recurse.
+  if (request.method === 'GET' && pathname === '/api/me') return true;
+  if (request.method === 'POST' && PUBLIC_AUTH_POST_ROUTES.has(pathname)) return true;
   if (isPublicPropertiesRead(request)) return true;
   return PUBLIC_API_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
@@ -270,7 +286,51 @@ function roleRedirect(request: NextRequest, role: TokenRole | null): NextRespons
   return null;
 }
 
-export function middleware(request: NextRequest) {
+type SessionCheck =
+  | { status: 'authenticated'; role: TokenRole }
+  | { status: 'unauthorized' }
+  | { status: 'unavailable' };
+
+/**
+ * Cryptographically verify the cookie and resolve its Postgres-backed role.
+ *
+ * Payload decoding above is only a cheap reject for obvious garbage. It can
+ * never authorize: anyone can forge a JWT-shaped string. /api/me runs under
+ * the Node runtime, calls requireAuth (RS256/JWKS verification), and resolves
+ * role/deactivation from Postgres. This exact endpoint is public in middleware
+ * only so this internal request can reach that cryptographic handler.
+ */
+async function authoritativeSession(request: NextRequest): Promise<SessionCheck> {
+  try {
+    const response = await fetch(new URL('/api/me', request.url), {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+        Cookie: request.headers.get('cookie') ?? '',
+      },
+      cache: 'no-store',
+    });
+    if (response.status === 401) return { status: 'unauthorized' };
+    if (!response.ok) return { status: 'unavailable' };
+
+    const body = (await response.json()) as { role?: unknown };
+    if (typeof body.role !== 'string' || !VALID_ROLES.has(body.role as TokenRole)) {
+      return { status: 'unauthorized' };
+    }
+    return { status: 'authenticated', role: body.role as TokenRole };
+  } catch {
+    return { status: 'unavailable' };
+  }
+}
+
+function authUnavailable(): NextResponse {
+  return NextResponse.json(
+    { error: 'Authentication is temporarily unavailable', code: 'AUTH_BACKEND_UNAVAILABLE' },
+    { status: 503, headers: { 'Retry-After': '30' } },
+  );
+}
+
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // The legacy client-side role impersonation route is permanently disabled.
@@ -331,9 +391,21 @@ export function middleware(request: NextRequest) {
       );
     }
 
+    const session = isDevToken(authToken)
+      ? { status: 'authenticated' as const, role: extractRoleFromToken(authToken) }
+      : await authoritativeSession(request);
+    if (session.status === 'unavailable') return authUnavailable();
+    if (session.status === 'unauthorized' || !session.role) {
+      return clearAuthCookie(
+        NextResponse.json(
+          { error: 'Authentication required', code: 'UNAUTHORIZED' },
+          { status: 401 },
+        ),
+      );
+    }
+
     if (isAdminOnly(pathname)) {
-      const role = extractRoleFromToken(authToken);
-      if (role && !['admin', 'owner'].includes(role)) {
+      if (!['admin', 'owner'].includes(session.role)) {
         return NextResponse.json(
           { error: 'Owner access required', code: 'FORBIDDEN' },
           { status: 403 },
@@ -350,14 +422,25 @@ export function middleware(request: NextRequest) {
       loginUrl.searchParams.set('callbackUrl', pathname);
       return NextResponse.redirect(loginUrl);
     }
-    if (isDevToken(authToken) && !devLoginEnabled()) return rejectDevPageToken(request);
+    if (isDevToken(authToken) && !devLoginEnabled()) return rejectPageToken(request);
 
-    const role = extractRoleFromToken(authToken);
-    const redirect = roleRedirect(request, role);
+    if (!isDevToken(authToken) && !looksLikeAcceptableToken(authToken)) {
+      return rejectPageToken(request);
+    }
+
+    const session = isDevToken(authToken)
+      ? { status: 'authenticated' as const, role: extractRoleFromToken(authToken) }
+      : await authoritativeSession(request);
+    if (session.status === 'unavailable') return authUnavailable();
+    if (session.status === 'unauthorized' || !session.role) return rejectPageToken(request);
+
+    const redirect = roleRedirect(request, session.role);
     if (redirect) return redirect;
 
-    if (isAdminOnly(pathname) && role && !['admin', 'owner'].includes(role)) {
-      return NextResponse.redirect(new URL(role === 'worker' ? '/worker' : '/properties', request.url));
+    if (isAdminOnly(pathname) && !['admin', 'owner'].includes(session.role)) {
+      return NextResponse.redirect(
+        new URL(session.role === 'worker' ? '/worker' : '/properties', request.url),
+      );
     }
     return NextResponse.next();
   }
@@ -373,6 +456,7 @@ export const __testing__ = {
   looksLikeLiveIdToken,
   looksLikeEchoAuthToken,
   looksLikeAcceptableToken,
+  isPublicApi,
 };
 
 export const config = {

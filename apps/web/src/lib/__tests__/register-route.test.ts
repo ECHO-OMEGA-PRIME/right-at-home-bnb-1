@@ -10,11 +10,25 @@
 
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
-const { requireAuth, userUpsert, userFindUnique, guestUpsert, staffApplicationCreate } =
+const {
+  requireAuth,
+  userFindFirst,
+  userFindMany,
+  userFindUnique,
+  userFindUniqueOrThrow,
+  userUpdateMany,
+  userCreate,
+  guestUpsert,
+  staffApplicationCreate,
+} =
   vi.hoisted(() => ({
     requireAuth: vi.fn(),
-    userUpsert: vi.fn(),
+    userFindFirst: vi.fn(),
+    userFindMany: vi.fn(),
     userFindUnique: vi.fn(),
+    userFindUniqueOrThrow: vi.fn(),
+    userUpdateMany: vi.fn(),
+    userCreate: vi.fn(),
     guestUpsert: vi.fn(),
     staffApplicationCreate: vi.fn(),
   }));
@@ -22,7 +36,14 @@ const { requireAuth, userUpsert, userFindUnique, guestUpsert, staffApplicationCr
 vi.mock('@/lib/api-auth', () => ({ requireAuth }));
 vi.mock('@/lib/prisma', () => ({
   default: {
-    user: { upsert: userUpsert, findUnique: userFindUnique },
+    user: {
+      findFirst: userFindFirst,
+      findMany: userFindMany,
+      findUnique: userFindUnique,
+      findUniqueOrThrow: userFindUniqueOrThrow,
+      updateMany: userUpdateMany,
+      create: userCreate,
+    },
     guest: { upsert: guestUpsert },
     staffApplication: { create: staffApplicationCreate },
   },
@@ -34,11 +55,14 @@ function request(body: Record<string, unknown>) {
   return { json: async () => body } as never;
 }
 
-function signedInAs(overrides: Partial<{ uid: string; email: string | null }> = {}) {
+function signedInAs(
+  overrides: Partial<{ uid: string; email: string | null; emailVerified: boolean }> = {},
+) {
   requireAuth.mockResolvedValue({
     user: {
       uid: 'uid-123',
       email: 'Guest@Example.com',
+      emailVerified: true,
       role: 'guest',
       workerType: null,
       isDevMode: false,
@@ -50,8 +74,11 @@ function signedInAs(overrides: Partial<{ uid: string; email: string | null }> = 
 
 beforeEach(() => {
   vi.clearAllMocks();
+  userFindFirst.mockResolvedValue(null);
+  userFindMany.mockResolvedValue([]);
   userFindUnique.mockResolvedValue(null);
-  userUpsert.mockResolvedValue({
+  userUpdateMany.mockResolvedValue({ count: 0 });
+  userCreate.mockResolvedValue({
     id: 'user-1',
     email: 'guest@example.com',
     role: 'GUEST',
@@ -79,14 +106,13 @@ describe('POST /api/register', () => {
     );
 
     expect(res.status).toBe(201);
-    expect(userUpsert).toHaveBeenCalledWith(
+    expect(userCreate).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { email: 'guest@example.com' },
-        create: expect.objectContaining({ authUid: 'uid-123', role: 'GUEST' }),
-        update: expect.objectContaining({
+        data: expect.objectContaining({
           authUid: 'uid-123',
           name: 'Ada Lovelace',
           phone: '432-555-1212',
+          role: 'GUEST',
         }),
       }),
     );
@@ -110,38 +136,52 @@ describe('POST /api/register', () => {
       request({
         firstName: 'Ada',
         lastName: 'Lovelace',
-        email: 'sp3158@sbcglobal.net',
+        email: 'seeded-admin@example.test',
         accountType: 'guest',
       }),
     );
 
-    expect(userFindUnique).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { email: 'real@example.com' } }),
+    expect(userFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { email: { equals: 'real@example.com', mode: 'insensitive' } },
+      }),
     );
-    expect(userUpsert).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { email: 'real@example.com' } }),
+    expect(userCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ email: 'real@example.com' }) }),
     );
   });
 
   it('refuses to create an account when the token carries no verified email', async () => {
     // The body still offers one. Accepting it was the account-takeover path:
-    // the RAH admin row has a NULL authUid, so a rebind would have handed over
-    // an ADMIN role to whoever asked first.
+    // a seeded admin row with a NULL authUid would hand ADMIN to the first
+    // caller if the route trusted a body-supplied address.
     signedInAs({ email: null });
 
     const res = await POST(
       request({
         firstName: 'Ada',
         lastName: 'Lovelace',
-        email: 'sp3158@sbcglobal.net',
+        email: 'seeded-admin@example.test',
         accountType: 'guest',
       }),
     );
 
     expect(res.status).toBe(400);
     await expect(res.json()).resolves.toMatchObject({ code: 'VERIFIED_EMAIL_REQUIRED' });
-    expect(userUpsert).not.toHaveBeenCalled();
+    expect(userCreate).not.toHaveBeenCalled();
     expect(guestUpsert).not.toHaveBeenCalled();
+  });
+
+  it('refuses an unverified token email even when it is non-null', async () => {
+    signedInAs({ emailVerified: false });
+
+    const res = await POST(
+      request({ firstName: 'Ada', lastName: 'Lovelace', accountType: 'guest' }),
+    );
+
+    expect(res.status).toBe(400);
+    expect(userCreate).not.toHaveBeenCalled();
+    expect(userUpdateMany).not.toHaveBeenCalled();
   });
 
   it('never lets a staff signup elect its own role', async () => {
@@ -160,9 +200,8 @@ describe('POST /api/register', () => {
 
     expect(res.status).toBe(201);
 
-    const [{ create, update }] = userUpsert.mock.calls[0];
-    expect(create.role).toBe('GUEST');
-    expect(update).not.toHaveProperty('role');
+    const [{ data }] = userCreate.mock.calls[0];
+    expect(data.role).toBe('GUEST');
 
     expect(staffApplicationCreate).toHaveBeenCalledWith({
       data: { userId: 'user-1', requestedType: 'cleaner', status: 'PENDING' },
@@ -183,7 +222,7 @@ describe('POST /api/register', () => {
     );
 
     expect(res.status).toBe(400);
-    expect(userUpsert).not.toHaveBeenCalled();
+    expect(userCreate).not.toHaveBeenCalled();
     expect(staffApplicationCreate).not.toHaveBeenCalled();
   });
 
@@ -191,18 +230,20 @@ describe('POST /api/register', () => {
     // Re-registering must not touch role or isActive. An owner who submits the
     // form again stays an owner; a deactivated account stays deactivated.
     signedInAs({ email: 'owner@example.com' });
-    userFindUnique.mockResolvedValue({ id: 'user-9', authUid: 'uid-123' });
+    userFindFirst.mockResolvedValue({ id: 'user-9', authUid: 'uid-123', isActive: true });
+    userFindUniqueOrThrow.mockResolvedValue({
+      id: 'user-9', email: 'owner@example.com', role: 'OWNER', name: 'Owner',
+    });
 
     await POST(request({ firstName: 'Ada', lastName: 'Lovelace', accountType: 'guest' }));
 
-    const [{ update }] = userUpsert.mock.calls[0];
-    expect(update).not.toHaveProperty('role');
-    expect(update).not.toHaveProperty('isActive');
+    expect(userCreate).not.toHaveBeenCalled();
+    expect(userUpdateMany).not.toHaveBeenCalled();
   });
 
   it('refuses to rebind a row that already belongs to a different uid', async () => {
     signedInAs({ uid: 'attacker-uid', email: 'shared@example.com' });
-    userFindUnique.mockResolvedValue({ id: 'user-9', authUid: 'someone-else' });
+    userFindMany.mockResolvedValue([{ id: 'user-9', authUid: 'someone-else', isActive: true }]);
 
     const res = await POST(
       request({ firstName: 'Ada', lastName: 'Lovelace', accountType: 'guest' }),
@@ -210,30 +251,49 @@ describe('POST /api/register', () => {
 
     expect(res.status).toBe(409);
     await expect(res.json()).resolves.toMatchObject({ code: 'EMAIL_ALREADY_REGISTERED' });
-    expect(userUpsert).not.toHaveBeenCalled();
+    expect(userCreate).not.toHaveBeenCalled();
   });
 
   it('lets a verified caller claim an unclaimed row, keeping its role', async () => {
     // The positive control for the rule above, and the case that unblocks the
-    // RAH admin: seeded in Postgres, authUid NULL, no way to sign in.
-    signedInAs({ uid: 'steven-uid', email: 'sp3158@sbcglobal.net' });
-    userFindUnique.mockResolvedValue({ id: 'user-admin', authUid: null });
-    userUpsert.mockResolvedValue({
+    // Seeded in Postgres, authUid NULL, with no identity link yet.
+    signedInAs({ uid: 'owner-uid', email: 'seeded-admin@example.test' });
+    userFindMany.mockResolvedValue([{ id: 'user-admin', authUid: null, isActive: true }]);
+    userUpdateMany.mockResolvedValue({ count: 1 });
+    userFindUniqueOrThrow.mockResolvedValue({
       id: 'user-admin',
-      email: 'sp3158@sbcglobal.net',
+      email: 'seeded-admin@example.test',
       role: 'ADMIN',
-      name: 'Steven',
+      name: 'Owner',
     });
 
     const res = await POST(
-      request({ firstName: 'Steven', lastName: 'P', accountType: 'guest' }),
+      request({ firstName: 'Owner', lastName: 'Operator', accountType: 'guest' }),
     );
 
     expect(res.status).toBe(201);
-    const [{ update }] = userUpsert.mock.calls[0];
-    expect(update.authUid).toBe('steven-uid');
-    expect(update).not.toHaveProperty('role');
+    expect(userUpdateMany).toHaveBeenCalledWith({
+      where: { id: 'user-admin', authUid: null, isActive: true },
+      data: { authUid: 'owner-uid' },
+    });
+    expect(userCreate).not.toHaveBeenCalled();
     await expect(res.json()).resolves.toMatchObject({ user: { role: 'ADMIN' } });
+  });
+
+  it('fails closed when case-insensitive email lookup is ambiguous', async () => {
+    signedInAs({ email: 'owner@example.test' });
+    userFindMany.mockResolvedValue([
+      { id: 'user-1', authUid: null, isActive: true },
+      { id: 'user-2', authUid: null, isActive: true },
+    ]);
+
+    const res = await POST(
+      request({ firstName: 'Owner', lastName: 'Operator', accountType: 'guest' }),
+    );
+
+    expect(res.status).toBe(409);
+    expect(userUpdateMany).not.toHaveBeenCalled();
+    expect(userCreate).not.toHaveBeenCalled();
   });
 
   it('does not write a CRM guest record for a staff signup', async () => {
@@ -262,6 +322,6 @@ describe('POST /api/register', () => {
     const res = await POST(request({ firstName: 'Ada', lastName: 'Lovelace' }));
 
     expect(res.status).toBe(401);
-    expect(userUpsert).not.toHaveBeenCalled();
+    expect(userCreate).not.toHaveBeenCalled();
   });
 });

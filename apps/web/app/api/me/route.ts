@@ -12,7 +12,7 @@
  *
  * The role now comes from the server, through the hardened path in
  * `@/lib/api-auth`: echo-auth verifies identity (RS256/JWKS, no Google billing),
- * and the role comes from the token claim or the Postgres `User` table. The
+ * and the role comes from the Postgres `User` table. The
  * browser cannot reach Postgres, so this endpoint is how it asks.
  *
  * Deliberately NOT a role gate. Any authenticated caller may ask who they are —

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireOneOfRoles } from '@/lib/api-auth';
 import { getDashboardStats } from '@/lib/dashboard-stats';
-import { isUnrestricted, propertyScopeFor } from '@/lib/tenant-scope';
+import { isUnrestricted, propertyScopeFor, scopeAllows } from '@/lib/tenant-scope';
 
 // Every figure here used to be fabricated: invented monthly revenue, three
 // made-up properties, five made-up bookings and a hardcoded task summary. The
@@ -49,9 +49,18 @@ export async function GET(request: NextRequest) {
   if (auth.error) return auth.error;
   try {
     const period = request.nextUrl.searchParams.get('period') ?? 'current_month';
-    const stats = await getDashboardStats(period);
-
     const scope = await propertyScopeFor(auth.user);
+    const requestedPropertyId = request.nextUrl.searchParams.get('propertyId');
+    if (requestedPropertyId && !scopeAllows(scope, requestedPropertyId)) {
+      return NextResponse.json(
+        { error: 'Property is outside your assignment scope', code: 'PROPERTY_FORBIDDEN' },
+        { status: 403 },
+      );
+    }
+
+    const effectiveScope = requestedPropertyId ? [requestedPropertyId] : scope;
+    const stats = await getDashboardStats(period, effectiveScope);
+
     if (isUnrestricted(scope)) {
       return NextResponse.json(stats);
     }
@@ -68,16 +77,19 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       ...visible,
       scope: 'assigned_properties',
-      property_count_in_scope: scope.length,
+      property_count_in_scope: effectiveScope?.length ?? 0,
+      property_ids_in_scope: effectiveScope ?? [],
       // Said out loud, so a restricted caller cannot mistake a partial view for
       // the whole picture.
       note:
         'Financial figures are omitted for this role, and counts cover only your ' +
         'assigned properties.',
     });
-  } catch (error: any) {
+  } catch (error) {
+    const incidentId = crypto.randomUUID();
+    console.error('[dashboard/stats] failed', { incidentId, error });
     return NextResponse.json(
-      { error: 'Failed to generate dashboard stats', detail: error.message },
+      { error: 'Failed to generate dashboard stats', code: 'DASHBOARD_UNAVAILABLE', incidentId },
       { status: 500 },
     );
   }

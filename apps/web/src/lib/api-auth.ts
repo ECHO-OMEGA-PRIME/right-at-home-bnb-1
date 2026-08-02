@@ -11,6 +11,7 @@ export type ApiUserRole = 'guest' | 'worker' | 'admin' | 'owner';
 export interface ApiUser {
   uid: string;
   email: string | null;
+  emailVerified: boolean;
   role: ApiUserRole;
   workerType: string | null;
   isDevMode: boolean;
@@ -90,6 +91,7 @@ function parseDevToken(token: string): ApiUser | null {
   return {
     uid: cleanToken,
     email: null,
+    emailVerified: false,
     role,
     workerType,
     isDevMode: true,
@@ -104,6 +106,7 @@ function parseDevToken(token: string): ApiUser | null {
 interface DecodedIdentity {
   uid: string;
   email?: string | null;
+  email_verified?: boolean;
   role?: unknown;
   workerType?: unknown;
 }
@@ -171,6 +174,7 @@ async function verifyEchoAuthToken(token: string): Promise<DecodedIdentity | nul
     return {
       uid,
       email: typeof payload.email === 'string' ? payload.email : null,
+      email_verified: payload.email_verified === true,
       role: payload.role,
       workerType: (payload as Record<string, unknown>).workerType,
     };
@@ -179,7 +183,17 @@ async function verifyEchoAuthToken(token: string): Promise<DecodedIdentity | nul
     // jose tags signature/claim failures with a stable `code`; anything without
     // one is a transport or configuration failure and must fail CLOSED.
     const code = (error as { code?: string }).code;
-    if (typeof code === 'string' && code.startsWith('ERR_JW')) return null;
+    const invalidTokenCodes = new Set([
+      'ERR_JOSE_ALG_NOT_ALLOWED',
+      'ERR_JWS_INVALID',
+      'ERR_JWS_SIGNATURE_VERIFICATION_FAILED',
+      'ERR_JWT_CLAIM_VALIDATION_FAILED',
+      'ERR_JWT_EXPIRED',
+      'ERR_JWT_INVALID',
+      'ERR_JWK_INVALID',
+      'ERR_JWKS_NO_MATCHING_KEY',
+    ]);
+    if (typeof code === 'string' && invalidTokenCodes.has(code)) return null;
     throw new IdentityProviderUnavailableError(error);
   }
 }
@@ -215,31 +229,24 @@ export async function verifyAuthToken(token: string | undefined): Promise<ApiUse
     if (!adminApp) return null;
 
     try {
-      decodedToken = (await getAuth(adminApp).verifyIdToken(
+      const firebaseToken = (await getAuth(adminApp).verifyIdToken(
         token,
         true
       )) as unknown as DecodedIdentity;
+      decodedToken = {
+        ...firebaseToken,
+        email_verified: firebaseToken.email_verified === true,
+      };
     } catch {
       // A failure here genuinely means "not authenticated".
       return null;
     }
   }
 
-  // Stage 2 - authorization. The identity is already proven; only the role is
-  // outstanding. Prefer the claim, which travels inside the verified token and
-  // needs no external read, so authorization survives an outage of the role
-  // store entirely. Both issuers carry it in the same place.
-  const claimRole = asRole(decodedToken.role);
-  if (claimRole) {
-    const claimWorkerType = decodedToken.workerType;
-    return {
-      uid: decodedToken.uid,
-      email: decodedToken.email || null,
-      role: claimRole,
-      workerType: typeof claimWorkerType === 'string' ? claimWorkerType : null,
-      isDevMode: false,
-    };
-  }
+  // Stage 2 - authorization. Postgres is the sole role/deactivation authority.
+  // A signed role claim can still be stale after a downgrade, and even a stale
+  // guest claim must not let a deactivated account continue through guest APIs.
+  // Claims may describe identity metadata, but they never bypass this read.
 
   // No claim on the token. Fall back to the POSTGRES role store, not Firestore.
   //
@@ -259,16 +266,18 @@ export async function verifyAuthToken(token: string | undefined): Promise<ApiUse
   // Imported lazily, mirroring how firebase-admin is loaded above, so the
   // common path -- a token that already carries its role claim -- never pulls
   // the Prisma client into the request at all.
-  let userRow: { role: string } | null;
+  let userRow: { role: string; isActive: boolean } | null;
   try {
     const { prisma } = await import('@/lib/prisma');
     userRow = await prisma.user.findFirst({
-      where: { authUid: decodedToken.uid, isActive: true },
-      select: { role: true },
+      where: { authUid: decodedToken.uid },
+      select: { role: true, isActive: true },
     });
   } catch (error) {
     throw new RoleStoreUnavailableError(error);
   }
+
+  if (userRow && !userRow.isActive) return null;
 
   // Postgres stores roles upper-case, and its vocabulary is wider than the
   // app's ApiUserRole union: CLEANER and MAINTENANCE are both 'worker'. Map
@@ -279,6 +288,7 @@ export async function verifyAuthToken(token: string | undefined): Promise<ApiUse
   return {
     uid: decodedToken.uid,
     email: decodedToken.email || null,
+    emailVerified: decodedToken.email_verified === true,
     role,
     // workerType lives on WorkerProfile, not User. The custom-claim path above
     // carries it, which is the path every provisioned account uses; a

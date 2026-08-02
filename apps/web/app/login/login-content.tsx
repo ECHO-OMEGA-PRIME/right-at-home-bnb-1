@@ -14,11 +14,12 @@ import Image from 'next/image';
 import { Eye, EyeOff, Lock, Mail, ArrowRight, Code } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { signInWithGoogle, signInWithApple, signInWithEmail } from '@/lib/auth';
+import { safeCallbackPath } from '@/lib/safe-redirect';
 
 export default function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
+  const callbackUrl = safeCallbackPath(searchParams.get('callbackUrl'));
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -30,13 +31,17 @@ export default function LoginContent() {
     setIsLoading(true);
 
     try {
-      // echo-auth first, Firebase only for accounts it does not know yet.
+      // Email/password sessions are owned by echo-auth. Google/Apple remain
+      // separate explicit buttons during the migration window.
       const user = await signInWithEmail(email, password);
 
       if (user) {
         localStorage.setItem('user_role', user.role || loginType);
         toast.success('Welcome back!');
-        router.push(callbackUrl);
+        // A hard navigation remounts AuthProvider, which hydrates the HttpOnly
+        // echo-auth session from /api/me. A client-only push would preserve the
+        // pre-login context instance (Firebase user = null) across navigation.
+        window.location.assign(callbackUrl);
       }
     } catch (error: any) {
       console.error('Login error:', error);

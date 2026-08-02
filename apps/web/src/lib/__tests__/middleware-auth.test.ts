@@ -16,8 +16,9 @@
  */
 
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { NextRequest } from 'next/server';
 
-import { __testing__ } from '../../../middleware';
+import { __testing__, middleware } from '../../../middleware';
 
 const { secretMatches, looksLikeLiveIdToken, looksLikeEchoAuthToken, looksLikeAcceptableToken } =
   __testing__;
@@ -185,5 +186,108 @@ describe('looksLikeAcceptableToken', () => {
     expect(
       looksLikeAcceptableToken(idToken({ ...echo(), iss: 'https://auth.evil.test' })),
     ).toBe(false);
+  });
+});
+
+describe('middleware auth route lifecycle', () => {
+  function post(pathname: string, cookie?: string) {
+    return middleware(
+      new NextRequest(`https://rah.example${pathname}`, {
+        method: 'POST',
+        headers: cookie ? { cookie } : undefined,
+      }),
+    );
+  }
+
+  it.each(['/api/auth/login', '/api/auth/signup'])(
+    'allows unauthenticated POST %s to reach its route handler',
+    async (pathname) => {
+      const response = await post(pathname);
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('x-middleware-next')).toBe('1');
+    },
+  );
+
+  it('lets logout clear a missing or malformed session cookie', async () => {
+    expect((await post('/api/auth/logout')).headers.get('x-middleware-next')).toBe('1');
+    expect(
+      (await post('/api/auth/logout', 'rah-auth-token=malformed')).headers.get(
+        'x-middleware-next',
+      ),
+    ).toBe('1');
+  });
+
+  it.each(['/api/auth/link', '/api/me'])(
+    'keeps unauthenticated POST %s behind the API gate',
+    async (pathname) => {
+      const response = await post(pathname);
+
+      expect(response.status).toBe(401);
+      expect(response.headers.get('x-middleware-next')).toBeNull();
+    },
+  );
+
+  it('does not make non-POST auth requests public by path alone', async () => {
+    const response = await middleware(
+      new NextRequest('https://rah.example/api/auth/login', { method: 'GET' }),
+    );
+
+    expect(response.status).toBe(401);
+  });
+
+  it('rejects a forged JWT-shaped cookie after authoritative verification', async () => {
+    const forged = idToken({
+      sub: 'attacker',
+      aud: PROJECT,
+      iss: 'https://auth.echo-op.com',
+      exp: Math.floor(Date.now() / 1000) + 3600,
+    });
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 401 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const response = await post('/api/bookings', `rah-auth-token=${forged}`);
+
+    expect(response.status).toBe(401);
+    expect(fetchMock).toHaveBeenCalledWith(
+      new URL('https://rah.example/api/me'),
+      expect.objectContaining({ method: 'GET', cache: 'no-store' }),
+    );
+  });
+
+  it('uses the database-backed role from /api/me for admin-only APIs', async () => {
+    const token = idToken({
+      sub: 'worker',
+      aud: PROJECT,
+      iss: 'https://auth.echo-op.com',
+      exp: Math.floor(Date.now() / 1000) + 3600,
+    });
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ role: 'worker' }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      ),
+    );
+
+    const response = await post('/api/admin/users', `rah-auth-token=${token}`);
+
+    expect(response.status).toBe(403);
+  });
+
+  it('fails unavailable instead of trusting a token when verification is down', async () => {
+    const token = idToken({
+      sub: 'user',
+      aud: PROJECT,
+      iss: 'https://auth.echo-op.com',
+      exp: Math.floor(Date.now() / 1000) + 3600,
+    });
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network down')));
+
+    const response = await post('/api/bookings', `rah-auth-token=${token}`);
+
+    expect(response.status).toBe(503);
   });
 });

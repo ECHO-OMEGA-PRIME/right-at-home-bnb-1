@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import type { PropertyScope } from '@/lib/tenant-scope';
 
 /**
  * Dashboard statistics computed from real data (queue #26855).
@@ -52,7 +53,10 @@ export interface DashboardStats {
   total_bookings_this_month: number;
 }
 
-export async function getDashboardStats(period = 'current_month'): Promise<DashboardStats> {
+export async function getDashboardStats(
+  period = 'current_month',
+  propertyScope: PropertyScope = null,
+): Promise<DashboardStats> {
   const now = new Date();
   // Six-month window ending with the current month, matching the shape the
   // dashboard chart previously rendered from its hardcoded array.
@@ -60,18 +64,26 @@ export async function getDashboardStats(period = 'current_month'): Promise<Dashb
   const currentMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
   const nextMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
   const prevMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
+  const propertyWhere = propertyScope === null ? {} : { id: { in: propertyScope } };
+  const childWhere = propertyScope === null ? {} : { propertyId: { in: propertyScope } };
 
   const [properties, windowBookings, activeBookings, recent, cleaningByStatus, workByStatus] =
     await Promise.all([
-      prisma.property.findMany({ select: { id: true, name: true } }),
+      prisma.property.findMany({ where: propertyWhere, select: { id: true, name: true } }),
       prisma.booking.findMany({
-        where: { checkIn: { gte: windowStart, lt: nextMonthStart } },
+        where: { ...childWhere, checkIn: { gte: windowStart, lt: nextMonthStart } },
         select: { propertyId: true, checkIn: true, totalPrice: true, totalNights: true, platform: true },
       }),
       prisma.booking.count({
-        where: { checkIn: { lte: now }, checkOut: { gt: now }, status: { in: ACTIVE_STATUSES } },
+        where: {
+          ...childWhere,
+          checkIn: { lte: now },
+          checkOut: { gt: now },
+          status: { in: ACTIVE_STATUSES },
+        },
       }),
       prisma.booking.findMany({
+        where: childWhere,
         orderBy: { createdAt: 'desc' },
         take: 5,
         include: {
@@ -79,8 +91,16 @@ export async function getDashboardStats(period = 'current_month'): Promise<Dashb
           property: { select: { name: true } },
         },
       }),
-      prisma.cleaningJob.groupBy({ by: ['status'], _count: { _all: true } }),
-      prisma.workOrder.groupBy({ by: ['status'], _count: { _all: true } }),
+      prisma.cleaningJob.groupBy({
+        by: ['status'],
+        where: childWhere,
+        _count: { _all: true },
+      }),
+      prisma.workOrder.groupBy({
+        by: ['status'],
+        where: childWhere,
+        _count: { _all: true },
+      }),
     ]);
 
   // ---- monthly buckets over the six-month window

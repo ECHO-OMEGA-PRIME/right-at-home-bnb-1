@@ -14,9 +14,9 @@
  *     wrote a Firestore document keyed on whatever email sat in a form field.
  *     Reading `body.email` here -- even as a fallback for a token that carries
  *     no email -- would let a caller name any existing account and have this
- *     route rebind that row's `authUid` to their own uid. The RAH admin row
- *     (`sp3158@sbcglobal.net`) currently has a NULL `authUid`, so that
- *     fallback was a one-request path to admin.
+ *     route rebind that row's `authUid` to their own uid. A pre-provisioned
+ *     administrator row with a NULL `authUid` would make that fallback a
+ *     one-request path to admin.
  *
  *  2. WHAT the caller may become never comes from the request at all. The form
  *     posts `accountType: 'staff'` with a `staffType`; the old code wrote that
@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
 
     // Rule 1. The token is the ONLY source of the email. No body fallback.
     const email = caller.email?.trim().toLowerCase();
-    if (!email) {
+    if (!email || !caller.emailVerified) {
       return NextResponse.json(
         {
           error:
@@ -110,10 +110,32 @@ export async function POST(request: NextRequest) {
     // address with different uids. Claiming a NULL row is the legitimate case
     // and the one that matters in practice: RAH's admin was seeded into
     // Postgres with no auth account at all and cannot otherwise sign in.
-    const existing = await prisma.user.findUnique({
-      where: { email },
-      select: { id: true, authUid: true },
+    const exactIdentity = await prisma.user.findFirst({
+      where: { authUid: caller.uid },
+      select: { id: true, authUid: true, isActive: true },
     });
+
+    const candidates = exactIdentity
+      ? []
+      : await prisma.user.findMany({
+          where: { email: { equals: email, mode: 'insensitive' } },
+          select: { id: true, authUid: true, isActive: true },
+          take: 2,
+        });
+    if (!exactIdentity && candidates.length > 1) {
+      return NextResponse.json(
+        { error: 'Account identity is ambiguous.', code: 'EMAIL_ALREADY_REGISTERED' },
+        { status: 409 },
+      );
+    }
+    const existing = exactIdentity ?? candidates[0] ?? null;
+
+    if (existing && !existing.isActive) {
+      return NextResponse.json(
+        { error: 'This account is inactive.', code: 'ACCOUNT_INACTIVE' },
+        { status: 403 },
+      );
+    }
 
     if (existing?.authUid && existing.authUid !== caller.uid) {
       return NextResponse.json(
@@ -125,25 +147,47 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Rule 2. `role` and `isActive` appear ONLY in `create`. An existing row
-    // keeps whatever an admin gave it -- registering again must not demote an
-    // owner to GUEST, and must not re-enable an account somebody deactivated.
-    const user = await prisma.user.upsert({
-      where: { email },
-      update: {
-        authUid: caller.uid,
-        name: displayName,
-        phone,
-      },
-      create: {
-        email,
-        authUid: caller.uid,
-        name: displayName,
-        phone,
-        role: 'GUEST',
-        isActive: true,
-      },
-    });
+    let user: { id: string; email: string; role: string; name: string };
+    if (existing) {
+      if (existing.authUid === null) {
+        const claimed = await prisma.user.updateMany({
+          where: { id: existing.id, authUid: null, isActive: true },
+          data: { authUid: caller.uid },
+        });
+        if (claimed.count !== 1) {
+          const winner = await prisma.user.findUnique({
+            where: { id: existing.id },
+            select: { authUid: true },
+          });
+          if (winner?.authUid !== caller.uid) {
+            return NextResponse.json(
+              { error: 'An account already exists for this email address.', code: 'EMAIL_ALREADY_REGISTERED' },
+              { status: 409 },
+            );
+          }
+        }
+      }
+
+      // A seeded/privileged row keeps all administrator-managed profile fields.
+      // Registration proves identity linkage; it is not a profile-edit route.
+      user = await prisma.user.findUniqueOrThrow({
+        where: { id: existing.id },
+        select: { id: true, email: true, role: true, name: true },
+      });
+    } else {
+      // Rule 2. A brand-new self-service account starts at least privilege.
+      user = await prisma.user.create({
+        data: {
+          email,
+          authUid: caller.uid,
+          name: displayName,
+          phone,
+          role: 'GUEST',
+          isActive: true,
+        },
+        select: { id: true, email: true, role: true, name: true },
+      });
+    }
 
     if (staffType) {
       await prisma.staffApplication.create({
@@ -200,11 +244,13 @@ export async function POST(request: NextRequest) {
       },
     );
   } catch (error) {
-    console.error('Error registering account:', error);
+    const incidentId = crypto.randomUUID();
+    console.error('[register] failed', { incidentId, error });
     return NextResponse.json(
       {
         error: 'Failed to register account',
-        details: error instanceof Error ? error.message : 'Unknown error',
+        code: 'REGISTRATION_UNAVAILABLE',
+        incidentId,
       },
       { status: 500 },
     );

@@ -44,17 +44,19 @@ afterEach(() => {
 });
 
 describe('POST /api/auth/login', () => {
-  it('forwards to echo-auth and returns the session', async () => {
+  it('forwards to echo-auth and stores the session server-side', async () => {
     fetchMock.mockResolvedValue(upstream(200, SESSION));
 
     const res = await POST(request({ email: ' Guest@Example.com ', password: 'hunter2' }));
 
     expect(res.status).toBe(200);
-    await expect(res.json()).resolves.toMatchObject({
-      access_token: SESSION.access_token,
-      uid: SESSION.uid,
-      expires_in: 3600,
-    });
+    await expect(res.json()).resolves.toEqual({ ok: true });
+    const cookie = res.headers.get('set-cookie') ?? '';
+    expect(cookie).toContain('rah-auth-token=');
+    expect(cookie).toContain('HttpOnly');
+    expect(cookie).toContain('SameSite=strict');
+    expect(cookie).toContain('Max-Age=3600');
+    expect(cookie).not.toContain(SESSION.refresh_token);
 
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe('https://auth.echo-op.com/v1/login');
@@ -70,6 +72,21 @@ describe('POST /api/auth/login', () => {
     fetchMock.mockResolvedValue(upstream(200, SESSION));
     const res = await POST(request({ email: 'a@b.c', password: 'x' }));
     expect(res.headers.get('Cache-Control')).toBe('no-store');
+  });
+
+  it('never exposes bearer or refresh tokens to JavaScript', async () => {
+    fetchMock.mockResolvedValue(upstream(200, SESSION));
+    const res = await POST(request({ email: 'a@b.c', password: 'x' }));
+    const body = JSON.stringify(await res.json());
+    expect(body).not.toContain(SESSION.access_token);
+    expect(body).not.toContain(SESSION.refresh_token);
+    expect(body).not.toContain(SESSION.uid);
+  });
+
+  it('bounds cookie lifetime to one hour even if upstream reports longer', async () => {
+    fetchMock.mockResolvedValue(upstream(200, { ...SESSION, expires_in: 86_400 }));
+    const res = await POST(request({ email: 'a@b.c', password: 'x' }));
+    expect(res.headers.get('set-cookie')).toContain('Max-Age=3600');
   });
 
   it('returns 401 when echo-auth rejects the credentials', async () => {
