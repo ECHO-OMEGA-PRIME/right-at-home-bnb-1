@@ -2,7 +2,7 @@
  * Server-side Firebase Admin access for RAH Midland.
  * Locked to the `echo-prime-ai` project — the canonical ECHO auth project that
  * actually holds the RAH users (confirmed from the live production client
- * bundle). The prior value 'rightathome-prod' pointed at an inaccessible/unused
+ * bundle). The prior project value pointed at an inaccessible/unused
  * project and broke server-side token verification. verifyIdToken() only needs
  * the projectId (it validates against Google's public certs), so we initialize
  * with projectId alone when no service account is mounted — this keeps auth

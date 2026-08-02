@@ -1,6 +1,6 @@
 /**
  * Firebase configuration for Right at Home BnB CloudSync.
- * Configuration is environment-only and restricted to rightathome-prod.
+ * Configuration is environment-only and restricted to echo-prime-ai.
  */
 
 import { FirebaseApp, FirebaseOptions, getApp, getApps, initializeApp } from 'firebase/app';
@@ -14,7 +14,7 @@ import {
   persistentMultipleTabManager,
 } from 'firebase/firestore';
 
-const EXPECTED_PROJECT_ID = 'rightathome-prod';
+const EXPECTED_PROJECT_ID = 'echo-prime-ai';
 
 function value(...candidates: Array<string | undefined>): string {
   return candidates.find((candidate) => candidate?.trim())?.trim() ?? '';

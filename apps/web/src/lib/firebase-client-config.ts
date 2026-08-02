@@ -4,7 +4,7 @@ import type { FirebaseOptions } from 'firebase/app';
 // authenticates its real users against `echo-prime-ai` — confirmed by extracting
 // the Firebase config from the live rah-midland.com bundle (projectId=echo-prime-ai,
 // sender 249995513427). Per ECHO doctrine "ALL sites use ONE project echo-prime-ai".
-// The prior value 'rightathome-prod' was a stale assumption pointing at an
+// The prior project value was a stale assumption pointing at an
 // inaccessible project, which is what broke login. The project-match security
 // check below is preserved — just repointed to the project that holds the users.
 export const RAH_FIREBASE_PROJECT_ID = 'echo-prime-ai';
