@@ -122,6 +122,9 @@ jobs:
       - name: Typecheck web
         run: pnpm --dir apps/web exec tsc --noEmit
 
+      - name: Build mobile workspace dependencies
+        run: pnpm --filter @rightathome/shared build
+
       - name: Typecheck mobile
         run: pnpm --dir apps/mobile exec tsc --noEmit
 
