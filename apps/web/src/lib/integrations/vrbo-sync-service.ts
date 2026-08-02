@@ -426,10 +426,24 @@ export async function syncPropertyIcal(propertyId: string, vrboListingId: string
               console.error(`[vrbo-sync] Automation error: ${autoErr.message}`);
             }
           }
-        }
-      } catch (err: any) {
-        result.errors.push(`Booking ${booking.uid}: ${err.message}`);
       }
+    } catch (err: any) {
+      // Two sync workers can observe the same UID before either commits. The
+      // database unique index is the arbiter; treat that race as an idempotent
+      // skip after confirming the winning row, rather than surfacing a 500.
+      if (err?.code === 'P2002') {
+        const winner = await prisma.booking.findFirst({
+          where: { platform: 'VRBO', externalRef: booking.uid },
+          select: { id: true },
+        });
+        if (winner) {
+          result.skipped++;
+          console.warn(`[vrbo-sync] idempotency race for ${booking.uid}; existing booking retained`);
+          continue;
+        }
+      }
+      result.errors.push(`Booking ${booking.uid}: ${err.message}`);
+    }
     }
 
     // Update sync timestamp
