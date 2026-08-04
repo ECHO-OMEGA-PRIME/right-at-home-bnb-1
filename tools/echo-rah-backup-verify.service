@@ -1,0 +1,49 @@
+[Unit]
+Description=RAH production database backup with live restore verification
+Documentation=file:/opt/rah-backup-verify/current/BACKUP_VERIFY.md
+Wants=network-online.target
+After=network-online.target postgresql@17-main.service
+OnFailure=echo-rah-backup-alert@%n.service
+
+[Service]
+Type=oneshot
+User=forge
+Group=forge
+Environment=PYTHONDONTWRITEBYTECODE=1
+LoadCredential=rah_db_config:/etc/rah-backup-verify.env
+ExecStart=/opt/rah-backup-verify/current/backup_verify.sh
+StandardInput=null
+StandardOutput=journal
+StandardError=journal
+UMask=0077
+TimeoutStartSec=2h
+MemoryMax=2G
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+NoNewPrivileges=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectClock=true
+ProtectHostname=true
+ProtectKernelLogs=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+ProtectProc=invisible
+ProcSubset=pid
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+ReadWritePaths=/var/backups/rah
+
+# Deliberately no Restart=. The daily timer is the only normal trigger.

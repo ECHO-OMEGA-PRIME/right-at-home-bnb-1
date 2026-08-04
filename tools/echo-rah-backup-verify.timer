@@ -1,0 +1,13 @@
+[Unit]
+Description=Run the verified RAH database backup daily
+Documentation=file:/opt/rah-backup-verify/current/BACKUP_VERIFY.md
+
+[Timer]
+OnCalendar=*-*-* 09:15:00 UTC
+Persistent=true
+RandomizedDelaySec=10m
+AccuracySec=1m
+Unit=echo-rah-backup-verify.service
+
+[Install]
+WantedBy=timers.target

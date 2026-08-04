@@ -14,3 +14,16 @@
 *.mp3 binary
 *.mp4 binary
 *.pdf binary
+
+# FORGE runtime assets must keep Unix line endings even from Windows clones.
+tools/backup_verify.sh text eol=lf
+tools/deploy_backup_verify.sh text eol=lf
+tools/backup_watchdog.py text eol=lf
+tools/test_backup_watchdog.py text eol=lf
+tools/prepare_pg_client_env.py text eol=lf
+tools/test_prepare_pg_client_env.py text eol=lf
+tools/echo-rah-backup-alert@.service text eol=lf
+tools/echo-rah-backup-silence.service text eol=lf
+tools/echo-rah-backup-silence.timer text eol=lf
+tools/echo-rah-backup-verify.service text eol=lf
+tools/echo-rah-backup-verify.timer text eol=lf
