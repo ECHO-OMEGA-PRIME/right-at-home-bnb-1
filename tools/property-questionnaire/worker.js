@@ -41,7 +41,6 @@ const PROPERTIES = [
 ];
 
 const API_BASE = "https://rah-midland.com";
-const API_SECRET = "rah-vrbo-sync-2026";
 
 function renderForm() {
   const propertyCards = PROPERTIES.map((p, i) => `
@@ -582,13 +581,20 @@ export default {
     if (url.pathname === '/api/save' && request.method === 'POST') {
       try {
         const data = await request.json();
+        const apiSecret = String(env.ADMIN_API_SECRET || '').trim();
+        if (!apiSecret) {
+          return Response.json(
+            { ok: false, error: 'Service credential is not configured' },
+            { status: 503 },
+          );
+        }
 
         // Push to RAH database
         const resp = await fetch(`${API_BASE}/api/admin/property-info`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'x-api-secret': API_SECRET,
+            'x-api-secret': apiSecret,
           },
           body: JSON.stringify(data),
         });

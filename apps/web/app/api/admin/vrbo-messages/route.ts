@@ -6,19 +6,24 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { requireOneOfRoles } from '@/lib/api-auth';
+import { adminSecretMatches } from '@/lib/admin-secret';
 
-const API_SECRET = process.env.ADMIN_API_SECRET || 'rah-vrbo-sync-2026';
+async function authorizeOwnerOrService(request: NextRequest) {
+  const supplied = request.headers.get('x-api-secret');
+  if (supplied) {
+    return adminSecretMatches(supplied)
+      ? null
+      : NextResponse.json({ error: 'Invalid API secret' }, { status: 403 });
+  }
 
-function verifySecret(request: NextRequest): boolean {
-  const secret = request.headers.get('x-api-secret');
-  return secret === API_SECRET;
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  return auth.error ?? null;
 }
 
 export async function GET(request: NextRequest) {
-  if (!verifySecret(request)) {
-    const cookie = request.cookies.get('rah-auth-token')?.value;
-    if (!cookie) return NextResponse.json({ error: 'Auth required' }, { status: 401 });
-  }
+  const denied = await authorizeOwnerOrService(request);
+  if (denied) return denied;
 
   try {
     const messages = await prisma.message.findMany({
@@ -42,9 +47,8 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  if (!verifySecret(request)) {
-    return NextResponse.json({ error: 'Invalid API secret' }, { status: 403 });
-  }
+  const denied = await authorizeOwnerOrService(request);
+  if (denied) return denied;
 
   try {
     const body = await request.json();

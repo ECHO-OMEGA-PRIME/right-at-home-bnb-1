@@ -1,7 +1,8 @@
 /**
  * ADMIN_API_SECRET validation tests.
  *
- * The defect these pin: `process.env.ADMIN_API_SECRET || 'rah-vrbo-sync-2026'`.
+ * The defect these pin: accepting a hardcoded fallback when the environment
+ * credential is absent.
  * A missing secret must DENY, never substitute a published default — the whole
  * point is that a misconfigured deployment refuses service instead of accepting
  * a value anyone can read in the repo.
@@ -31,10 +32,9 @@ describe('a missing secret fails CLOSED', () => {
     expect(adminSecretConfigured()).toBe(false);
   });
 
-  it('denies the retired hardcoded fallback specifically', () => {
-    // The literal that used to be accepted when the env var was missing.
+  it('denies a legacy-looking fallback value', () => {
     delete process.env.ADMIN_API_SECRET;
-    expect(adminSecretMatches('rah-vrbo-sync-2026')).toBe(false);
+    expect(adminSecretMatches('legacy-placeholder-secret')).toBe(false);
   });
 
   it('treats an empty/whitespace env var as unset', () => {

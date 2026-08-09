@@ -4,17 +4,21 @@
  * POST — Update property info fields (wifi, parking, check-in/out, rules, etc.)
  */
 
-import crypto from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { requireOneOfRoles } from '@/lib/api-auth';
+import { adminSecretMatches } from '@/lib/admin-secret';
 
-function verifySecret(request: NextRequest): boolean {
-  const expected = process.env.ADMIN_API_SECRET || '';
-  const supplied = request.headers.get('x-api-secret') || '';
-  if (!expected || !supplied) return false;
-  const left = Buffer.from(supplied);
-  const right = Buffer.from(expected);
-  return left.length === right.length && crypto.timingSafeEqual(left, right);
+async function authorizeOwnerOrService(request: NextRequest) {
+  const supplied = request.headers.get('x-api-secret');
+  if (supplied) {
+    return adminSecretMatches(supplied)
+      ? null
+      : NextResponse.json({ error: 'Invalid API secret' }, { status: 403 });
+  }
+
+  const auth = await requireOneOfRoles(request, ['owner', 'admin']);
+  return auth.error ?? null;
 }
 
 const INFO_FIELDS = {
@@ -30,9 +34,8 @@ const INFO_FIELDS = {
 } as const;
 
 export async function GET(request: NextRequest) {
-  if (!verifySecret(request)) {
-    return NextResponse.json({ error: 'Invalid API secret' }, { status: 401 });
-  }
+  const denied = await authorizeOwnerOrService(request);
+  if (denied) return denied;
 
   try {
     const { searchParams } = new URL(request.url);
@@ -63,9 +66,8 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  if (!verifySecret(request)) {
-    return NextResponse.json({ error: 'Invalid API secret' }, { status: 401 });
-  }
+  const denied = await authorizeOwnerOrService(request);
+  if (denied) return denied;
 
   try {
     const body = await request.json();

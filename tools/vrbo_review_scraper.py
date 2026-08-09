@@ -13,7 +13,9 @@ sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 
 CDP_PORT = int(os.environ.get('VRBO_CDP_PORT', '9222'))
 API_BASE = os.environ.get('RAH_API_BASE', 'https://rah-midland.com')
-API_SECRET = os.environ.get('ADMIN_API_SECRET', 'rah-vrbo-sync-2026')
+API_SECRET = os.environ.get('ADMIN_API_SECRET', '').strip()
+if not API_SECRET:
+    raise RuntimeError('ADMIN_API_SECRET is required; refusing to use a fallback credential')
 _msg_id = 0
 
 # Load internal IDs

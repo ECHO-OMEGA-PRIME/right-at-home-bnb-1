@@ -3,8 +3,7 @@
  *
  * Two failures this replaces, both in app/api/admin/vrbo-ical:
  *
- *   1. `process.env.ADMIN_API_SECRET || 'rah-vrbo-sync-2026'` — a fallback to a
- *      PUBLISHED literal. If the env var were ever unset or misspelled, the
+ *   1. A fallback to a published literal. If the env var were ever unset or misspelled, the
  *      route would silently accept a secret anyone can read in the repo. A
  *      missing secret must deny, never substitute a default.
  *
