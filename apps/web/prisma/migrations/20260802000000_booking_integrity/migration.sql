@@ -72,6 +72,39 @@ SELECT "id" AS "duplicateId", "keeperId"
 FROM ranked
 WHERE "rowNumber" > 1;
 
+-- A single class of older imported data predates channel identifiers entirely.
+-- Quarantine only completed VRBO stays where both rows are unidentified and
+-- overlap, keeping the earliest imported record. Current and future stays are
+-- never inferred here: they must be reconciled from the live channel feed.
+CREATE TEMP TABLE "_legacy_overlap_quarantine" ON COMMIT DROP AS
+SELECT DISTINCT ON (candidate."id")
+       candidate."id" AS "duplicateId",
+       keeper."id" AS "keeperId"
+FROM "Booking" AS candidate
+JOIN "Booking" AS keeper
+  ON keeper."id" <> candidate."id"
+ AND keeper."propertyId" = candidate."propertyId"
+ AND UPPER(keeper."platform") = 'VRBO'
+ AND keeper."status" IN ('PENDING', 'CONFIRMED', 'CHECKED_IN')
+ AND keeper."externalRef" IS NULL
+ AND keeper."checkOut" < CURRENT_TIMESTAMP
+ AND (keeper."createdAt", keeper."id") < (candidate."createdAt", candidate."id")
+ AND tsrange(keeper."checkIn", keeper."checkOut", '[)') &&
+     tsrange(candidate."checkIn", candidate."checkOut", '[)')
+WHERE UPPER(candidate."platform") = 'VRBO'
+  AND candidate."status" IN ('PENDING', 'CONFIRMED', 'CHECKED_IN')
+  AND candidate."externalRef" IS NULL
+  AND candidate."checkOut" < CURRENT_TIMESTAMP
+  AND NOT EXISTS (
+    SELECT 1 FROM "_booking_dedupe" AS exact
+    WHERE exact."duplicateId" = candidate."id"
+  )
+ORDER BY candidate."id", keeper."createdAt", keeper."id";
+
+INSERT INTO "_booking_dedupe" ("duplicateId", "keeperId")
+SELECT "duplicateId", "keeperId"
+FROM "_legacy_overlap_quarantine";
+
 UPDATE "WorkOrder" AS child
 SET "bookingId" = d."keeperId", "updatedAt" = CURRENT_TIMESTAMP
 FROM "_booking_dedupe" AS d
@@ -128,6 +161,19 @@ SET "status" = 'CANCELLED',
     "updatedAt" = CURRENT_TIMESTAMP
 FROM "_booking_dedupe" AS d
 WHERE duplicate."id" = d."duplicateId";
+
+UPDATE "Booking" AS duplicate
+SET "internalNotes" = CONCAT_WS(
+      E'\n',
+      NULLIF(duplicate."internalNotes", ''),
+      CONCAT(
+        'Retired by booking-integrity migration; historical unidentified overlap with ',
+        q."keeperId"
+      )
+    ),
+    "updatedAt" = CURRENT_TIMESTAMP
+FROM "_legacy_overlap_quarantine" AS q
+WHERE duplicate."id" = q."duplicateId";
 
 -- The prior migration created the nullable idempotency index. Keep it and add
 -- database-enforced concurrency protection only after the data repair above.

@@ -13,6 +13,14 @@ describe('booking integrity migration', () => {
     expect(migration).toMatch(/tsrange\([^]*\)\s*&&\s*tsrange/i);
   });
 
+  it('quarantines only historical unidentified VRBO overlaps before adding the constraint', () => {
+    expect(migration).toContain('_legacy_overlap_quarantine');
+    expect(migration).toMatch(/candidate\."externalRef"\s+IS\s+NULL/i);
+    expect(migration).toMatch(/keeper\."externalRef"\s+IS\s+NULL/i);
+    expect(migration).toMatch(/candidate\."checkOut"\s*<\s*CURRENT_TIMESTAMP/i);
+    expect(migration).toMatch(/Retired by booking-integrity migration; historical unidentified overlap/i);
+  });
+
   it('uses an advisory-lock trigger to close concurrent insert races', () => {
     expect(migration).toMatch(/pg_advisory_xact_lock\s*\(\s*hashtext\s*\(\s*NEW\."propertyId"/i);
     expect(migration).toMatch(/CREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION\s+"booking_prevent_overlap"/i);
