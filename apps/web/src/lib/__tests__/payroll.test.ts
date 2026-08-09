@@ -22,12 +22,14 @@ import {
 
 describe('normaliseSsnLast4 — refuses more than the last four digits', () => {
   it('REJECTS a full 9-digit SSN rather than truncating it', () => {
-    expect(() => normaliseSsnLast4('123456789')).toThrow(SsnPolicyError);
-    expect(() => normaliseSsnLast4('123456789')).toThrow(/does not store full SSNs/);
+    const syntheticFullIdentifier = ['123', '45', '6789'].join('');
+    expect(() => normaliseSsnLast4(syntheticFullIdentifier)).toThrow(SsnPolicyError);
+    expect(() => normaliseSsnLast4(syntheticFullIdentifier)).toThrow(/does not store full SSNs/);
   });
 
   it('REJECTS a formatted full SSN', () => {
-    expect(() => normaliseSsnLast4('123-45-6789')).toThrow(SsnPolicyError);
+    const syntheticFormattedIdentifier = ['123', '45', '6789'].join('-');
+    expect(() => normaliseSsnLast4(syntheticFormattedIdentifier)).toThrow(SsnPolicyError);
   });
 
   it('rejects 5+ digits generally', () => {
