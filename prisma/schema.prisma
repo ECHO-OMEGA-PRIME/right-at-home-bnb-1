@@ -282,9 +282,9 @@ model CleaningJob {
   checkOutLat Float?
   checkOutLng Float?
 
-  // Checklist & Photos (stored as JSON string)
-  checklistProgress String?
-  photos            String?
+  // Checklist & Photos (validated JSON arrays; see 20260809230000 migration)
+  checklistProgress Json?
+  photos            Json?
 
   // Quality
   score         Int?
@@ -292,7 +292,7 @@ model CleaningJob {
 
   // Notes
   notes  String?
-  issues String?
+  issues Json?
 
   // Duration
   durationMins Int?

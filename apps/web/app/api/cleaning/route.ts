@@ -20,18 +20,22 @@ import {
 
 
 /**
- * Parse a JSON column that may be malformed.
+ * Normalize evidence values returned by Prisma.
  *
- * checklistProgress / photos / issues are JSON STRINGS on CleaningJob rather
- * than relations (see queue #26966). Every read site called JSON.parse bare, so
- * a single malformed row 500'd the whole request -- including the LIST endpoint,
- * where one bad row would take out every other job with it.
+ * Current rows are validated JSONB arrays. String parsing is retained only for
+ * a rolling-deploy window in which an old application instance can still read
+ * a row written before migration 20260809230000.
  *
  * Returns [] and logs, so one damaged row degrades to an empty list instead of
  * an outage. It does NOT silently hide the problem: the row id is logged.
  */
-function parseJsonColumn(raw: string | null, jobId: string, field: string): unknown[] {
-  if (!raw) return [];
+function parseJsonColumn(raw: unknown, jobId: string, field: string): unknown[] {
+  if (raw == null) return [];
+  if (Array.isArray(raw)) return raw;
+  if (typeof raw !== 'string') {
+    console.error('[cleaning] non-array JSON column', { jobId, field });
+    return [];
+  }
   try {
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
@@ -144,9 +148,9 @@ export async function POST(request: NextRequest) {
             scheduledAt: new Date(scheduledAt),
             jobType,
             status: 'SCHEDULED',
-            checklistProgress: JSON.stringify(checklistItems),
-            photos: JSON.stringify([]),
-            issues: JSON.stringify([]),
+            checklistProgress: checklistItems,
+            photos: [],
+            issues: [],
           },
           include: {
             property: { select: { name: true } },
@@ -218,7 +222,7 @@ export async function POST(request: NextRequest) {
 
         await prisma.cleaningJob.update({
           where: { id: reportId },
-          data: { checklistProgress: JSON.stringify(checklist) },
+          data: { checklistProgress: checklist },
         });
 
         const completed = checklist.filter((i: any) => i.completed).length;
@@ -254,7 +258,7 @@ export async function POST(request: NextRequest) {
 
         await prisma.cleaningJob.update({
           where: { id: reportId },
-          data: { issues: JSON.stringify(issues) },
+          data: { issues },
         });
 
         return NextResponse.json({ success: true, issue: newIssue });
@@ -282,7 +286,7 @@ export async function POST(request: NextRequest) {
 
         await prisma.cleaningJob.update({
           where: { id: reportId },
-          data: { photos: JSON.stringify(photos) },
+          data: { photos },
         });
 
         return NextResponse.json({ success: true, photo });

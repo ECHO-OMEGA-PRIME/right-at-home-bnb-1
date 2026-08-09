@@ -74,20 +74,22 @@ const pct = (n: number, d: number) => (d > 0 ? Math.round((n / d) * 1000) / 10 :
 
 /** A completion left evidence if any of the three traces exists. */
 function hasEvidence(j: {
-  checklistProgress: string | null;
-  photos: string | null;
+  checklistProgress: unknown;
+  photos: unknown;
   checkInLat: number | null;
 }): boolean {
-  // A malformed blob is not evidence, but it is also not proof of absence —
-  // it counts only if it parses to something non-empty.
-  const nonEmptyJson = (raw: string | null) => {
+  // During the rolling deploy this accepts both the new native JSON arrays and
+  // legacy serialized JSON text. A malformed value is never evidence.
+  const nonEmptyJson = (raw: unknown) => {
     if (!raw) return false;
+    let value = raw;
     try {
-      const v = JSON.parse(raw);
-      return Array.isArray(v) ? v.length > 0 : Boolean(v && Object.keys(v).length);
+      if (typeof value === 'string') value = JSON.parse(value);
     } catch {
       return false;
     }
+    if (Array.isArray(value)) return value.length > 0;
+    return Boolean(value && typeof value === 'object' && Object.keys(value).length);
   };
   return nonEmptyJson(j.checklistProgress) || nonEmptyJson(j.photos) || j.checkInLat !== null;
 }
