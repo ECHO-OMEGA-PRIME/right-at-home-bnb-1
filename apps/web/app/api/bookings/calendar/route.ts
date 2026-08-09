@@ -1,306 +1,157 @@
 /**
- * Right at Home BnB - Calendar Events API
- * Returns unified calendar events from Prisma bookings + VRBO iCal feeds
- * GET /api/bookings/calendar?month=4&year=2026&property_id=optional
+ * Unified owner calendar backed by the imported database mirror.
+ *
+ * The five-minute VRBO sync owns external retrieval. This route intentionally
+ * never guesses calendar URLs or makes a second live vendor request: opaque
+ * export URLs live only in VrboSync and one importer updates the source of
+ * truth. That keeps the UI deterministic and makes stale data visible.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { PROPERTIES } from '@/lib/property-data';
 import { requireOneOfRoles } from '@/lib/api-auth';
+import { prisma } from '@/lib/prisma';
+import { OCCUPYING_BOOKING_STATUSES } from '@/lib/booking-availability';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-// VRBO listing IDs for all active properties
-const VRBO_PROPERTIES: Record<string, { vrboId: string; name: string }> = {};
-for (const p of PROPERTIES) {
-  if (p.status === 'ACTIVE' && p.vrboId) {
-    VRBO_PROPERTIES[p.id] = { vrboId: p.vrboId, name: p.name };
-  }
-}
-
-// Property colors for calendar display
 const PROPERTY_COLORS = [
   '#FF5A5F', '#3B5998', '#10B981', '#8B5CF6', '#F59E0B',
   '#EC4899', '#06B6D4', '#84CC16', '#F97316', '#6366F1',
   '#14B8A6', '#E11D48', '#7C3AED', '#0EA5E9', '#22C55E',
   '#EF4444', '#A855F7', '#D946EF', '#0891B2', '#65A30D',
 ];
+const FRESH_AFTER_MS = 15 * 60_000;
 
-interface CalendarEvent {
-  id: string;
-  title: string;
-  start: string;
-  end: string;
-  platform: string;
-  guestName: string | null;
-  guestCount: number;
-  confirmationCode: string | null;
-  totalPrice: number | null;
-  color: string;
-  propertyId: string;
-  propertyName: string;
+function integerParam(value: string | null, fallback: number): number {
+  if (value === null || value === '') return fallback;
+  return Number.parseInt(value, 10);
 }
 
-// ── iCal parser ──────────────────────────────────────────────────────────────
-function parseICalText(text: string): Array<{
-  uid: string;
-  summary: string;
-  dtstart: string;
-  dtend: string;
-  description: string;
-}> {
-  const events: Array<{ uid: string; summary: string; dtstart: string; dtend: string; description: string }> = [];
-  const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/\n[ \t]/g, '').split('\n');
-
-  let inEvent = false;
-  let current: any = {};
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (trimmed === 'BEGIN:VEVENT') {
-      inEvent = true;
-      current = { uid: '', summary: '', dtstart: '', dtend: '', description: '' };
-      continue;
-    }
-    if (trimmed === 'END:VEVENT') {
-      inEvent = false;
-      if (current.uid && current.dtstart) {
-        events.push(current);
-      }
-      current = {};
-      continue;
-    }
-    if (!inEvent) continue;
-
-    const colonIdx = trimmed.indexOf(':');
-    if (colonIdx === -1) continue;
-    const nameAndParams = trimmed.slice(0, colonIdx);
-    const value = trimmed.slice(colonIdx + 1);
-    const name = nameAndParams.split(';')[0].toUpperCase();
-
-    switch (name) {
-      case 'UID': current.uid = value; break;
-      case 'SUMMARY': current.summary = value; break;
-      case 'DTSTART': current.dtstart = parseICalDate(value); break;
-      case 'DTEND': current.dtend = parseICalDate(value); break;
-      case 'DESCRIPTION': current.description = value; break;
-    }
-  }
-  return events;
-}
-
-function parseICalDate(val: string): string {
-  // Handle YYYYMMDD and YYYYMMDDTHHmmssZ formats
-  const clean = val.replace(/[^0-9T]/g, '');
-  if (clean.length >= 8) {
-    const y = clean.slice(0, 4);
-    const m = clean.slice(4, 6);
-    const d = clean.slice(6, 8);
-    return `${y}-${m}-${d}`;
-  }
-  return val;
-}
-
-function extractGuestName(summary: string, description: string): string | null {
-  // VRBO summaries are typically "Reserved - Guest Name" or "Booked: Guest Name"
-  const patterns = [
-    /Reserved\s*[-–]\s*(.+)/i,
-    /Booked:\s*(.+)/i,
-    /Booking:\s*(.+)/i,
-    /Guest:\s*(.+)/i,
-  ];
-  for (const p of patterns) {
-    const m = summary.match(p) || description.match(p);
-    if (m) return m[1].trim();
-  }
-  // If summary isn't a generic "Not available", use it as guest name
-  if (summary && !summary.toLowerCase().includes('not available') && !summary.toLowerCase().includes('blocked')) {
-    return summary;
-  }
-  return null;
-}
-
-function extractConfirmCode(summary: string, description: string): string | null {
-  const combined = `${summary} ${description}`;
-  const m = combined.match(/(?:Confirmation|Conf|Code|Ref)[\s#:]*([A-Z0-9]{6,})/i);
-  return m ? m[1] : null;
-}
-
-// ── Fetch VRBO iCal feeds ────────────────────────────────────────────────────
-async function fetchVrboCalendars(propertyFilter?: string | null): Promise<CalendarEvent[]> {
-  const events: CalendarEvent[] = [];
-  const propertyIds = Object.keys(VRBO_PROPERTIES);
-  const targets = propertyFilter
-    ? propertyIds.filter(id => id === propertyFilter)
-    : propertyIds;
-
-  // Try multiple VRBO iCal URL patterns
-  const urlPatterns = [
-    (vrboId: string) => `https://www.vrbo.com/icalendar/${vrboId}.ics`,
-    (vrboId: string) => `https://www.vrbo.com/ical/${vrboId}.ics`,
-    (vrboId: string) => `https://calendar.vrbo.com/ical/${vrboId}`,
-  ];
-
-  const fetchPromises = targets.map(async (propId, propIdx) => {
-    const { vrboId, name } = VRBO_PROPERTIES[propId];
-    const color = PROPERTY_COLORS[propIdx % PROPERTY_COLORS.length];
-
-    for (const pattern of urlPatterns) {
-      try {
-        const url = pattern(vrboId);
-        const res = await fetch(url, {
-          headers: { 'User-Agent': 'RightAtHomeBnB/1.0' },
-          signal: AbortSignal.timeout(8000),
-        });
-        if (!res.ok) continue;
-
-        const text = await res.text();
-        if (!text.includes('BEGIN:VCALENDAR')) continue;
-
-        const parsed = parseICalText(text);
-        for (const evt of parsed) {
-          events.push({
-            id: `vrbo-${vrboId}-${evt.uid}`,
-            title: evt.summary || `VRBO Booking - ${name}`,
-            start: evt.dtstart,
-            end: evt.dtend || evt.dtstart,
-            platform: 'vrbo',
-            guestName: extractGuestName(evt.summary, evt.description),
-            guestCount: 1,
-            confirmationCode: extractConfirmCode(evt.summary, evt.description),
-            totalPrice: null,
-            color,
-            propertyId: propId,
-            propertyName: name,
-          });
-        }
-        break; // Stop trying patterns once one works
-      } catch {
-        // Try next pattern
-      }
-    }
-  });
-
-  await Promise.allSettled(fetchPromises);
-  return events;
-}
-
-// ── Fetch Prisma bookings ────────────────────────────────────────────────────
-async function fetchPrismaBookings(month: number, year: number, propertyFilter?: string | null): Promise<CalendarEvent[]> {
-  try {
-    // Dynamic import to handle cases where prisma isn't configured
-    const { default: prisma } = await import('@/lib/prisma');
-
-    const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 0, 23, 59, 59);
-
-    const where: any = {
-      status: { not: 'CANCELLED' },
-      OR: [
-        { checkIn: { gte: startDate, lte: endDate } },
-        { checkOut: { gte: startDate, lte: endDate } },
-        { AND: [{ checkIn: { lte: startDate } }, { checkOut: { gte: endDate } }] },
-      ],
-    };
-
-    if (propertyFilter) {
-      where.propertyId = propertyFilter;
-    }
-
-    const bookings = await prisma.booking.findMany({
-      where,
-      include: {
-        property: { select: { id: true, name: true } },
-        guest: { select: { name: true } },
-      },
-    });
-
-    const propIds = [...new Set(bookings.map(b => b.propertyId))];
-
-    return bookings.map((b) => {
-      const propIdx = propIds.indexOf(b.propertyId);
-      return {
-        id: b.id,
-        title: `${b.guest.name} — ${b.property.name}`,
-        start: b.checkIn.toISOString().split('T')[0],
-        end: b.checkOut.toISOString().split('T')[0],
-        platform: b.platform.toLowerCase(),
-        guestName: b.guest.name,
-        guestCount: b.guestCount,
-        confirmationCode: b.confirmCode,
-        totalPrice: b.totalPrice,
-        color: PROPERTY_COLORS[propIdx % PROPERTY_COLORS.length],
-        propertyId: b.propertyId,
-        propertyName: b.property.name,
-      };
-    });
-  } catch (err) {
-    console.error('[calendar] Prisma query failed:', err);
-    return [];
-  }
-}
-
-// ── GET handler ──────────────────────────────────────────────────────────────
 export async function GET(request: NextRequest) {
   const auth = await requireOneOfRoles(request, ['owner', 'admin']);
   if (auth.error) return auth.error;
+
+  const now = new Date();
+  const month = integerParam(request.nextUrl.searchParams.get('month'), now.getMonth() + 1);
+  const year = integerParam(request.nextUrl.searchParams.get('year'), now.getFullYear());
+  const propertyFilter = request.nextUrl.searchParams.get('property_id');
+  if (!Number.isInteger(month) || month < 1 || month > 12 || !Number.isInteger(year) || year < 2020 || year > 2100) {
+    return NextResponse.json(
+      { error: 'Invalid calendar month or year', code: 'INVALID_CALENDAR_RANGE' },
+      { status: 400 },
+    );
+  }
+
   try {
-    const params = request.nextUrl.searchParams;
-    const month = parseInt(params.get('month') || String(new Date().getMonth() + 1));
-    const year = parseInt(params.get('year') || String(new Date().getFullYear()));
-    const propertyFilter = params.get('property_id') || null;
-
-    // Fetch from both sources in parallel
-    const [prismaEvents, vrboEvents] = await Promise.all([
-      fetchPrismaBookings(month, year, propertyFilter),
-      fetchVrboCalendars(propertyFilter),
-    ]);
-
-    // Filter VRBO events to the requested month (rough filter - include surrounding weeks)
-    const monthStart = new Date(year, month - 1, 1);
-    const monthEnd = new Date(year, month, 0);
-    const filteredVrbo = vrboEvents.filter(evt => {
-      const start = new Date(evt.start);
-      const end = new Date(evt.end);
-      return start <= monthEnd && end >= monthStart;
+    const properties = await prisma.property.findMany({
+      where: {
+        status: 'ACTIVE',
+        ...(propertyFilter
+          ? { OR: [{ id: propertyFilter }, { slug: propertyFilter }] }
+          : {}),
+      },
+      select: {
+        id: true,
+        slug: true,
+        name: true,
+        address: true,
+        vrboSync: {
+          select: { syncEnabled: true, lastIcalSync: true },
+        },
+      },
+      orderBy: { name: 'asc' },
     });
 
-    // Deduplicate: if a VRBO booking matches a Prisma booking by confirmation code, skip the VRBO one
-    const prismaConfCodes = new Set(prismaEvents.map(e => e.confirmationCode).filter(Boolean));
-    const dedupedVrbo = filteredVrbo.filter(e =>
-      !e.confirmationCode || !prismaConfCodes.has(e.confirmationCode)
-    );
-
-    const allEvents = [...prismaEvents, ...dedupedVrbo];
-
-    // Build property list for sidebar
-    const propertyMap = new Map<string, string>();
-    for (const p of PROPERTIES) {
-      if (p.status === 'ACTIVE') {
-        propertyMap.set(p.id, p.name);
-      }
+    if (propertyFilter && properties.length === 0) {
+      return NextResponse.json(
+        { error: 'Property not found', code: 'PROPERTY_NOT_FOUND' },
+        { status: 404 },
+      );
     }
 
+    const startDate = new Date(Date.UTC(year, month - 1, 1));
+    const endDate = new Date(Date.UTC(year, month, 1));
+    const propertyIds = properties.map((property) => property.id);
+    const bookings = propertyIds.length
+      ? await prisma.booking.findMany({
+          where: {
+            propertyId: { in: propertyIds },
+            status: { in: [...OCCUPYING_BOOKING_STATUSES] },
+            checkIn: { lt: endDate },
+            checkOut: { gt: startDate },
+          },
+          include: {
+            property: { select: { id: true, name: true } },
+            guest: { select: { name: true } },
+          },
+          orderBy: [{ checkIn: 'asc' }, { propertyId: 'asc' }],
+        })
+      : [];
+
+    const colorByProperty = new Map(
+      properties.map((property, index) => [property.id, PROPERTY_COLORS[index % PROPERTY_COLORS.length]]),
+    );
+    const events = bookings.map((booking) => ({
+      id: booking.id,
+      title: booking.status === 'BLOCKED'
+        ? `Blocked — ${booking.property.name}`
+        : `${booking.guest.name} — ${booking.property.name}`,
+      start: booking.checkIn.toISOString().split('T')[0],
+      end: booking.checkOut.toISOString().split('T')[0],
+      platform: booking.platform.toLowerCase(),
+      status: booking.status,
+      guestName: booking.status === 'BLOCKED' ? null : booking.guest.name,
+      guestCount: booking.guestCount,
+      confirmationCode: booking.confirmCode,
+      totalPrice: booking.totalPrice,
+      color: colorByProperty.get(booking.propertyId) || PROPERTY_COLORS[0],
+      propertyId: booking.propertyId,
+      propertyName: booking.property.name,
+    }));
+
+    const sourceRows = properties.map((property) => {
+      const lastSync = property.vrboSync?.lastIcalSync || null;
+      const ageSeconds = lastSync
+        ? Math.max(0, Math.floor((now.getTime() - lastSync.getTime()) / 1000))
+        : null;
+      const state = !property.vrboSync?.syncEnabled || !lastSync
+        ? 'missing'
+        : ageSeconds! * 1000 <= FRESH_AFTER_MS
+          ? 'fresh'
+          : 'stale';
+      return { propertyId: property.id, state, ageSeconds, lastIcalSync: lastSync?.toISOString() || null };
+    });
+
     return NextResponse.json({
-      events: allEvents,
+      events,
       month,
       year,
-      properties: Array.from(propertyMap.entries()).map(([id, name], idx) => ({
-        id,
-        name,
-        color: PROPERTY_COLORS[idx % PROPERTY_COLORS.length],
+      properties: properties.map((property, index) => ({
+        id: property.id,
+        slug: property.slug,
+        name: property.name,
+        color: PROPERTY_COLORS[index % PROPERTY_COLORS.length],
       })),
       sources: {
-        prisma: prismaEvents.length,
-        vrbo: dedupedVrbo.length,
+        database: events.length,
+        configured: properties.filter((property) => property.vrboSync?.syncEnabled).length,
+        freshness: {
+          generatedAt: now.toISOString(),
+          staleAfterSeconds: FRESH_AFTER_MS / 1000,
+          fresh: sourceRows.filter((row) => row.state === 'fresh').length,
+          stale: sourceRows.filter((row) => row.state === 'stale').length,
+          missing: sourceRows.filter((row) => row.state === 'missing').length,
+          properties: sourceRows,
+        },
       },
     });
-  } catch (error: any) {
-    console.error('[calendar] Error:', error);
+  } catch (error) {
+    const incidentId = crypto.randomUUID();
+    console.error('[bookings/calendar] failed', { incidentId, error });
     return NextResponse.json(
-      { events: [], error: error.message },
-      { status: 200 }, // Return 200 with empty events to avoid breaking the UI
+      { error: 'Calendar data unavailable', code: 'CALENDAR_UNAVAILABLE', incidentId },
+      { status: 503 },
     );
   }
 }

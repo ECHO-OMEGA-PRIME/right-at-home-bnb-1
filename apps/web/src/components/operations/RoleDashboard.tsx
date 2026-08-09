@@ -11,10 +11,12 @@ import {
   Clock3,
   DollarSign,
   ExternalLink,
+  Home,
   KeyRound,
   MapPin,
   Newspaper,
   RefreshCw,
+  ShieldCheck,
   Send,
   ShoppingBag,
   Sparkles,
@@ -22,6 +24,8 @@ import {
   Music,
   MoonStar,
   Wrench,
+  Wifi,
+  WifiOff,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { dashboardForRole, type DashboardRole } from '@/lib/operations-policy';
@@ -218,6 +222,106 @@ function AreaIntelligencePanel({ data }: { data: JsonRecord | null }) {
   );
 }
 
+function PortfolioAvailabilityPanel({ portfolio }: { portfolio: JsonRecord | null }) {
+  if (!portfolio) return <EmptyState>Live booking availability is loading.</EmptyState>;
+  const summary = portfolio.summary || {};
+  const properties = [...(portfolio.properties || [])].sort((left: any, right: any) => {
+    const risk = (row: any) => (row.conflictCount ? 3 : row.sourceState !== 'fresh' ? 2 : row.availability === 'occupied' ? 1 : 0);
+    return risk(right) - risk(left) || left.name.localeCompare(right.name);
+  });
+  const availabilityClass: Record<string, string> = {
+    occupied: 'bg-blue-100 text-blue-800',
+    blocked: 'bg-amber-100 text-amber-800',
+    available: 'bg-emerald-100 text-emerald-800',
+  };
+
+  return (
+    <section id="live-occupancy" className="scroll-mt-6 space-y-5 rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="h-5 w-5 text-[#500000]" />
+            <h2 className="text-xl font-semibold text-[#500000]">Live Booking &amp; Occupancy</h2>
+          </div>
+          <p className="mt-1 text-sm text-black/55">Database-backed VRBO mirror · refreshes automatically every minute</p>
+        </div>
+        <div className="text-right text-xs text-black/50">
+          <div>Updated {dateTime(portfolio.generatedAt)}</div>
+          <div>{summary.staleSources || 0} stale or missing source{summary.staleSources === 1 ? '' : 's'}</div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        {[
+          ['Homes', summary.total || 0],
+          ['Occupied', summary.occupied || 0],
+          ['Available', summary.available || 0],
+          ['Blocked', summary.blocked || 0],
+          ['Conflicts', summary.conflicts || 0],
+          ['Source issues', summary.staleSources || 0],
+        ].map(([label, value]) => (
+          <div key={String(label)} className="rounded-xl bg-[#F5F5F0] p-3">
+            <div className="text-xs font-medium text-black/50">{label}</div>
+            <div className={`mt-1 text-2xl font-semibold ${label === 'Conflicts' && Number(value) > 0 ? 'text-red-700' : 'text-[#2D2D2D]'}`}>{value}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid gap-3 lg:grid-cols-2">
+        {properties.map((property: any) => (
+          <article key={property.propertyId} className={`rounded-xl border p-4 ${property.conflictCount ? 'border-red-300 bg-red-50/50' : 'border-black/10'}`}>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <Home className="h-4 w-4 shrink-0 text-[#500000]" />
+                  <h3 className="truncate font-semibold text-[#2D2D2D]">{property.name}</h3>
+                </div>
+                <p className="mt-1 truncate text-xs text-black/50">{property.address}</p>
+              </div>
+              <span className={`rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${availabilityClass[property.availability] || 'bg-black/5 text-black/60'}`}>
+                {property.availability}
+              </span>
+            </div>
+
+            <div className="mt-4 grid gap-2 text-xs sm:grid-cols-2">
+              <div className="rounded-lg bg-white/80 p-3">
+                <div className="font-medium text-black/50">Current</div>
+                <div className="mt-1 font-semibold text-black/80">
+                  {property.currentStay
+                    ? `${property.currentStay.platform} · until ${dateTime(property.currentStay.checkOut)}`
+                    : 'Open now'}
+                </div>
+              </div>
+              <div className="rounded-lg bg-white/80 p-3">
+                <div className="font-medium text-black/50">Next</div>
+                <div className="mt-1 font-semibold text-black/80">
+                  {property.nextStay
+                    ? `${property.nextStay.platform} · ${dateTime(property.nextStay.checkIn)}`
+                    : 'No upcoming stay'}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+              <div className={`inline-flex items-center gap-1.5 ${property.sourceState === 'fresh' ? 'text-emerald-700' : 'text-amber-800'}`}>
+                {property.sourceState === 'fresh' ? <Wifi className="h-3.5 w-3.5" /> : <WifiOff className="h-3.5 w-3.5" />}
+                VRBO source {property.sourceState}
+                {property.sourceAgeSeconds !== null ? ` · ${Math.max(0, Math.floor(property.sourceAgeSeconds / 60))}m ago` : ''}
+              </div>
+              {property.conflictCount > 0 && (
+                <Link href="/bookings" className="font-semibold text-red-700">
+                  {property.conflictCount} conflict{property.conflictCount === 1 ? '' : 's'} · resolve
+                </Link>
+              )}
+            </div>
+          </article>
+        ))}
+      </div>
+      {!properties.length && <EmptyState>No active properties are configured.</EmptyState>}
+    </section>
+  );
+}
+
 function OwnerDashboard({ data, area }: { data: JsonRecord; area: JsonRecord | null }) {
   const metrics = data.metrics || {};
   return (
@@ -229,6 +333,8 @@ function OwnerDashboard({ data, area }: { data: JsonRecord; area: JsonRecord | n
         <MetricCard label="Unassigned" value={metrics.unassignedWorkOrders || 0} icon={AlertTriangle} warning={metrics.unassignedWorkOrders > 0} />
         <MetricCard label="Worker pay owed" value={money(metrics.unpaidWorkerCents)} icon={DollarSign} />
       </div>
+
+      <PortfolioAvailabilityPanel portfolio={data.portfolio || null} />
 
       <div className="grid gap-4 md:grid-cols-4">
         {[
@@ -502,8 +608,9 @@ export default function RoleDashboard({ expectedRole }: { expectedRole: Dashboar
     }
   }, [actualRole, appUser, authLoading, expectedRole, router]);
 
-  const refresh = useCallback(async () => {
-    setLoading(true); setError('');
+  const refresh = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
+    setError('');
     try {
       const [dashboardData, areaData] = await Promise.all([
         jsonFetch('/api/operations/dashboard'),
@@ -514,11 +621,17 @@ export default function RoleDashboard({ expectedRole }: { expectedRole: Dashboar
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Dashboard failed to load');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [expectedRole]);
 
-  useEffect(() => { if (!authLoading) void refresh(); }, [authLoading, refresh]);
+  useEffect(() => {
+    if (authLoading) return;
+    void refresh();
+    if (expectedRole !== 'owner') return;
+    const interval = window.setInterval(() => void refresh(true), 60_000);
+    return () => window.clearInterval(interval);
+  }, [authLoading, expectedRole, refresh]);
 
   if (authLoading || loading) {
     return <div className="flex min-h-[60vh] items-center justify-center"><RefreshCw className="h-7 w-7 animate-spin text-[#500000]" /></div>;

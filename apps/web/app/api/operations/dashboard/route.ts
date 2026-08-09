@@ -3,6 +3,10 @@ import { prisma } from '@/lib/prisma';
 import { ApiUser, requireAuth } from '@/lib/api-auth';
 import { resolveDatabaseUser } from '@/lib/operations-auth';
 import { propertyScopeFor, scopeAllows } from '@/lib/tenant-scope';
+import {
+  OCCUPYING_BOOKING_STATUSES,
+  summarizePortfolioAvailability,
+} from '@/lib/booking-availability';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -33,6 +37,8 @@ async function ownerDashboard() {
     activeGuestRequests,
     lockProblems,
     recentWorkOrders,
+    portfolioProperties,
+    portfolioBookings,
   ] = await Promise.all([
     prisma.property.count({ where: { status: 'ACTIVE' } }),
     prisma.booking.count({
@@ -55,6 +61,32 @@ async function ownerDashboard() {
       orderBy: { updatedAt: 'desc' },
       take: 12,
     }),
+    prisma.property.findMany({
+      where: { status: 'ACTIVE' },
+      select: {
+        id: true,
+        slug: true,
+        name: true,
+        address: true,
+        vrboSync: { select: { syncEnabled: true, lastIcalSync: true } },
+      },
+      orderBy: { name: 'asc' },
+    }),
+    prisma.booking.findMany({
+      where: {
+        status: { in: [...OCCUPYING_BOOKING_STATUSES] },
+        checkOut: { gt: now },
+      },
+      select: {
+        id: true,
+        propertyId: true,
+        checkIn: true,
+        checkOut: true,
+        platform: true,
+        status: true,
+      },
+      orderBy: [{ propertyId: 'asc' }, { checkIn: 'asc' }],
+    }),
   ]);
 
   return {
@@ -71,6 +103,11 @@ async function ownerDashboard() {
       lockProblems,
     },
     recentWorkOrders,
+    portfolio: summarizePortfolioAvailability({
+      properties: portfolioProperties,
+      bookings: portfolioBookings,
+      now,
+    }),
   };
 }
 

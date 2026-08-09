@@ -17,32 +17,41 @@ WHERE "status" <> 'CANCELLED'
   AND LOWER(CONCAT_WS(' ', "specialReqs", "internalNotes")) ~
       '(blocked|not available|unavailable|owner stay|maintenance|do not book|owner hold)';
 
--- The legacy importer stored the channel UID in confirmCode.  Backfill only
--- one row per (platform, confirmCode); ambiguous candidates remain NULL rather
--- than inventing an identity or violating the existing unique index.
-CREATE TEMP TABLE "_booking_ref_candidates" ON COMMIT DROP AS
-SELECT "id", "platform", "confirmCode",
-       ROW_NUMBER() OVER (
-         PARTITION BY "platform", "confirmCode"
-         ORDER BY "createdAt", "id"
-       ) AS "candidateRank"
-FROM "Booking"
-WHERE "externalRef" IS NULL
-  AND NULLIF(BTRIM("confirmCode"), '') IS NOT NULL;
+-- Retire legacy VRBO rows that have no channel identity when the current iCal
+-- mirror has an identified row occupying the same property and dates.  The
+-- row stays in place for audit/history, but it can no longer create a false
+-- double booking.  We deliberately do NOT infer externalRef from confirmCode:
+-- those fields have different semantics and an invented identity is worse
+-- than an explicit historical record.
+CREATE TEMP TABLE "_legacy_superseded" ON COMMIT DROP AS
+SELECT DISTINCT ON (legacy."id")
+       legacy."id" AS "legacyId",
+       current."id" AS "currentId"
+FROM "Booking" AS legacy
+JOIN "Booking" AS current
+  ON current."id" <> legacy."id"
+ AND current."propertyId" = legacy."propertyId"
+ AND UPPER(current."platform") = UPPER(legacy."platform")
+ AND current."status" <> 'CANCELLED'
+ AND current."externalRef" IS NOT NULL
+ AND tsrange(current."checkIn", current."checkOut", '[)') &&
+     tsrange(legacy."checkIn", legacy."checkOut", '[)')
+WHERE legacy."status" <> 'CANCELLED'
+  AND UPPER(legacy."platform") = 'VRBO'
+  AND legacy."externalRef" IS NULL
+ORDER BY legacy."id", current."updatedAt" DESC, current."id";
 
-UPDATE "Booking" AS b
-SET "externalRef" = NULLIF(BTRIM(c."confirmCode"), ''),
+UPDATE "Booking" AS legacy
+SET "status" = 'CANCELLED',
+    "internalNotes" = CONCAT_WS(
+      E'\n',
+      NULLIF(legacy."internalNotes", ''),
+      CONCAT('Retired by booking-integrity migration; superseded by ', s."currentId")
+    ),
     "updatedAt" = CURRENT_TIMESTAMP
-FROM "_booking_ref_candidates" AS c
-WHERE b."id" = c."id"
-  AND c."candidateRank" = 1
-  AND NOT EXISTS (
-    SELECT 1
-    FROM "Booking" AS occupied
-    WHERE occupied."id" <> b."id"
-      AND occupied."platform" = b."platform"
-      AND occupied."externalRef" = NULLIF(BTRIM(c."confirmCode"), '')
-  );
+FROM "_legacy_superseded" AS s
+WHERE legacy."id" = s."legacyId"
+  AND legacy."externalRef" IS NULL;
 
 -- Collapse exact duplicate reservations without destroying their audit trail.
 -- Foreign keys that are not one-to-one are moved to the keeper where possible;
@@ -120,23 +129,63 @@ SET "status" = 'CANCELLED',
 FROM "_booking_dedupe" AS d
 WHERE duplicate."id" = d."duplicateId";
 
--- The prior migration created the nullable idempotency index.  Keep it and add
--- the non-null production guarantee only after the data repair above.
+-- The prior migration created the nullable idempotency index. Keep it and add
+-- database-enforced concurrency protection only after the data repair above.
 CREATE EXTENSION IF NOT EXISTS btree_gist;
 
-DO $$
+ALTER TABLE "Booking" DROP CONSTRAINT IF EXISTS "booking_no_overlap";
+
+-- The exclusion constraint closes concurrent guest-reservation races. Blocks
+-- are handled by the trigger below so two maintenance/owner blocks may overlap
+-- without weakening the guest-reservation guarantee.
+ALTER TABLE "Booking"
+  ADD CONSTRAINT "booking_no_overlap"
+  EXCLUDE USING gist (
+    "propertyId" WITH =,
+    tsrange("checkIn", "checkOut", '[)') WITH &&
+  )
+  WHERE ("status" IN ('PENDING', 'CONFIRMED', 'CHECKED_IN'));
+
+CREATE OR REPLACE FUNCTION "booking_prevent_overlap"()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
 BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint WHERE conname = 'booking_no_overlap'
-  ) THEN
-    ALTER TABLE "Booking"
-      ADD CONSTRAINT "booking_no_overlap"
-      EXCLUDE USING gist (
-        "propertyId" WITH =,
-        tsrange("checkIn", "checkOut", '[)') WITH &&
-      )
-      WHERE ("status" <> 'CANCELLED');
+  IF NEW."status" NOT IN ('PENDING', 'CONFIRMED', 'CHECKED_IN', 'BLOCKED') THEN
+    RETURN NEW;
   END IF;
-END $$;
+
+  IF NEW."checkOut" <= NEW."checkIn" THEN
+    RAISE EXCEPTION 'booking check-out must be after check-in'
+      USING ERRCODE = '22007';
+  END IF;
+
+  -- Serialize all occupancy writes per property. The GiST constraint protects
+  -- guest/guest races too; this lock also makes guest/block checks race-safe.
+  PERFORM pg_advisory_xact_lock(hashtext(NEW."propertyId"));
+
+  IF EXISTS (
+    SELECT 1
+    FROM "Booking" AS existing
+    WHERE existing."id" <> NEW."id"
+      AND existing."propertyId" = NEW."propertyId"
+      AND existing."status" IN ('PENDING', 'CONFIRMED', 'CHECKED_IN', 'BLOCKED')
+      AND tsrange(existing."checkIn", existing."checkOut", '[)') &&
+          tsrange(NEW."checkIn", NEW."checkOut", '[)')
+      AND NOT (NEW."status" = 'BLOCKED' AND existing."status" = 'BLOCKED')
+  ) THEN
+    RAISE EXCEPTION 'booking overlaps occupied inventory for property %', NEW."propertyId"
+      USING ERRCODE = '23P01';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS "booking_prevent_overlap" ON "Booking";
+CREATE TRIGGER "booking_prevent_overlap"
+BEFORE INSERT OR UPDATE OF "propertyId", "checkIn", "checkOut", "status"
+ON "Booking"
+FOR EACH ROW EXECUTE FUNCTION "booking_prevent_overlap"();
 
 COMMIT;

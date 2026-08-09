@@ -44,7 +44,7 @@
     "backend": "cd backend && python -m uvicorn main:app --reload --port 8000",
     "backend:prod": "cd backend && python -m uvicorn main:app --host 0.0.0.0 --port 8000",
 
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate && pnpm --dir apps/web exec prisma generate --schema prisma/schema.prisma"
   },
   "dependencies": {
     "@prisma/client": "^5.9.0"

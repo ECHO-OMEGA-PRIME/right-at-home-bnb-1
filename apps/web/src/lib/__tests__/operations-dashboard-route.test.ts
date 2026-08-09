@@ -4,14 +4,30 @@ const {
   requireAuth,
   resolveDatabaseUser,
   propertyScopeFor,
+  propertyCount,
+  propertyFindMany,
+  bookingCount,
+  bookingFindMany,
+  workOrderCount,
   workOrderFindMany,
+  operationalAlertCount,
+  guestRequestCount,
+  smartLockCount,
   payAggregate,
   scheduleFindMany,
 } = vi.hoisted(() => ({
   requireAuth: vi.fn(),
   resolveDatabaseUser: vi.fn(),
   propertyScopeFor: vi.fn(),
+  propertyCount: vi.fn(),
+  propertyFindMany: vi.fn(),
+  bookingCount: vi.fn(),
+  bookingFindMany: vi.fn(),
+  workOrderCount: vi.fn(),
   workOrderFindMany: vi.fn(),
+  operationalAlertCount: vi.fn(),
+  guestRequestCount: vi.fn(),
+  smartLockCount: vi.fn(),
   payAggregate: vi.fn(),
   scheduleFindMany: vi.fn(),
 }));
@@ -24,7 +40,12 @@ vi.mock('@/lib/tenant-scope', () => ({
 }));
 vi.mock('@/lib/prisma', () => ({
   prisma: {
-    workOrder: { findMany: workOrderFindMany },
+    property: { count: propertyCount, findMany: propertyFindMany },
+    booking: { count: bookingCount, findMany: bookingFindMany },
+    workOrder: { count: workOrderCount, findMany: workOrderFindMany },
+    operationalAlert: { count: operationalAlertCount },
+    guestRequest: { count: guestRequestCount },
+    smartLock: { count: smartLockCount },
     workerPayEntry: { aggregate: payAggregate },
     serviceSchedule: { findMany: scheduleFindMany },
   },
@@ -60,8 +81,60 @@ beforeEach(() => {
     },
   });
   workOrderFindMany.mockResolvedValue([{ id: 'job-1', property: { id: 'property-a' } }]);
+  propertyCount.mockResolvedValue(1);
+  propertyFindMany.mockResolvedValue([]);
+  bookingCount.mockResolvedValue(0);
+  bookingFindMany.mockResolvedValue([]);
+  workOrderCount.mockResolvedValue(0);
+  operationalAlertCount.mockResolvedValue(0);
+  guestRequestCount.mockResolvedValue(0);
+  smartLockCount.mockResolvedValue(0);
   payAggregate.mockResolvedValue({ _sum: { amountCents: 100 }, _count: 1 });
   scheduleFindMany.mockResolvedValue([{ id: 'schedule-1', property: { id: 'property-a' } }]);
+});
+
+describe('GET /api/operations/dashboard owner portfolio', () => {
+  it('returns a live, PII-free occupancy and source-freshness view', async () => {
+    const observedAt = Date.now();
+    requireAuth.mockResolvedValue({
+      user: { uid: 'owner-uid', email: 'owner@example.test', role: 'owner' },
+      error: null,
+    });
+    propertyFindMany.mockResolvedValue([
+      {
+        id: 'property-a',
+        slug: 'alpha-house',
+        name: 'Alpha House',
+        address: '100 Example Street',
+        vrboSync: {
+          syncEnabled: true,
+          lastIcalSync: new Date(observedAt - 60_000),
+        },
+      },
+    ]);
+    bookingFindMany.mockResolvedValue([
+      {
+        id: 'booking-a',
+        propertyId: 'property-a',
+        platform: 'VRBO',
+        status: 'CHECKED_IN',
+        checkIn: new Date(observedAt - 60_000),
+        checkOut: new Date(observedAt + 60_000),
+      },
+    ]);
+
+    const response = await GET(request());
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.portfolio.summary).toMatchObject({ total: 1, occupied: 1, staleSources: 0 });
+    expect(body.portfolio.properties[0]).toMatchObject({
+      propertyId: 'property-a',
+      availability: 'occupied',
+      sourceState: 'fresh',
+    });
+    expect(JSON.stringify(body.portfolio)).not.toMatch(/guest|email|phone/i);
+  });
 });
 
 describe('GET /api/operations/dashboard tenant scope', () => {
