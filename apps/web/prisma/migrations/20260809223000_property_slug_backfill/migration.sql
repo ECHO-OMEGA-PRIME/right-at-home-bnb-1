@@ -1,6 +1,14 @@
 -- Join public marketing slugs to the canonical Property ids through VRBO's
 -- stable listing id. This makes every API response and operational foreign key
 -- share one identity while preserving human-readable public URLs.
+-- Listing 5103284 is a distinct retired/duplicate channel listing that carried
+-- the canonical Mockingbird Ridge slug in the legacy seed. Move it to its
+-- explicit non-public alias before assigning that slug to listing 5103283.
+UPDATE "Property"
+SET "slug" = 'blazing-saddle-dup', "updatedAt" = CURRENT_TIMESTAMP
+WHERE "vrboId" = '5103284'
+  AND "slug" IS DISTINCT FROM 'blazing-saddle-dup';
+
 WITH mapping("slug", "vrboId") AS (
   VALUES
     ('castleford-5001', '2636389'),
