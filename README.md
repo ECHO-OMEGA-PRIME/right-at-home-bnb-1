@@ -1,3 +1,23 @@
+> ## TESTED AND TRANSFERRED
+>
+> This repository has been superseded. The Right at Home Midland platform is now
+> maintained at **https://github.com/echoomegaprime/rah-midland**.
+>
+> | | |
+> |---|---|
+> | **Destination** | https://github.com/echoomegaprime/rah-midland |
+> | **Certified commit** | `9c71aefba3839b641861179e480a88dffa20e712` |
+> | **Certification Forge** | `PRODUCTION_READY` — run `cert_eae56cb5ae660b8afcf6d0d19825081d43e6bf67`, policy `certforge.release-strict.v2`, 0 findings |
+> | **Verdict signature** | verified — key `ed25519:a07f417e23d6ef50e316f046c115b9fc`, evidence merkle root `af61e16cac1bda6faddc9467dd447f54439ae6eaf611b6d72f337d1725b0e65e` |
+> | **GitHub App Suite** | ECHO Certification Forge and ECHO Release Sentinel checks green on the destination default branch |
+> | **Verified** | 2026-08-10 |
+>
+> **Product:** booking, calendar/VRBO synchronization, owner/worker/guest operations,
+> smart-lock guest access, payroll and cleaning operations for Right at Home Midland.
+>
+> **Known limitation:** this legacy repository is retained as immutable provenance and
+> receives no further updates. Open issues and changes against the destination repository.
+
 # Right at Home BnB - Property Management System
 
 > A comprehensive multi-platform property management system for short-term rental operations -- featuring a web dashboard, mobile cleaner app, desktop manager, AI concierge, smart lock integration, and full financial tracking.
