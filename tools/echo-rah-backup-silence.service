@@ -1,0 +1,48 @@
+[Unit]
+Description=Check RAH verified backup freshness and timer health
+Documentation=file:/opt/rah-backup-verify/current/BACKUP_VERIFY.md
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=forge
+Group=forge
+Environment=PYTHONDONTWRITEBYTECODE=1
+EnvironmentFile=/etc/rah-backup-alert.env
+ExecStart=/usr/bin/python3 /opt/rah-backup-verify/current/backup_watchdog.py silence
+StandardInput=null
+StandardOutput=journal
+StandardError=journal
+StateDirectory=rah-backup-monitor
+StateDirectoryMode=0700
+UMask=0077
+TimeoutStartSec=90
+MemoryMax=128M
+Nice=10
+NoNewPrivileges=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=read-only
+ProtectClock=true
+ProtectHostname=true
+ProtectKernelLogs=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+ProtectProc=invisible
+ProcSubset=pid
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+ReadOnlyPaths=/var/backups/rah
+
+# Deliberately no Restart=. The hourly timer supplies bounded retries.

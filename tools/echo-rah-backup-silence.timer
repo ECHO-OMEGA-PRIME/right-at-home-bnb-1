@@ -1,0 +1,13 @@
+[Unit]
+Description=Check RAH verified backup freshness hourly
+Documentation=file:/opt/rah-backup-verify/current/BACKUP_VERIFY.md
+
+[Timer]
+OnCalendar=hourly
+Persistent=true
+RandomizedDelaySec=5m
+AccuracySec=1m
+Unit=echo-rah-backup-silence.service
+
+[Install]
+WantedBy=timers.target
