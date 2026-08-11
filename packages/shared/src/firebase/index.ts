@@ -9,7 +9,7 @@ import { Firestore, getFirestore } from 'firebase/firestore';
 import { FirebaseStorage, getStorage } from 'firebase/storage';
 import { Functions, getFunctions } from 'firebase/functions';
 
-const EXPECTED_PROJECT_ID = 'rightathome-prod';
+const EXPECTED_PROJECT_ID = 'echo-prime-ai';
 
 function first(...values: Array<string | undefined>): string {
   return values.find((value) => value?.trim())?.trim() ?? '';

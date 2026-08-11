@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { requireAuth } from '@/lib/api-auth';
+import { ApiUser, requireAuth } from '@/lib/api-auth';
 import { resolveDatabaseUser } from '@/lib/operations-auth';
+import { propertyScopeFor, scopeAllows } from '@/lib/tenant-scope';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -73,15 +74,10 @@ async function ownerDashboard() {
   };
 }
 
-async function workerDashboard(apiUser: { uid: string; email: string | null }) {
-  const dbUser = await resolveDatabaseUser({
-    ...apiUser,
-    role: 'worker',
-    workerType: null,
-    isDevMode: false,
-  });
+async function workerDashboard(apiUser: ApiUser, propertyId: string | null) {
+  const dbUser = await resolveDatabaseUser(apiUser);
   if (!dbUser?.workerProfile) {
-    throw new Error('Worker profile is not configured');
+    return null;
   }
 
   const workerId = dbUser.workerProfile.id;
@@ -91,13 +87,16 @@ async function workerDashboard(apiUser: { uid: string; email: string | null }) {
     prisma.workOrder.findMany({
       where: {
         assignedWorkerId: workerId,
+        ...(propertyId ? { propertyId } : {}),
         OR: [
           { status: { in: ['ASSIGNED', 'ACCEPTED', 'IN_PROGRESS'] } },
           { scheduledStart: { gte: today, lt: tomorrow } },
         ],
       },
       include: {
-        property: { select: { name: true, address: true, latitude: true, longitude: true } },
+        property: {
+          select: { id: true, name: true, address: true, latitude: true, longitude: true },
+        },
         checklistItems: { orderBy: { sortOrder: 'asc' } },
         accessGrant: { select: { status: true, startsAt: true, endsAt: true } },
       },
@@ -105,13 +104,17 @@ async function workerDashboard(apiUser: { uid: string; email: string | null }) {
       take: 30,
     }),
     prisma.workerPayEntry.aggregate({
-      where: { workerId, status: { in: ['EARNED', 'APPROVED'] } },
+      where: {
+        workerId,
+        status: { in: ['EARNED', 'APPROVED'] },
+        ...(propertyId ? { workOrder: { propertyId } } : {}),
+      },
       _sum: { amountCents: true },
       _count: true,
     }),
     prisma.serviceSchedule.findMany({
-      where: { workerId, isActive: true },
-      include: { property: { select: { name: true, address: true } } },
+      where: { workerId, isActive: true, ...(propertyId ? { propertyId } : {}) },
+      include: { property: { select: { id: true, name: true, address: true } } },
       orderBy: { nextRunAt: 'asc' },
       take: 20,
     }),
@@ -239,13 +242,30 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(await ownerDashboard());
     }
     if (auth.user!.role === 'worker') {
-      return NextResponse.json(await workerDashboard(auth.user!));
+      const requestedPropertyId = request.nextUrl.searchParams.get('propertyId');
+      const scope = await propertyScopeFor(auth.user);
+      if (requestedPropertyId && !scopeAllows(scope, requestedPropertyId)) {
+        return NextResponse.json(
+          { error: 'Property is outside your assignment scope', code: 'PROPERTY_FORBIDDEN' },
+          { status: 403 },
+        );
+      }
+      const dashboard = await workerDashboard(auth.user!, requestedPropertyId);
+      if (!dashboard) {
+        return NextResponse.json(
+          { error: 'Worker profile is not configured', code: 'WORKER_PROFILE_REQUIRED' },
+          { status: 403 },
+        );
+      }
+      return NextResponse.json(dashboard);
     }
     return NextResponse.json(await guestDashboard(auth.user!.email));
   } catch (error) {
+    const incidentId = crypto.randomUUID();
+    console.error('[operations/dashboard] failed', { incidentId, error });
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Dashboard data unavailable' },
-      { status: 400 },
+      { error: 'Dashboard data unavailable', code: 'DASHBOARD_UNAVAILABLE', incidentId },
+      { status: 500 },
     );
   }
 }

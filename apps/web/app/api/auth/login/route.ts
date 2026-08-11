@@ -23,6 +23,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 const ECHO_AUTH_ISSUER = process.env.ECHO_AUTH_ISSUER?.trim() || 'https://auth.echo-op.com';
+const AUTH_COOKIE = 'rah-auth-token';
 
 /** echo-auth is a network hop; without a bound a hung upstream hangs the login form. */
 const LOGIN_TIMEOUT_MS = 10_000;
@@ -95,14 +96,23 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  return NextResponse.json(
-    {
-      access_token: accessToken,
-      refresh_token: typeof payload.refresh_token === 'string' ? payload.refresh_token : null,
-      uid: typeof payload.uid === 'string' ? payload.uid : null,
-      email: typeof payload.email === 'string' ? payload.email : email,
-      expires_in: typeof payload.expires_in === 'number' ? payload.expires_in : null,
-    },
+  const upstreamTtl =
+    typeof payload.expires_in === 'number' && Number.isFinite(payload.expires_in)
+      ? Math.floor(payload.expires_in)
+      : 3600;
+  const response = NextResponse.json(
+    { ok: true },
     { status: 200, headers: { 'Cache-Control': 'no-store' } },
   );
+  response.cookies.set(AUTH_COOKIE, accessToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV !== 'development',
+    sameSite: 'strict',
+    path: '/',
+    // Never let a browser retain a one-hour bearer for the old 30-day client
+    // cookie lifetime. The JWT expiry is still verified server-side; this just
+    // keeps the browser lifecycle aligned with it.
+    maxAge: Math.max(1, Math.min(upstreamTtl, 3600)),
+  });
+  return response;
 }

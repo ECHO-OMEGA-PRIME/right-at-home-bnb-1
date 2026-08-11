@@ -53,8 +53,8 @@ PHOTO_STORAGE: dict = {}  # In production, use database
 # FIREBASE STORAGE SERVICE
 # ============================================
 
-# RAH Midland's real, controlled Firebase project is echo-prime-ai; rightathome-prod
-# is inaccessible to us (see apps/web/src/lib/firebase-client-config.ts, commit
+# RAH Midland's real, controlled Firebase project is echo-prime-ai; the retired
+# project is inaccessible to us (see apps/web/src/lib/firebase-client-config.ts, commit
 # c442be3). This guard previously enforced the WRONG value and would RuntimeError
 # on the real production service account.
 EXPECTED_FIREBASE_PROJECT_ID = "echo-prime-ai"

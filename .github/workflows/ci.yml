@@ -50,6 +50,12 @@ jobs:
       - name: Check out source
         uses: actions/checkout@v4
 
+      # setup-node resolves the pnpm store while configuring its cache, so the
+      # executable must exist before setup-node runs. The previous order failed
+      # every job at setup-node before a single project check could start.
+      - name: Install repository-pinned pnpm
+        uses: pnpm/action-setup@v6
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -63,12 +69,8 @@ jobs:
           node-version: 20
           cache: pnpm
 
-      - name: Activate pinned pnpm
-        shell: bash
-        run: |
-          corepack enable
-          corepack prepare pnpm@10.33.0 --activate
-          pnpm --version
+      - name: Verify pinned pnpm
+        run: pnpm --version
 
       - name: Install JavaScript dependencies
         run: pnpm install --frozen-lockfile
@@ -120,6 +122,9 @@ jobs:
       - name: Typecheck web
         run: pnpm --dir apps/web exec tsc --noEmit
 
+      - name: Build mobile workspace dependencies
+        run: pnpm --filter @rightathome/shared build
+
       - name: Typecheck mobile
         run: pnpm --dir apps/mobile exec tsc --noEmit
 
@@ -153,17 +158,17 @@ jobs:
       - name: Check out exact validated commit
         uses: actions/checkout@v4
 
+      - name: Install repository-pinned pnpm
+        uses: pnpm/action-setup@v6
+
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: pnpm
 
-      - name: Activate pinned pnpm
-        shell: bash
-        run: |
-          corepack enable
-          corepack prepare pnpm@10.33.0 --activate
+      - name: Verify pinned pnpm
+        run: pnpm --version
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile

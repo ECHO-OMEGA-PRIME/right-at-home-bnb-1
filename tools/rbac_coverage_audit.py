@@ -58,12 +58,20 @@ ALT_CONTROL_PATTERNS = {
 # the entry so this list stays reviewable instead of becoming a silent allowlist.
 PUBLIC_BY_DESIGN = {
     "health/route.ts": "liveness probe; returns no tenant data",
+    # Exact POST-only middleware exceptions. Login/signup necessarily run
+    # before a session exists; logout must be idempotent for an expired or
+    # malformed cookie. Their handlers expose no tenant data, while
+    # auth/link remains authenticated and therefore must never appear here.
+    "auth/login/route.ts": "credential exchange; returns only an HttpOnly session cookie",
+    "auth/signup/route.ts": "identity enrollment and verification initiation",
+    "auth/logout/route.ts": "idempotent session-cookie deletion",
     # Verified live 2026-07-30: both return 200 to an anonymous caller today and
     # are the public marketing-site property listings. middleware.ts has an
     # explicit isPublicPropertyApi branch for them. Adding a session guard here
     # breaks the public site, so this is a decision, not an oversight.
     "properties/route.ts": "public property listings for the marketing site",
     "properties/[id]/route.ts": "public property detail for the marketing site",
+    "properties/photos/[photoId]/route.ts": "public listing photo bytes by opaque image id",
 }
 
 # Real gaps that are TRACKED, not accepted. Kept out of the --strict failure so

@@ -480,11 +480,12 @@ function base64ToBytes(value: string): Uint8Array {
   return Uint8Array.from(binary, (character) => character.charCodeAt(0));
 }
 
-function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
-  return bytes.buffer.slice(
-    bytes.byteOffset,
-    bytes.byteOffset + bytes.byteLength
-  ) as ArrayBuffer;
+function asWebCryptoBufferSource(bytes: Uint8Array): BufferSource {
+  // The DOM typings conservatively allow Uint8Array<SharedArrayBuffer>, while
+  // these values are always backed by ordinary ArrayBuffers. Keep the runtime
+  // view intact (important across Electron/jsdom realms) and narrow only the
+  // type presented to WebCrypto.
+  return bytes as BufferSource;
 }
 
 export function generateSalt(length = PASSWORD_SALT_BYTES): string {
@@ -508,7 +509,11 @@ async function derivePasswordCryptoKey(
   return crypto.subtle.deriveKey(
     {
       name: 'PBKDF2',
-      salt: toArrayBuffer(salt),
+      // Pass the view directly. Copying its backing buffer with .slice()
+      // creates a foreign-realm ArrayBuffer under jsdom/Electron test
+      // boundaries, which Node 20 WebCrypto rejects even though Uint8Array is
+      // a valid BufferSource.
+      salt: asWebCryptoBufferSource(salt),
       iterations,
       hash: 'SHA-256',
     },
@@ -531,7 +536,7 @@ export async function deriveKey(password: string, salt: string): Promise<string>
   const bits = await crypto.subtle.deriveBits(
     {
       name: 'PBKDF2',
-      salt: toArrayBuffer(saltBytes),
+      salt: asWebCryptoBufferSource(saltBytes),
       iterations: PASSWORD_KDF_ITERATIONS,
       hash: 'SHA-256',
     },
@@ -546,7 +551,7 @@ async function encryptWithPassword(plaintext: string, password: string): Promise
   const iv = crypto.getRandomValues(new Uint8Array(PASSWORD_IV_BYTES));
   const key = await derivePasswordCryptoKey(password, salt);
   const ciphertext = await crypto.subtle.encrypt(
-    { name: 'AES-GCM', iv: toArrayBuffer(iv) },
+    { name: 'AES-GCM', iv: asWebCryptoBufferSource(iv) },
     key,
     new TextEncoder().encode(plaintext)
   );
@@ -574,9 +579,9 @@ async function decryptWithPassword(payloadText: string, password: string): Promi
   const iv = base64ToBytes(payload.iv);
   const key = await derivePasswordCryptoKey(password, salt, payload.iterations);
   const plaintext = await crypto.subtle.decrypt(
-    { name: 'AES-GCM', iv: toArrayBuffer(iv) },
+    { name: 'AES-GCM', iv: asWebCryptoBufferSource(iv) },
     key,
-    toArrayBuffer(base64ToBytes(payload.ciphertext))
+    asWebCryptoBufferSource(base64ToBytes(payload.ciphertext))
   );
   return new TextDecoder().decode(plaintext);
 }

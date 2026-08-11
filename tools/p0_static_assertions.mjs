@@ -6,8 +6,11 @@ import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const expectedProject = 'rightathome-prod';
-const forbiddenProject = 'echo-prime-ai';
+// RAH uses ECHO's single controlled Firebase project. The retired
+// rightathome-prod identifier caused the original P0 login outage and must
+// never return to runtime, deployment, test, or maintenance paths.
+const expectedProject = 'echo-prime-ai';
+const forbiddenProject = 'rightathome-prod';
 
 const failures = [];
 const passes = [];
@@ -109,7 +112,7 @@ assert(
 
 const firebaseClient = read('apps/web/src/lib/firebase-client-config.ts');
 assert(
-  'Canonical web Firebase client config names rightathome-prod',
+  `Canonical web Firebase client config names ${expectedProject}`,
   firebaseClient.includes(`RAH_FIREBASE_PROJECT_ID = '${expectedProject}'`),
 );
 assert(
@@ -137,8 +140,11 @@ assert(
   middleware.includes("'/properties/new'") && middleware.includes('ADMIN_ONLY_PREFIXES'),
 );
 assert(
-  'Middleware rejects production development tokens',
-  middleware.includes('rejectDevPageToken') && middleware.includes('rejectDevApiToken'),
+  'Middleware rejects production development tokens and verifies sessions authoritatively',
+  middleware.includes('isDevToken(authToken) && !devLoginEnabled()') &&
+    middleware.includes('rejectDevApiToken') &&
+    middleware.includes('await authoritativeSession(request)') &&
+    middleware.includes("new URL('/api/me', request.url)"),
 );
 
 const routeGuard = read('apps/web/src/components/properties/PropertiesRouteGuard.tsx');
@@ -153,8 +159,9 @@ assert(
 
 const providers = read('apps/web/app/providers.tsx');
 assert(
-  'Sync identity follows authenticated user',
-  providers.includes('user?.uid ?? appUser?.uid'),
+  'Unused Firestore SyncProvider is not mounted',
+  providers.includes('SyncProvider is deliberately NOT mounted') &&
+    !providers.includes('<SyncProvider'),
 );
 assert(
   'Shared guest_user sync identity removed',
@@ -163,17 +170,17 @@ assert(
 
 const admin = read('apps/web/src/lib/firebase-admin.ts');
 assert(
-  'Firebase Admin validates rightathome-prod service account',
+  `Firebase Admin validates ${expectedProject} service account`,
   admin.includes(`EXPECTED_PROJECT_ID = '${expectedProject}'`) &&
     admin.includes('serviceAccount.project_id !== EXPECTED_PROJECT_ID'),
 );
 
 const vrboWebhook = read('apps/web/app/api/webhooks/vrbo/route.ts');
 assert(
-  'VRBO webhook uses centralized Firebase Admin authority',
-  vrboWebhook.includes("from '@/lib/firebase-admin'") &&
+  'VRBO webhook persists to Postgres without Firebase',
+  vrboWebhook.includes("import prisma from '@/lib/prisma'") &&
     !vrboWebhook.includes("from 'firebase-admin/app'") &&
-    vrboWebhook.includes('FirebaseUnavailableError'),
+    vrboWebhook.includes('verifySignature'),
 );
 
 const health = read('apps/web/app/api/health/route.ts');
@@ -201,7 +208,7 @@ assert(
 
 const mobileFirebase = read('apps/mobile/src/services/firebase-config.ts');
 assert(
-  'Mobile Firebase configuration is locked to rightathome-prod',
+  `Mobile Firebase configuration is locked to ${expectedProject}`,
   mobileFirebase.includes(`RAH_FIREBASE_PROJECT_ID = '${expectedProject}'`) &&
     mobileFirebase.includes('Mobile Firebase project mismatch'),
 );
@@ -219,7 +226,7 @@ assert(
 
 const backendPhotos = read('backend/routers/photos.py');
 assert(
-  'Backend photo storage requires rightathome-prod',
+  `Backend photo storage requires ${expectedProject}`,
   backendPhotos.includes(`EXPECTED_FIREBASE_PROJECT_ID = "${expectedProject}"`) &&
     backendPhotos.includes('FIREBASE_STORAGE_BUCKET is required'),
 );
@@ -230,16 +237,16 @@ const backendEnv = read('backend/.env.example');
 const railwayEnv = read('backend/.env.railway');
 const rootEnv = read('.env.example');
 assert(
-  'Web environment template uses rightathome-prod',
+  `Web environment template uses ${expectedProject}`,
   appEnv.includes(`NEXT_PUBLIC_FIREBASE_PROJECT_ID=${expectedProject}`),
 );
 assert(
-  'Mobile environment template uses rightathome-prod and current API domain',
+  `Mobile environment template uses ${expectedProject} and current API domain`,
   mobileEnv.includes(`EXPO_PUBLIC_FIREBASE_PROJECT_ID=${expectedProject}`) &&
     mobileEnv.includes('EXPO_PUBLIC_API_URL=https://api.rah-midland.com'),
 );
 assert(
-  'Backend environment template uses rightathome-prod',
+  `Backend environment template uses ${expectedProject}`,
   backendEnv.includes(`FIREBASE_PROJECT_ID=${expectedProject}`),
 );
 assert(
@@ -248,7 +255,7 @@ assert(
     railwayEnv.includes(`FIREBASE_PROJECT_ID=${expectedProject}`),
 );
 assert(
-  'Root environment template uses rightathome-prod',
+  `Root environment template uses ${expectedProject}`,
   rootEnv.includes(`FIREBASE_PROJECT_ID="${expectedProject}"`) &&
     rootEnv.includes(`NEXT_PUBLIC_FIREBASE_PROJECT_ID="${expectedProject}"`),
 );
@@ -267,7 +274,7 @@ assert(
   syncTool.includes('SYNC_RAH_VERCEL_ENV') && syncTool.includes('--confirm'),
 );
 assert(
-  'Vercel sync tool is locked to rightathome-prod',
+  `Vercel sync tool is locked to ${expectedProject}`,
   syncTool.includes(`EXPECTED_PROJECT_ID = "${expectedProject}"`),
 );
 assert(

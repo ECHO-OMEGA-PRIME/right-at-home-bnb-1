@@ -1,6 +1,6 @@
 'use client';
 
-import { setAuthCookie } from '@/lib/auth-cookie';
+import { clearAuthCookie, setAuthCookie } from '@/lib/auth-cookie';
 import { FirebaseApp, getApps, initializeApp } from 'firebase/app';
 import {
   Auth,
@@ -248,7 +248,7 @@ function toDate(value: unknown, fallback = new Date()): Date {
   return fallback;
 }
 
-function appUserFromData(user: User, data: Record<string, unknown>): AppUser {
+function appUserFromData(user: User | null, data: Record<string, unknown>): AppUser {
   const role = normalizeRole(data.role);
   const workerTypeValue = data.workerType ?? data.staffType;
   const workerType =
@@ -258,13 +258,16 @@ function appUserFromData(user: User, data: Record<string, unknown>): AppUser {
       ? workerTypeValue
       : undefined;
 
+  const uid = user?.uid ?? (typeof data.uid === 'string' ? data.uid : '');
+  if (!uid) throw new Error('Authenticated profile is missing its uid');
+
   return {
-    uid: user.uid,
-    email: user.email ?? (typeof data.email === 'string' ? data.email : null),
+    uid,
+    email: user?.email ?? (typeof data.email === 'string' ? data.email : null),
     displayName:
-      user.displayName ??
+      user?.displayName ??
       (typeof data.displayName === 'string' ? data.displayName : null),
-    photoURL: user.photoURL ?? (typeof data.photoURL === 'string' ? data.photoURL : null),
+    photoURL: user?.photoURL ?? (typeof data.photoURL === 'string' ? data.photoURL : null),
     role,
     properties: Array.isArray(data.properties)
       ? data.properties.filter((item): item is string => typeof item === 'string')
@@ -363,15 +366,33 @@ async function createOrUpdateUser(user: User): Promise<AppUser> {
   // Firestore for roles, so that write granted nothing -- but code that appears
   // to hand out `owner` is a loaded gun for whoever reads it next, so it is gone.
   //
-  // The role is now whatever the server says it is. AuthContext sets the auth
-  // cookie from the fresh ID token before its own load, and signIn* callers are
-  // followed by onAuthChange doing the same, so /api/me is reachable here.
-  const profile = await getCurrentUser();
-  if (profile) return profile;
+  // Publish the provider token before the explicit one-time link. Relying on
+  // AuthProvider's listener here races the /api/me request after popup return.
+  try {
+    setAuthCookie(await user.getIdToken());
+    const link = await linkCurrentIdentity();
+    if (!link.ok) throw new Error('This account could not be linked securely');
 
-  // Signed in, but the server has no elevated role for this uid yet. Report the
-  // least privilege rather than inventing one -- never the email allowlist.
-  return appUserFromData(user, { role: 'guest' });
+    const profile = await getCurrentUser();
+    if (profile) return profile;
+
+    // Signed in, but the server has no elevated role for this uid yet. Report
+    // least privilege rather than inventing one -- never the email allowlist.
+    return appUserFromData(user, { role: 'guest' });
+  } catch (error) {
+    // A popup provider already created a live Firebase session before linking.
+    // Tear down both session families so a rejected link cannot leave a hidden
+    // authenticated cookie/currentUser behind while the UI reports failure.
+    await clearServerSession().catch(() => undefined);
+    clearAuthCookie();
+    try {
+      await firebaseSignOut(getAuthInstance());
+    } catch {
+      // Preserve the original link/profile error; local cookie cleanup above is
+      // synchronous and the server response also expires the HttpOnly cookie.
+    }
+    throw error;
+  }
 }
 
 export async function signInWithGoogle(): Promise<AppUser | null> {
@@ -396,6 +417,23 @@ export class SignInUnavailableError extends Error {
     super('Sign-in is temporarily unavailable');
     this.name = 'SignInUnavailableError';
   }
+}
+
+async function clearServerSession(): Promise<void> {
+  const response = await fetch('/api/auth/logout', {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { Accept: 'application/json' },
+  });
+  if (!response.ok) throw new Error('Sign-out is temporarily unavailable');
+}
+
+async function linkCurrentIdentity(): Promise<Response> {
+  return fetch('/api/auth/link', {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { Accept: 'application/json' },
+  });
 }
 
 /**
@@ -435,15 +473,16 @@ export async function signInWithEmail(
   }
 
   if (response.ok) {
-    const session = await response.json().catch(() => null);
-    if (typeof session?.access_token === 'string' && session.access_token) {
-      // Publish the session before resolving the profile: /api/me authenticates
-      // with this cookie, and AuthContext's Firebase listener will not fire for
-      // an echo-auth sign-in, so nothing else is going to set it.
-      setAuthCookie(session.access_token);
-      return getCurrentUser();
+    // The same-origin login route owns the HttpOnly session cookie. By the time
+    // fetch resolves, the browser has stored it and /api/me can hydrate the
+    // profile without exposing a bearer token to JavaScript.
+    const link = await linkCurrentIdentity().catch(() => null);
+    if (!link || !link.ok) {
+      await clearServerSession().catch(() => undefined);
+      if (!link || link.status === 503) throw new SignInUnavailableError();
+      throw new Error('This account could not be linked securely');
     }
-    throw new SignInUnavailableError();
+    return getCurrentUser();
   }
 
   if (response.status === 503) throw new SignInUnavailableError();
@@ -453,7 +492,15 @@ export async function signInWithEmail(
 }
 
 export async function signOut(): Promise<void> {
-  await firebaseSignOut(getAuthInstance());
+  await clearServerSession();
+  clearAuthCookie();
+  try {
+    const instance = getAuthInstance();
+    if (instance.currentUser) await firebaseSignOut(instance);
+  } catch {
+    // An echo-auth session deliberately has no Firebase currentUser. Clearing
+    // the shared cookie above is the complete logout for that session family.
+  }
 }
 
 /**
@@ -466,7 +513,7 @@ export async function signOut(): Promise<void> {
  * authorises.
  *
  * GET /api/me resolves it server-side instead (echo-auth verifies the token, the
- * role comes from the claim or Postgres). The auth cookie is already set by
+ * role comes from Postgres). The auth cookie is already set by
  * AuthContext before this runs, so a same-origin fetch carries the credential.
  *
  * A 503 is deliberately NOT treated as "signed out". The server uses it to say
@@ -475,15 +522,26 @@ export async function signOut(): Promise<void> {
  * Firestore incident look like a login bug for 16 hours.
  */
 export async function getCurrentUser(): Promise<AppUser | null> {
-  const currentUser = getAuthInstance().currentUser;
-  if (!currentUser) return null;
+  // echo-auth sessions do not create a Firebase currentUser. The cookie is the
+  // common session primitive for BOTH token families, and echo-auth's cookie is
+  // HttpOnly. Ask /api/me instead of trying to inspect it from JavaScript.
+
+  let currentUser: User | null = null;
+  try {
+    currentUser = getAuthInstance().currentUser;
+  } catch {
+    // Expected for an echo-auth-only deployment/session.
+  }
 
   const response = await fetch('/api/me', {
     credentials: 'same-origin',
     headers: { Accept: 'application/json' },
   });
 
-  if (response.status === 401) return null;
+  if (response.status === 401) {
+    clearAuthCookie();
+    return null;
+  }
   if (!response.ok) {
     throw new Error(`identity unavailable (${response.status})`);
   }

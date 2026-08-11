@@ -10,7 +10,11 @@ import {
   onAuthChange,
   AppUser,
 } from '@/lib/auth';
-import { clearAuthCookie, isDevCookiePresent, setAuthCookie } from '@/lib/auth-cookie';
+import {
+  clearAuthCookie,
+  isDevCookiePresent,
+  setAuthCookie,
+} from '@/lib/auth-cookie';
 
 function clearDevState() {
   if (typeof window === 'undefined') return;
@@ -91,13 +95,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const loadUserData = useCallback(async () => {
+  const loadUserData = useCallback(async (): Promise<AppUser | null> => {
     try {
       const userData = await getCurrentUser();
       setAppUser(userData);
+      return userData;
     } catch (err) {
       console.error('Error loading user data:', err);
       setAppUser(null);
+      return null;
     }
   }, []);
 
@@ -114,9 +120,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setAuthCookie(token);
         await loadUserData();
       } else {
-        setAppUser(null);
         setIsDevMode(false);
-        if (isDevCookiePresent()) clearAuthCookie();
+        if (isDevCookiePresent()) {
+          clearAuthCookie();
+          setAppUser(null);
+        } else {
+          // Email/password sessions are issued by echo-auth and intentionally
+          // have no Firebase currentUser. Hydrate them from the same /api/me
+          // endpoint used after login instead of treating Firebase's null as a
+          // logout event.
+          await loadUserData();
+        }
       }
       setLoading(false);
     });
@@ -158,7 +172,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       clearDevState();
       clearAuthCookie();
       setIsDevMode(false);
-      if (user) await signOut();
+      // Echo-auth sessions intentionally have no Firebase `user`; the shared
+      // signOut helper also clears the server-owned HttpOnly cookie, so it must
+      // run unconditionally.
+      await signOut();
       setUser(null);
       setAppUser(null);
     } catch (err: any) {

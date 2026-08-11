@@ -3,15 +3,12 @@ import { prisma } from '@/lib/prisma';
 import { ApiUser, requireAuth, requireOneOfRoles } from '@/lib/api-auth';
 
 export async function resolveDatabaseUser(apiUser: ApiUser) {
-  const candidates = [
-    apiUser.uid ? { authUid: apiUser.uid } : null,
-    apiUser.email ? { email: apiUser.email } : null,
-    apiUser.uid ? { id: apiUser.uid } : null,
-  ].filter(Boolean) as Array<{ authUid?: string; email?: string; id?: string }>;
-
-  if (candidates.length === 0) return null;
+  if (!apiUser.uid) return null;
   return prisma.user.findFirst({
-    where: { OR: candidates },
+    // Authorization follows the durable identity link only. Falling back to an
+    // email (or treating the auth uid as a database cuid) could resolve a
+    // disabled or differently-bound worker after a token/account mismatch.
+    where: { authUid: apiUser.uid, isActive: true },
     include: { workerProfile: true },
   });
 }

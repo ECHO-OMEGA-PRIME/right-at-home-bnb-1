@@ -56,7 +56,11 @@ function requestWithToken(token?: string) {
 }
 
 beforeEach(() => {
-  vi.clearAllMocks();
+  verifyIdToken.mockReset();
+  findFirst.mockReset();
+  decodeJwt.mockReset();
+  jwtVerify.mockReset();
+  findFirst.mockResolvedValue(null);
   // NODE_ENV is typed readonly, so stub it rather than assigning.
   vi.stubEnv('NODE_ENV', 'production');
   vi.stubEnv('ALLOW_DEV_LOGIN', '');
@@ -84,18 +88,31 @@ describe('verifyAuthToken', () => {
     await expect(verifyAuthToken(TOKEN)).rejects.toThrow();
   });
 
-  it('uses the role custom claim without touching the role store', async () => {
+  it('confirms an elevated token claim against the active role store', async () => {
     verifyIdToken.mockResolvedValue({ uid: 'u1', email: 'a@b.com', role: 'owner' });
+    findFirst.mockResolvedValue({ role: 'OWNER', isActive: true });
     const user = await verifyAuthToken(TOKEN);
     expect(user).toMatchObject({ uid: 'u1', role: 'owner', isDevMode: false });
-    expect(findFirst).not.toHaveBeenCalled();
+    expect(findFirst).toHaveBeenCalled();
   });
 
-  it('ignores an invalid role claim and falls back to the role store', async () => {
+  it('uses the database role even when a token claim disagrees', async () => {
     verifyIdToken.mockResolvedValue({ uid: 'u1', email: 'a@b.com', role: 'superuser' });
-    findFirst.mockResolvedValue({ role: 'WORKER' });
+    findFirst.mockResolvedValue({ role: 'WORKER', isActive: true });
     await expect(verifyAuthToken(TOKEN)).resolves.toMatchObject({ role: 'worker' });
     expect(findFirst).toHaveBeenCalled();
+  });
+
+  it('never lets a stale owner claim elevate a database guest', async () => {
+    verifyIdToken.mockResolvedValue({ uid: 'u1', email: 'a@b.com', role: 'owner' });
+    findFirst.mockResolvedValue({ role: 'GUEST', isActive: true });
+    await expect(verifyAuthToken(TOKEN)).resolves.toMatchObject({ role: 'guest' });
+  });
+
+  it('rejects a deactivated linked account even with a signed claim', async () => {
+    verifyIdToken.mockResolvedValue({ uid: 'u1', email: 'a@b.com', role: 'owner' });
+    findFirst.mockResolvedValue({ role: 'OWNER', isActive: false });
+    await expect(verifyAuthToken(TOKEN)).resolves.toBeNull();
   });
 
   it('treats a missing user document as guest', async () => {
@@ -134,6 +151,7 @@ describe('requireAuth', () => {
 
   it('passes an authenticated user through', async () => {
     verifyIdToken.mockResolvedValue({ uid: 'u1', email: 'a@b.com', role: 'owner' });
+    findFirst.mockResolvedValue({ role: 'OWNER', isActive: true });
     const { user, error } = await requireAuth(requestWithToken(TOKEN));
     expect(error).toBeNull();
     expect(user).toMatchObject({ uid: 'u1', role: 'owner' });
@@ -151,6 +169,7 @@ describe('echo-auth identity path', () => {
   it('routes a non-echo-auth issuer to the legacy Firebase path', async () => {
     // A Firebase token must NOT be judged by the echo-auth verifier.
     verifyIdToken.mockResolvedValue({ uid: 'u1', email: 'a@b.com', role: 'owner' });
+    findFirst.mockResolvedValue({ role: 'OWNER', isActive: true });
     const user = await verifyAuthToken(TOKEN);
     expect(user).toMatchObject({ uid: 'u1', role: 'owner' });
     expect(verifyIdToken).toHaveBeenCalled();
@@ -182,6 +201,19 @@ describe('echo-auth identity path', () => {
     });
     expect(user).toBeNull();
     // and it must never have been handed to the legacy verifier
+    expect(verifyIdToken).not.toHaveBeenCalled();
+  });
+
+  it('a JWKS timeout is a 503, not a bad-credential 401', async () => {
+    decodeJwt.mockReturnValue({ iss: ISS });
+    jwtVerify.mockRejectedValue(
+      Object.assign(new Error('JWKS request timed out'), { code: 'ERR_JWKS_TIMEOUT' }),
+    );
+
+    const { user, error } = await requireAuth(requestWithToken('echo.auth.token'));
+
+    expect(user).toBeNull();
+    expect(error?.status).toBe(503);
     expect(verifyIdToken).not.toHaveBeenCalled();
   });
 

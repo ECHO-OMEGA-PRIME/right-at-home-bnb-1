@@ -79,7 +79,7 @@ beforeEach(() => {
   vi.stubGlobal('fetch', fetchMock);
 
   requireOneOfRoles.mockResolvedValue({
-    user: { uid: 'u1', email: 'a@b.c', role: 'admin', workerType: null, isDevMode: false },
+    user: { uid: 'u1', email: 'a@b.c', emailVerified: true, role: 'admin', workerType: null, isDevMode: false },
     error: null,
   });
   propertyFindUnique.mockResolvedValue({ id: 'prop-1' });

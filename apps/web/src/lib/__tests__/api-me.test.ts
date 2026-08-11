@@ -34,6 +34,7 @@ describe('GET /api/me', () => {
       user: {
         uid: 'u1',
         email: 'owner@example.com',
+        emailVerified: true,
         role: 'owner',
         workerType: null,
         isDevMode: false,
@@ -52,7 +53,7 @@ describe('GET /api/me', () => {
 
   it('never caches identity in a shared cache', async () => {
     requireAuth.mockResolvedValue({
-      user: { uid: 'u1', email: null, role: 'guest', workerType: null, isDevMode: false },
+      user: { uid: 'u1', email: null, emailVerified: false, role: 'guest', workerType: null, isDevMode: false },
       error: null,
     });
 
@@ -96,7 +97,7 @@ describe('GET /api/me', () => {
     // The uid comes from the verified token inside requireAuth. Nothing in the
     // request can redirect this endpoint at somebody else's record.
     requireAuth.mockResolvedValue({
-      user: { uid: 'real-uid', email: null, role: 'guest', workerType: null, isDevMode: false },
+      user: { uid: 'real-uid', email: null, emailVerified: false, role: 'guest', workerType: null, isDevMode: false },
       error: null,
     });
 
